@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 - 玖联包装</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --primary:#1a5632;--primary-light:#2d7a4a;--primary-dark:#0d3b1f;
+      --white:#fff;--gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;
+      --gray-300:#d1d5db;--gray-400:#9ca3af;--gray-500:#6b7280;--gray-600:#4b5563;
+      --gray-700:#374151;--gray-800:#1f2937;--gray-900:#111827;
+      --red:#ef4444;--green:#10b981;--blue:#3b82f6;--yellow:#f59e0b;--purple:#8b5cf6;
+      --shadow:0 1px 3px rgba(0,0,0,.1);--shadow-lg:0 4px 12px rgba(0,0,0,.12);
+      --radius:8px;--radius-lg:12px;
+    }
+    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--gray-50);color:var(--gray-700);font-size:14px}
+    .admin-layout{display:flex;min-height:100vh}
+
+    /* Sidebar */
+    .sidebar{width:260px;background:var(--white);border-right:1px solid var(--gray-200);display:flex;flex-direction:column;position:fixed;height:100vh;overflow-y:auto;z-index:100}
+    .sidebar-header{padding:20px;border-bottom:1px solid var(--gray-200)}
+    .sidebar-logo{display:flex;align-items:center;gap:10px}
+    .logo-icon{width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .logo-icon img{width:100%;height:100%;object-fit:contain}
+    .logo-text h1{font-size:15px;font-weight:600;color:var(--gray-900)}
+    .logo-text p{font-size:11px;color:var(--gray-500)}
+    .sidebar-nav{padding:8px 0;flex:1;overflow-y:auto}
+    .nav-group{margin-bottom:2px}
+    .nav-group-title{padding:10px 20px 6px;font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;color:var(--gray-600);font-size:13px;font-weight:500;transition:all .15s;position:relative}
+    .nav-item:hover{background:var(--gray-50);color:var(--primary)}
+    .nav-item.active{background:rgba(26,86,50,.06);color:var(--primary);font-weight:600}
+    .nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--primary);border-radius:0 3px 3px 0}
+    .nav-item .icon{font-size:15px;width:20px;text-align:center}
+    .nav-item .badge{margin-left:auto;background:var(--red);color:var(--white);font-size:10px;padding:1px 6px;border-radius:8px;font-weight:600}
+    .nav-parent{cursor:pointer}
+    .nav-parent .arrow{margin-left:auto;font-size:10px;transition:transform .2s;color:var(--gray-400)}
+    .nav-parent.expanded .arrow{transform:rotate(90deg)}
+    .nav-children{display:none;background:var(--gray-50)}
+    .nav-children.open{display:block}
+    .nav-children .nav-item{padding-left:50px;font-size:12px}
+    .nav-children .nav-item.active::before{display:none}
+    .nav-children .nav-item.active{background:rgba(26,86,50,.08)}
+
+    /* Main */
+    .main{flex:1;margin-left:260px;display:flex;flex-direction:column}
+    .topbar{background:var(--white);border-bottom:1px solid var(--gray-200);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+    .breadcrumb{font-size:13px;color:var(--gray-500)}
+    .breadcrumb span{color:var(--gray-900);font-weight:500}
+    .topbar-right{display:flex;align-items:center;gap:14px}
+    .user-chip{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;background:var(--gray-50);border-radius:20px}
+    .user-chip .avatar{width:28px;height:28px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+    .user-chip .name{font-size:12px;font-weight:500;color:var(--gray-700)}
+    .btn-logout{padding:6px 14px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:6px;font-size:12px;cursor:pointer;color:var(--gray-600);transition:all .15s}
+    .btn-logout:hover{background:var(--gray-200)}
+
+    /* Content */
+    .content{padding:24px 28px;flex:1}
+    .page-header{margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+    .page-title{font-size:22px;font-weight:700;color:var(--gray-900)}
+    .page-desc{font-size:13px;color:var(--gray-500);margin-top:4px}
+
+    /* Buttons */
+    .btn{padding:8px 16px;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+    .btn-primary{background:var(--primary);color:var(--white)}
+    .btn-primary:hover{background:var(--primary-dark)}
+    .btn-secondary{background:var(--white);color:var(--gray-700);border:1px solid var(--gray-300)}
+    .btn-secondary:hover{background:var(--gray-50)}
+    .btn-danger{background:rgba(239,68,68,.1);color:var(--red)}
+    .btn-danger:hover{background:rgba(239,68,68,.2)}
+    .btn-sm{padding:5px 10px;font-size:12px}
+    .btn-icon{padding:6px 8px}
+
+    /* Cards */
+    .card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);box-shadow:var(--shadow)}
+    .card-header{padding:16px 20px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}
+    .card-title{font-size:15px;font-weight:600;color:var(--gray-900)}
+    .card-body{padding:20px}
+
+    /* Stats */
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px}
+    .stat-card{background:var(--white);border-radius:var(--radius-lg);padding:20px;border:1px solid var(--gray-200);box-shadow:var(--shadow)}
+    .stat-card .label{font-size:12px;color:var(--gray-500);font-weight:500;margin-bottom:8px}
+    .stat-card .value{font-size:28px;font-weight:700;color:var(--gray-900)}
+    .stat-card .change{font-size:11px;margin-top:4px}
+    .stat-card .change.up{color:var(--green)}
+    .stat-card .change.down{color:var(--red)}
+    .stat-card .icon-box{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;float:right}
+    .icon-blue{background:rgba(59,130,246,.1);color:var(--blue)}
+    .icon-green{background:rgba(16,185,129,.1);color:var(--green)}
+    .icon-yellow{background:rgba(245,158,11,.1);color:var(--yellow)}
+    .icon-red{background:rgba(239,68,68,.1);color:var(--red)}
+    .icon-purple{background:rgba(139,92,246,.1);color:var(--purple)}
+
+    /* Table */
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse}
+    th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;background:var(--gray-50);border-bottom:1px solid var(--gray-200)}
+    td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--gray-100);color:var(--gray-700)}
+    tr:hover td{background:var(--gray-50)}
+    .td-id{font-weight:600;color:var(--primary)}
+    .td-name{font-weight:500;color:var(--gray-900)}
+    .td-sub{font-size:11px;color:var(--gray-500)}
+
+    /* Badges */
+    .badge{padding:3px 10px;border-radius:10px;font-size:11px;font-weight:500;display:inline-block}
+    .badge-blue{background:rgba(59,130,246,.1);color:var(--blue)}
+    .badge-green{background:rgba(16,185,129,.1);color:var(--green)}
+    .badge-yellow{background:rgba(245,158,11,.1);color:var(--yellow)}
+    .badge-red{background:rgba(239,68,68,.1);color:var(--red)}
+    .badge-gray{background:var(--gray-100);color:var(--gray-500)}
+    .badge-purple{background:rgba(139,92,246,.1);color:var(--purple)}
+
+    /* Forms */
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .form-group{margin-bottom:16px}
+    .form-group.full{grid-column:1/-1}
+    .form-label{display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:6px}
+    .form-input,.form-select,.form-textarea{width:100%;padding:9px 12px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;font-family:inherit;color:var(--gray-700);transition:border-color .15s}
+    .form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,86,50,.08)}
+    .form-textarea{resize:vertical;min-height:80px}
+
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all .2s}
+    .modal-overlay.active{opacity:1;visibility:visible}
+    .modal{background:var(--white);border-radius:var(--radius-lg);width:90%;max-width:640px;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+    .modal-header{padding:16px 20px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}
+    .modal-header h3{font-size:16px;font-weight:600;color:var(--gray-900)}
+    .modal-close{width:28px;height:28px;border:none;background:var(--gray-100);border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--gray-500)}
+    .modal-close:hover{background:var(--gray-200)}
+    .modal-body{padding:20px}
+    .modal-footer{padding:16px 20px;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end;gap:10px}
+
+    /* Toolbar */
+    .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+    .toolbar .search{flex:1;min-width:200px;position:relative}
+    .toolbar .search input{width:100%;padding:8px 12px 8px 32px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px}
+    .toolbar .search::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px}
+    .toolbar select{padding:8px 12px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;background:var(--white)}
+
+    /* Pagination */
+    .pagination{padding:12px 20px;border-top:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--gray-500)}
+    .page-btns{display:flex;gap:4px}
+    .page-btns button{padding:5px 10px;border:1px solid var(--gray-300);background:var(--white);border-radius:4px;font-size:12px;cursor:pointer}
+    .page-btns button.active{background:var(--primary);color:var(--white);border-color:var(--primary)}
+
+    /* Tabs */
+    .tabs{display:flex;gap:0;border-bottom:2px solid var(--gray-200);margin-bottom:20px}
+    .tab{padding:10px 20px;font-size:13px;font-weight:500;color:var(--gray-500);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+    .tab:hover{color:var(--gray-700)}
+    .tab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+
+    /* Kanban */
+    .kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:16px}
+    .kanban-col{min-width:220px;flex:1;background:var(--gray-50);border-radius:var(--radius);padding:12px}
+    .kanban-col h4{font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+    .kanban-col h4 .count{background:var(--gray-200);padding:1px 6px;border-radius:8px;font-size:10px}
+    .kanban-card{background:var(--white);border:1px solid var(--gray-200);border-radius:6px;padding:10px;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s}
+    .kanban-card:hover{box-shadow:var(--shadow)}
+    .kanban-card .title{font-size:12px;font-weight:600;color:var(--gray-800);margin-bottom:4px}
+    .kanban-card .meta{font-size:11px;color:var(--gray-500)}
+
+    /* Empty state */
+    .empty{text-align:center;padding:48px 20px;color:var(--gray-400)}
+    .empty .icon{font-size:40px;margin-bottom:12px}
+    .empty p{font-size:14px}
+
+    /* Toast */
+    .toast{position:fixed;top:20px;right:20px;padding:12px 20px;background:var(--primary);color:var(--white);border-radius:8px;box-shadow:var(--shadow-lg);z-index:300;font-size:13px;font-weight:500;animation:slideIn .3s ease-out}
+    @keyframes slideIn{from{transform:translateX(300px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+    /* Responsive */
+    @media(max-width:1024px){
+      .sidebar{transform:translateX(-100%);transition:transform .3s}
+      .sidebar.open{transform:translateX(0)}
+      .main{margin-left:0}
+      .stats-row{grid-template-columns:1fr 1fr}
+      .form-grid{grid-template-columns:1fr}
+    }
+
+    /* Utility */
+    .flex{display:flex}.gap-8{gap:8px}.gap-12{gap:12px}.items-center{align-items:center}.justify-between{justify-content:space-between}
+    .mb-8{margin-bottom:8px}.mb-16{margin-bottom:16px}.mb-20{margin-bottom:20px}.mb-24{margin-bottom:24px}
+    .text-sm{font-size:12px}.text-gray{color:var(--gray-500)}.font-bold{font-weight:600}
+    .hidden{display:none!important}
+  </style>
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon"><img src="/images/logo.png" alt="玖联包装"></div>
+        <div class="logo-text"><h1>玖联包装</h1><p>管理后台 v2.0</p></div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="breadcrumb" id="breadcrumb">首页 / <span>数据看板</span></div>
+      <div class="topbar-right">
+        <div class="user-chip">
+          <div class="avatar">管</div>
+          <div class="name">管理员</div>
+        </div>
+        <button class="btn-logout" onclick="logout()">退出</button>
+      </div>
+    </header>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+// ========== MENU STRUCTURE ==========
+const MENU = [
+  { id:'dashboard', icon:'📊', label:'数据看板', children:[
+    {id:'dashboard-overview',label:'概览'},{id:'dashboard-trend',label:'图表'},{id:'dashboard-todo',label:'提醒'}
+  ]},
+  { id:'leads', icon:'📥', label:'线索管理', badge:'12', children:[
+    {id:'leads-pool',label:'线索池'},{id:'leads-detail',label:'线索详情'},{id:'leads-customers',label:'客户库'},{id:'leads-followup',label:'跟进记录'}
+  ]},
+  { id:'quotes', icon:'💰', label:'报价管理', children:[
+    {id:'quotes-list',label:'报价单'},{id:'quotes-new',label:'新建报价'},{id:'quotes-pricebook',label:'价格簿'},{id:'quotes-template',label:'模板'}
+  ]},
+  { id:'orders', icon:'📦', label:'订单管理', badge:'5', children:[
+    {id:'orders-list',label:'全部订单'},{id:'orders-production',label:'生产工单'},{id:'orders-payments',label:'付款'},{id:'orders-delivery',label:'发货'},{id:'orders-dieline',label:'刀模/Artwork'},{id:'orders-proof',label:'打样'}
+  ]},
+  { id:'products', icon:'🏷️', label:'商品管理', children:[
+    {id:'products-categories',label:'分类'},{id:'products-list',label:'商品列表'},{id:'products-printing',label:'印刷色数库'},{id:'products-finish',label:'表面处理库'},{id:'products-material',label:'材质库'}
+  ]},
+  { id:'content', icon:'📝', label:'内容管理', children:[
+    {id:'content-articles',label:'文章'},{id:'content-faq',label:'FAQ'},{id:'content-banner',label:'首页Banner'},{id:'content-advantages',label:'优势图标区'},{id:'content-stats',label:'数据展示'},{id:'content-testimonials',label:'评价'},{id:'content-clients',label:'合作品牌墙'},{id:'content-about',label:'About 关于我们'},{id:'content-process',label:'How We Work'},{id:'content-printing-guide',label:'印刷指南'}
+  ]},
+  { id:'forms', icon:'📋', label:'表单管理', children:[
+    {id:'forms-list',label:'表单列表'},{id:'forms-quote-config',label:'报价表单配置'},{id:'forms-entries',label:'表单提交记录'}
+  ]},
+  { id:'media', icon:'🖼️', label:'媒体库', children:[
+    {id:'media-files',label:'图片/文件'}
+  ]},
+  { id:'cases', icon:'🎓', label:'案例/示例', children:[
+    {id:'cases-list',label:'案例列表'},{id:'cases-categories',label:'分类'}
+  ]},
+  { id:'policies', icon:'📜', label:'政策', children:[
+    {id:'policies-list',label:'政策列表'}
+  ]},
+  { id:'settings', icon:'⚙️', label:'系统设置', children:[
+    {id:'settings-site',label:'基本信息'},{id:'settings-seo',label:'SEO 设置'},{id:'settings-notifications',label:'通知模板'},{id:'settings-certs',label:'认证/资质'},{id:'settings-shipping',label:'配送区域'},{id:'settings-finance',label:'税率/货币'},{id:'settings-users',label:'管理员列表'},{id:'settings-roles',label:'角色管理'},{id:'settings-logs',label:'操作日志'}
+  ]}
+];
+
+// ========== DATA MANAGER ==========
+const DM = {
+  get(key, def=[]) { try { return JSON.parse(localStorage.getItem('jl_'+key)) || def } catch { return def } },
+  set(key, val) { localStorage.setItem('jl_'+key, JSON.stringify(val)) },
+  genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2,3).toUpperCase() },
+  now() { return new Date().toISOString().slice(0,16).replace('T',' ') }
+};
+
+// ========== SEED DATA ==========
+function seedData() {
+  if (DM.get('seeded', false)) return;
+  const leads = [
+    {id:'LD-001',name:'John Smith',company:'L\'Oréal Malaysia',phone:'+60123456789',email:'john@loreal.com',source:'表单',boxType:'飞机盒',size:'24×22×4',quantity:1000,printing:'4C1C',finishing:'哑光覆膜',status:'new',assignee:'销售A',notes:'需要食品级材料',created:'2026-10-04 10:30',followUps:[]},
+    {id:'LD-002',name:'Sarah Ahmad',company:'Shopee Foods',phone:'+60198765432',email:'sarah@shopee.com',source:'电话',boxType:'食品盒',size:'15×14×4.3',quantity:2000,printing:'4C4C',finishing:'光面覆膜',status:'quoted',assignee:'销售B',notes:'急单，需10天内交货',created:'2026-10-04 09:15',followUps:[]},
+    {id:'LD-003',name:'Michael Tan',company:'Grab Holdings',phone:'+60167891234',email:'michael@grab.com',source:'邮件',boxType:'手提盒',size:'18.5×18.5×5',quantity:500,printing:'1C0C',finishing:'无覆膜',status:'new',assignee:'销售A',notes:'',created:'2026-10-03 16:45',followUps:[]},
+    {id:'LD-004',name:'Emily Wong',company:'AirAsia Group',phone:'+60175551234',email:'emily@airasia.com',source:'表单',boxType:'套筒盒',size:'33×21.6×5',quantity:3000,printing:'4C0C',finishing:'Spot UV',status:'negotiating',assignee:'销售B',notes:'长期合作客户，VIP',created:'2026-10-03 14:20',followUps:[]},
+    {id:'LD-005',name:'David Lee',company:'Petronas',phone:'+60129876543',email:'david@petronas.com',source:'Google',boxType:'精装盒',size:'22×11.5×5.5',quantity:100,printing:'4C4C',finishing:'Emboss + Hot-stamp',status:'sample',assignee:'销售A',notes:'需要打样确认',created:'2026-10-02 11:00',followUps:[]}
+  ];
+  DM.set('leads', leads);
+
+  const customers = [
+    {id:'C-001',company:"L'Oréal Malaysia",contact:'John Smith',email:'john@loreal.com',phone:'+60123456789',orders:8,totalAmount:24500,level:'VIP',source:'表单',notes:'法国化妆品品牌马来西亚分部'},
+    {id:'C-002',company:'Shopee Foods',contact:'Sarah Ahmad',email:'sarah@shopee.com',phone:'+60198765432',orders:3,totalAmount:8200,level:'普通',source:'电话',notes:''},
+    {id:'C-003',company:'Grab Holdings',contact:'Michael Tan',email:'michael@grab.com',phone:'+60167891234',orders:1,totalAmount:1500,level:'普通',source:'邮件',notes:'首次合作'}
+  ];
+  DM.set('customers', customers);
+
+  const quotes = [
+    {id:'QT-2026-001',leadId:'LD-001',customer:"L'Oréal Malaysia",product:'飞机盒',size:'24×22×4',quantity:1000,unitPrice:1.67,subtotal:1670,sst:167,total:1837,status:'draft',validUntil:'2026-10-18',creator:'管理员',created:'2026-10-04 11:00'},
+    {id:'QT-2026-002',leadId:'LD-004',customer:'AirAsia Group',product:'套筒盒',size:'33×21.6×5',quantity:3000,unitPrice:2.65,subtotal:7950,sst:795,total:8745,status:'sent',validUntil:'2026-10-17',creator:'管理员',created:'2026-10-03 15:00'}
+  ];
+  DM.set('quotes', quotes);
+
+  const orders = [
+    {id:'OD-2026-001',quoteId:'QT-2026-001',customer:"L'Oréal Malaysia",amount:1837,depositPaid:true,depositAmount:918.5,productionStatus:'artwork',deliveryDate:'2026-10-20',assignee:'生产A',created:'2026-10-04 14:00'},
+  ];
+  DM.set('orders', orders);
+
+  const categories = [
+    {id:'CAT-01',name:'飞机盒',slug:'mailer-box',icon:'📦',sort:1,active:true},
+    {id:'CAT-02',name:'套筒盒',slug:'sleeve-box',icon:'🎁',sort:2,active:true},
+    {id:'CAT-03',name:'天地盖',slug:'lid-base-box',icon:'📦',sort:3,active:true},
+    {id:'CAT-04',name:'手提盒',slug:'handle-box',icon:'🛍️',sort:4,active:true},
+    {id:'CAT-05',name:'彩色运输盒',slug:'shipping-box',icon:'🚚',sort:5,active:true},
+    {id:'CAT-06',name:'蛋糕盒',slug:'cake-box',icon:'🎂',sort:6,active:true},
+    {id:'CAT-07',name:'食品盒',slug:'food-box',icon:'🍱',sort:7,active:true},
+    {id:'CAT-08',name:'纸袋',slug:'paper-bag',icon:'🛍️',sort:8,active:true},
+    {id:'CAT-09',name:'椰枣盒',slug:'date-box',icon:'🌴',sort:9,active:true},
+    {id:'CAT-10',name:'酒盒',slug:'wine-box',icon:'🍷',sort:10,active:true},
+    {id:'CAT-11',name:'插边盒',slug:'tuck-end-box',icon:'📦',sort:11,active:true},
+    {id:'CAT-12',name:'精装盒',slug:'rigid-box',icon:'💎',sort:12,active:true},
+    {id:'CAT-13',name:'POS展示架',slug:'pos-display',icon:'🏪',sort:13,active:true}
+  ];
+  DM.set('categories', categories);
+
+  const faqs = [
+    {id:'FAQ-01',category:'MOQ',question:'What is the minimum order quantity?',answer:'Our MOQ starts from 100 pieces for standard products and 500 pieces for custom printed items.',sort:1},
+    {id:'FAQ-02',category:'交期',question:'How long is the production lead time?',answer:'Standard production takes 10-14 working days after artwork approval. Rush orders available upon request.',sort:2},
+    {id:'FAQ-03',category:'配送',question:'Do you offer free delivery?',answer:'Yes! We offer free delivery within Kuala Lumpur and Selangor. Other areas are charged based on volume and destination.',sort:3},
+    {id:'FAQ-04',category:'Artwork',question:'What file format do you accept?',answer:'We accept AI, PDF, PSD (300dpi minimum). Please include bleed area of 3mm on all sides.',sort:4},
+    {id:'FAQ-05',category:'认证',question:'Are your materials food-safe?',answer:'Yes, we offer FSC-certified and food-grade materials. All our materials comply with EU and FDA standards.',sort:5},
+    {id:'FAQ-06',category:'价格',question:'How is pricing calculated?',answer:'Pricing depends on box type, size, material, printing colors, finishing, and quantity. Use our 60-second quote form for instant estimates.',sort:6}
+  ];
+  DM.set('faqs', faqs);
+
+  const testimonials = [
+    {id:'T-01',name:'Ahmad Razak',position:'Procurement Manager',company:'Nestlé Malaysia',rating:5,content:'Excellent quality and on-time delivery. Jiulian has been our trusted packaging partner for 3 years.',avatar:'A',active:true},
+    {id:'T-02',name:'Lisa Chen',position:'Brand Director',company:'Guardian Malaysia',rating:5,content:'The print quality is outstanding. They helped us redesign our gift boxes and the result exceeded expectations.',avatar:'L',active:true},
+    {id:'T-03',name:'Raj Kumar',position:'Operations Lead',company:'GrabMart',rating:5,content:'Fast turnaround and competitive pricing. The team is very responsive on WhatsApp.',avatar:'R',active:true}
+  ];
+  DM.set('testimonials', testimonials);
+
+  const policies = [
+    {id:'P-01',slug:'privacy',title:'隐私政策 Privacy Policy',content:'We are committed to protecting your personal data in accordance with PDPA...',updated:'2026-10-01'},
+    {id:'P-02',slug:'returns',title:'退换货政策 Returns Policy',content:'Due to the custom nature of our products, returns are only accepted for defective items...',updated:'2026-10-01'},
+    {id:'P-03',slug:'terms',title:'条款与条件 Terms & Conditions',content:'All orders are subject to our standard terms. Payment: 50% deposit, 50% before delivery...',updated:'2026-10-01'},
+    {id:'P-04',slug:'shipping',title:'配送政策 Shipping Policy',content:'Free delivery within KL & Selangor. Other areas charged by volume and distance...',updated:'2026-10-01'},
+    {id:'P-05',slug:'sst',title:'SST 说明',content:'All prices are subject to 10% Sales and Service Tax (SST) unless otherwise stated...',updated:'2026-10-01'}
+  ];
+  DM.set('policies', policies);
+
+  const users = [
+    {id:'U-01',username:'admin',name:'管理员',role:'超级管理员',email:'admin@jiulian.com',active:true,created:'2026-10-01'},
+    {id:'U-02',username:'sales1',name:'销售A',role:'销售',email:'sales1@jiulian.com',active:true,created:'2026-10-01'},
+    {id:'U-03',username:'sales2',name:'销售B',role:'销售',email:'sales2@jiulian.com',active:true,created:'2026-10-02'}
+  ];
+  DM.set('users', users);
+
+  const logs = [
+    {id:'L-001',user:'管理员',action:'登录',detail:'管理员登录系统',time:'2026-10-05 09:00'},
+    {id:'L-002',user:'销售A',action:'新建线索',detail:'新建线索 LD-001 L\'Oréal Malaysia',time:'2026-10-04 10:30'},
+    {id:'L-003',user:'管理员',action:'发送报价',detail:'发送报价 QT-2026-001',time:'2026-10-04 11:05'}
+  ];
+  DM.set('logs', logs);
+
+  DM.set('seeded', true);
+}
+
+// ========== RENDER SIDEBAR ==========
+function renderSidebar() {
+  const nav = document.getElementById('sidebarNav');
+  nav.innerHTML = MENU.map(group => `
+    <div class="nav-group">
+      <div class="nav-item nav-parent" data-group="${group.id}" onclick="toggleGroup('${group.id}')">
+        <span class="icon">${group.icon}</span>
+        <span>${group.label}</span>
+        ${group.badge ? `<span class="badge">${group.badge}</span>` : ''}
+        <span class="arrow">▶</span>
+      </div>
+      <div class="nav-children" id="children-${group.id}">
+        ${group.children.map(c => `
+          <div class="nav-item" data-page="${c.id}" onclick="navigateTo('${c.id}','${group.label}','${c.label}')">
+            ${c.label}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleGroup(id) {
+  const parent = document.querySelector(`[data-group="${id}"]`);
+  const children = document.getElementById('children-' + id);
+  const isOpen = children.classList.contains('open');
+  document.querySelectorAll('.nav-children').forEach(c => c.classList.remove('open'));
+  document.querySelectorAll('.nav-parent').forEach(p => p.classList.remove('expanded'));
+  if (!isOpen) {
+    children.classList.add('open');
+    parent.classList.add('expanded');
+  }
+}
+
+// ========== NAVIGATION ==========
+let currentPageId = '';
+function navigateTo(pageId, groupLabel, pageLabel) {
+  currentPageId = pageId;
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.querySelector(`[data-page="${pageId}"]`)?.classList.add('active');
+  document.getElementById('breadcrumb').innerHTML = `${groupLabel} / <span>${pageLabel}</span>`;
+  renderPage(pageId);
+}
+
+function renderPage(id) {
+  const c = document.getElementById('content');
+  const pages = {
+    'dashboard-overview': renderDashboard,
+    'dashboard-trend': renderDashboardTrend,
+    'dashboard-todo': renderDashboardTodo,
+    'leads-pool': renderLeadsPool,
+    'leads-detail': renderLeadsDetail,
+    'leads-customers': renderCustomers,
+    'leads-followup': renderFollowUp,
+    'quotes-list': renderQuotesList,
+    'quotes-new': renderQuoteNew,
+    'quotes-pricebook': renderPricebook,
+    'quotes-template': renderQuoteTemplate,
+    'orders-list': renderOrdersList,
+    'orders-production': renderProduction,
+    'orders-payments': renderPayments,
+    'orders-delivery': renderDelivery,
+    'orders-dieline': renderDieline,
+    'orders-proof': renderProof,
+    'products-categories': renderCategories,
+    'products-list': renderProductsList,
+    'products-printing': renderPrintingMeta,
+    'products-finish': renderFinishMeta,
+    'products-material': renderMaterialMeta,
+    'content-articles': renderArticles,
+    'content-faq': renderFAQ,
+    'content-banner': renderBanner,
+    'content-advantages': renderAdvantages,
+    'content-stats': renderStats,
+    'content-testimonials': renderTestimonials,
+    'content-clients': renderClients,
+    'content-about': renderAbout,
+    'content-process': renderProcess,
+    'content-printing-guide': renderPrintingGuide,
+    'forms-list': renderFormsList,
+    'forms-quote-config': renderQuoteConfig,
+    'forms-entries': renderFormEntries,
+    'media-files': renderMedia,
+    'cases-list': renderCasesList,
+    'cases-categories': renderCasesCategories,
+    'policies-list': renderPoliciesList,
+    'settings-site': renderSettingsSite,
+    'settings-seo': renderSettingsSEO,
+    'settings-notifications': renderSettingsNotifications,
+    'settings-certs': renderSettingsCerts,
+    'settings-shipping': renderSettingsShipping,
+    'settings-finance': renderSettingsFinance,
+    'settings-users': renderUsers,
+    'settings-roles': renderRoles,
+    'settings-logs': renderLogs
+  };
+  (pages[id] || renderPlaceholder)(c, id);
+}
+
+function renderPlaceholder(c, id) {
+  c.innerHTML = `<div class="page-header"><h1 class="page-title">${id}</h1></div><div class="empty"><div class="icon">🚧</div><p>此模块正在建设中</p></div>`;
+}
+
+// ========== DASHBOARD ==========
+function renderDashboard(c) {
+  const leads = DM.get('leads');
+  const orders = DM.get('orders');
+  const quotes = DM.get('quotes');
+  const newLeads = leads.filter(l => l.status === 'new').length;
+  const pendingQuotes = quotes.filter(q => q.status === 'draft' || q.status === 'sent').length;
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">数据看板</h1><p class="page-desc">核心业务指标概览</p></div></div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="icon-box icon-blue">📥</div><div class="label">今日新询盘</div><div class="value">${newLeads}</div><div class="change up">需及时跟进</div></div>
+      <div class="stat-card"><div class="icon-box icon-yellow">💰</div><div class="label">待报价数</div><div class="value">${pendingQuotes}</div><div class="change">待处理</div></div>
+      <div class="stat-card"><div class="icon-box icon-green">📦</div><div class="label">本周订单</div><div class="value">${orders.length}</div><div class="change up">↑ 12% 较上周</div></div>
+      <div class="stat-card"><div class="icon-box icon-purple">💵</div><div class="label">本月销售额</div><div class="value">RM ${orders.reduce((s,o)=>s+o.amount,0).toLocaleString()}</div><div class="change up">↑ 8.5%</div></div>
+      <div class="stat-card"><div class="icon-box icon-red">✅</div><div class="label">本月成单</div><div class="value">${orders.length}</div><div class="change">目标: 20</div></div>
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">最近 10 条新线索</span></div>
+      <div class="table-wrap"><table><thead><tr><th>编号</th><th>客户</th><th>公司</th><th>盒型</th><th>数量</th><th>状态</th><th>时间</th></tr></thead>
+      <tbody>${leads.slice(0,10).map(l=>`<tr><td class="td-id">${l.id}</td><td class="td-name">${l.name}</td><td>${l.company}</td><td>${l.boxType}</td><td>${l.quantity}</td><td>${statusBadge(l.status)}</td><td>${l.created}</td></tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+
+function renderDashboardTrend(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">趋势分析</h1><p class="page-desc">近 30 天数据趋势</p></div></div>
+    <div class="stats-row">
+      <div class="card" style="grid-column:1/-1"><div class="card-header"><span class="card-title">询盘趋势 (近30天)</span></div><div class="card-body">
+        <div style="height:200px;display:flex;align-items:flex-end;gap:4px;padding:20px 0">
+          ${Array.from({length:30},(_,i)=>{const h=30+Math.random()*150;return `<div style="flex:1;background:var(--primary);border-radius:3px 3px 0 0;height:${h}px;opacity:${0.4+Math.random()*0.6}" title="Day ${i+1}"></div>`}).join('')}
+        </div>
+      </div></div>
+    </div>
+    <div class="stats-row" style="grid-template-columns:1fr 1fr">
+      <div class="card"><div class="card-header"><span class="card-title">询盘来源</span></div><div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="flex items-center justify-between"><span>直接表单</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:45%;height:100%;background:var(--primary);border-radius:4px"></div></div><span class="font-bold">45%</span></div>
+          <div class="flex items-center justify-between"><span>电话</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:25%;height:100%;background:var(--blue);border-radius:4px"></div></div><span class="font-bold">25%</span></div>
+          <div class="flex items-center justify-between"><span>邮件</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:18%;height:100%;background:var(--yellow);border-radius:4px"></div></div><span class="font-bold">18%</span></div>
+          <div class="flex items-center justify-between"><span>Google</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:12%;height:100%;background:var(--purple);border-radius:4px"></div></div><span class="font-bold">12%</span></div>
+        </div>
+      </div></div>
+      <div class="card"><div class="card-header"><span class="card-title">产品类别 TOP 5</span></div><div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${[['飞机盒',85],['食品盒',62],['手提盒',48],['精装盒',35],['纸袋',28]].map(([n,v])=>`<div class="flex items-center justify-between"><span style="width:60px">${n}</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:${v}%;height:100%;background:var(--green);border-radius:4px"></div></div><span class="font-bold">${v}</span></div>`).join('')}
+        </div>
+      </div></div>
+    </div>`;
+}
+
+function renderDashboardTodo(c) {
+  const leads = DM.get('leads');
+  const overdue = leads.filter(l => l.status === 'new');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">待办事项</h1><p class="page-desc">需要及时处理的事项</p></div></div>
+    <div class="card mb-20"><div class="card-header"><span class="card-title" style="color:var(--red)">⚠️ 超过 24h 未回复的询盘</span></div>
+      <div class="card-body">${overdue.length ? overdue.map(l=>`<div class="flex items-center justify-between" style="padding:10px 0;border-bottom:1px solid var(--gray-100)"><div><span class="td-id">${l.id}</span> <span class="td-name">${l.name}</span> - ${l.company}</div><span class="badge badge-red">紧急</span></div>`).join('') : '<div class="empty"><p>暂无逾期询盘 ✅</p></div>'}</div>
+    </div>
+    <div class="card mb-20"><div class="card-header"><span class="card-title">📋 待客户确认打样</span></div><div class="card-body"><div class="empty"><p>暂无待确认打样</p></div></div></div>
+    <div class="card mb-20"><div class="card-header"><span class="card-title">💰 待收尾款</span></div><div class="card-body"><div class="empty"><p>暂无待收尾款订单</p></div></div></div>
+    <div class="card"><div class="card-header"><span class="card-title">📦 库存/物料预警</span></div><div class="card-body"><div class="empty"><p>库存充足 ✅</p></div></div></div>`;
+}
+
+// ========== LEADS ==========
+function renderLeadsPool(c) {
+  const leads = DM.get('leads');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">线索池</h1><p class="page-desc">全部线索管理</p></div><button class="btn btn-primary" onclick="openLeadModal()">+ 新建线索</button></div>
+    <div class="toolbar"><div class="search"><input placeholder="搜索客户名/公司..." oninput="filterLeads(this.value)"></div>
+      <select onchange="filterLeadStatus(this.value)"><option value="">全部状态</option><option value="new">新线索</option><option value="quoted">已报价</option><option value="negotiating">洽谈中</option><option value="sample">打样中</option><option value="won">已成交</option><option value="lost">已流失</option></select>
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV('leads')">📥 导出CSV</button>
+    </div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>编号</th><th>来源</th><th>姓名</th><th>公司</th><th>电话</th><th>盒型</th><th>数量</th><th>状态</th><th>负责人</th><th>创建时间</th><th>操作</th></tr></thead>
+    <tbody id="leadsTableBody">${leads.map(l=>leadRow(l)).join('')}</tbody></table></div>
+    <div class="pagination"><span>共 ${leads.length} 条</span><div class="page-btns"><button class="active">1</button></div></div></div>`;
+}
+
+function leadRow(l) {
+  return `<tr><td class="td-id">${l.id}</td><td><span class="badge badge-gray">${l.source}</span></td><td class="td-name">${l.name}</td><td>${l.company}</td><td>${l.phone}</td><td>${l.boxType}</td><td>${l.quantity}</td><td>${statusBadge(l.status)}</td><td>${l.assignee}</td><td>${l.created}</td><td><button class="btn btn-sm btn-secondary" onclick="viewLead('${l.id}')">查看</button> <button class="btn btn-sm btn-danger" onclick="deleteLead('${l.id}')">删除</button></td></tr>`;
+}
+
+function statusBadge(s) {
+  const m = {new:'badge-blue',quoted:'badge-yellow',negotiating:'badge-purple',sample:'badge-yellow',won:'badge-green',lost:'badge-red',draft:'badge-gray',sent:'badge-blue',accepted:'badge-green',rejected:'badge-red',expired:'badge-gray'};
+  const labels = {new:'新线索',quoted:'已报价',negotiating:'洽谈中',sample:'打样中',won:'已成交',lost:'已流失',draft:'草稿',sent:'已发出',accepted:'已接受',rejected:'已拒绝',expired:'已过期'};
+  return `<span class="badge ${m[s]||'badge-gray'}">${labels[s]||s}</span>`;
+}
+
+function openLeadModal(lead) {
+  const isEdit = !!lead;
+  showModal(isEdit ? '编辑线索' : '新建线索', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${lead?.name||''}"></div>
+      <div class="form-group"><label class="form-label">公司</label><input class="form-input" id="f_company" value="${lead?.company||''}"></div>
+      <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="f_phone" value="${lead?.phone||''}"></div>
+      <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="f_email" value="${lead?.email||''}"></div>
+      <div class="form-group"><label class="form-label">来源</label><select class="form-select" id="f_source"><option>表单</option><option>电话</option><option>邮件</option><option>Google</option></select></div>
+      <div class="form-group"><label class="form-label">负责人</label><select class="form-select" id="f_assignee"><option>销售A</option><option>销售B</option></select></div>
+      <div class="form-group"><label class="form-label">盒型</label><select class="form-select" id="f_boxType">${DM.get('categories').map(c=>`<option>${c.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">尺寸 (cm)</label><input class="form-input" id="f_size" placeholder="长×宽×高" value="${lead?.size||''}"></div>
+      <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" id="f_quantity" value="${lead?.quantity||''}"></div>
+      <div class="form-group"><label class="form-label">印刷方式</label><select class="form-select" id="f_printing"><option>1C0C</option><option>1C1C</option><option>4C0C</option><option>4C1C</option><option>4C4C</option></select></div>
+      <div class="form-group"><label class="form-label">表面处理</label><select class="form-select" id="f_finishing"><option>无覆膜</option><option>哑光覆膜</option><option>光面覆膜</option><option>Soft Touch</option><option>Spot UV</option><option>Emboss</option><option>Hot-stamp Foil</option></select></div>
+      <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_status"><option value="new">新线索</option><option value="quoted">已报价</option><option value="negotiating">洽谈中</option><option value="sample">打样中</option><option value="won">已成交</option><option value="lost">已流失</option></select></div>
+      <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="f_notes">${lead?.notes||''}</textarea></div>
+    </div>
+  `, () => {
+    const leads = DM.get('leads');
+    const data = {
+      id: lead?.id || DM.genId('LD'),
+      name: val('f_name'), company: val('f_company'), phone: val('f_phone'), email: val('f_email'),
+      source: val('f_source'), assignee: val('f_assignee'), boxType: val('f_boxType'), size: val('f_size'),
+      quantity: parseInt(val('f_quantity'))||0, printing: val('f_printing'), finishing: val('f_finishing'),
+      status: val('f_status'), notes: val('f_notes'), created: lead?.created || DM.now(), followUps: lead?.followUps || []
+    };
+    if (isEdit) { const idx = leads.findIndex(l=>l.id===lead.id); leads[idx] = data; }
+    else leads.unshift(data);
+    DM.set('leads', leads);
+    toast(isEdit ? '线索已更新' : '线索已创建');
+    renderPage(currentPageId);
+  });
+}
+
+function viewLead(id) {
+  const l = DM.get('leads').find(x=>x.id===id);
+  if (!l) return;
+  showModal('线索详情 - ' + id, `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+      <div><strong>姓名:</strong> ${l.name}</div><div><strong>公司:</strong> ${l.company}</div>
+      <div><strong>电话:</strong> ${l.phone}</div><div><strong>邮箱:</strong> ${l.email}</div>
+      <div><strong>盒型:</strong> ${l.boxType}</div><div><strong>尺寸:</strong> ${l.size}</div>
+      <div><strong>数量:</strong> ${l.quantity}</div><div><strong>印刷:</strong> ${l.printing}</div>
+      <div><strong>表面处理:</strong> ${l.finishing}</div><div><strong>状态:</strong> ${statusBadge(l.status)}</div>
+      <div><strong>来源:</strong> ${l.source}</div><div><strong>负责人:</strong> ${l.assignee}</div>
+      <div style="grid-column:1/-1"><strong>备注:</strong> ${l.notes||'无'}</div>
+      <div style="grid-column:1/-1"><strong>跟进记录:</strong> ${l.followUps?.length ? l.followUps.map(f=>`<div style="padding:6px 0;border-bottom:1px solid var(--gray-100)">${f.time} - ${f.method} - ${f.content}</div>`).join('') : '暂无跟进记录'}</div>
+    </div>
+  `, null, [
+    {label:'转报价',cls:'btn-primary',fn:()=>{closeModal();toast('已转为报价单')}},
+    {label:'关闭',cls:'btn-secondary',fn:closeModal}
+  ]);
+}
+
+function deleteLead(id) {
+  if (!confirm('确定删除此线索？')) return;
+  DM.set('leads', DM.get('leads').filter(l=>l.id!==id));
+  toast('线索已删除');
+  renderPage(currentPageId);
+}
+
+function renderLeadsDetail(c) { renderLeadsPool(c); }
+
+function renderCustomers(c) {
+  const customers = DM.get('customers');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">客户库</h1><p class="page-desc">按公司聚合的客户列表</p></div><button class="btn btn-primary" onclick="openCustomerModal()">+ 新建客户</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>公司</th><th>联系人</th><th>电话</th><th>邮箱</th><th>累计订单</th><th>累计金额</th><th>等级</th><th>操作</th></tr></thead>
+    <tbody>${customers.map(c=>`<tr><td class="td-name">${c.company}</td><td>${c.contact}</td><td>${c.phone}</td><td>${c.email}</td><td>${c.orders}</td><td>RM ${c.totalAmount.toLocaleString()}</td><td><span class="badge ${c.level==='VIP'?'badge-purple':'badge-gray'}">${c.level}</span></td><td><button class="btn btn-sm btn-secondary">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openCustomerModal() {
+  showModal('新建客户', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">公司名 *</label><input class="form-input" id="f_company"></div>
+      <div class="form-group"><label class="form-label">联系人</label><input class="form-input" id="f_contact"></div>
+      <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="f_phone"></div>
+      <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="f_email"></div>
+      <div class="form-group"><label class="form-label">等级</label><select class="form-select" id="f_level"><option>普通</option><option>VIP</option></select></div>
+      <div class="form-group"><label class="form-label">来源</label><select class="form-select" id="f_source"><option>表单</option><option>电话</option><option>邮件</option><option>Google</option></select></div>
+      <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="f_notes"></textarea></div>
+    </div>
+  `, () => {
+    const customers = DM.get('customers');
+    customers.push({id:DM.genId('C'),company:val('f_company'),contact:val('f_contact'),phone:val('f_phone'),email:val('f_email'),orders:0,totalAmount:0,level:val('f_level'),source:val('f_source'),notes:val('f_notes')});
+    DM.set('customers', customers);
+    toast('客户已创建'); renderPage(currentPageId);
+  });
+}
+
+function renderFollowUp(c) {
+  const leads = DM.get('leads').filter(l => l.followUps?.length > 0);
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">跟进记录</h1><p class="page-desc">销售跟进时间线</p></div></div>
+    <div class="card"><div class="card-body">${leads.length ? leads.map(l=>`<div style="padding:12px 0;border-bottom:1px solid var(--gray-100)"><div class="flex justify-between items-center mb-8"><span class="td-id">${l.id}</span><span class="td-name">${l.name} - ${l.company}</span></div>${l.followUps.map(f=>`<div style="padding:6px 0 6px 16px;border-left:2px solid var(--gray-200);margin-left:8px;font-size:13px"><span class="text-gray">${f.time}</span> · <span class="badge badge-blue">${f.method}</span> ${f.content}</div>`).join('')}</div>`).join('') : '<div class="empty"><div class="icon">📋</div><p>暂无跟进记录</p></div>'}</div></div>`;
+}
+
+// ========== QUOTES ==========
+function renderQuotesList(c) {
+  const quotes = DM.get('quotes');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">报价单</h1><p class="page-desc">管理所有报价</p></div><button class="btn btn-primary" onclick="navigateTo('quotes-new','报价管理','新建报价')">+ 新建报价</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>报价单号</th><th>客户</th><th>产品</th><th>数量</th><th>总额(RM)</th><th>SST 10%</th><th>状态</th><th>有效期</th><th>操作</th></tr></thead>
+    <tbody>${quotes.map(q=>`<tr><td class="td-id">${q.id}</td><td class="td-name">${q.customer}</td><td>${q.product}</td><td>${q.quantity}</td><td>${q.subtotal.toFixed(2)}</td><td>${q.sst.toFixed(2)}</td><td>${statusBadge(q.status)}</td><td>${q.validUntil}</td><td><button class="btn btn-sm btn-secondary">查看</button> <button class="btn btn-sm btn-secondary">编辑</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function renderQuoteNew(c) {
+  const cats = DM.get('categories');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">新建报价</h1><p class="page-desc">基于线索创建报价单</p></div></div>
+    <div class="card"><div class="card-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">选择线索</label><select class="form-select"><option value="">-- 选择线索 --</option>${DM.get('leads').map(l=>`<option value="${l.id}">${l.id} - ${l.name} (${l.company})</option>`).join('')}</select></div>
+        <div class="form-group"><label class="form-label">客户公司</label><input class="form-input" placeholder="自动填入"></div>
+        <div class="form-group"><label class="form-label">盒型</label><select class="form-select">${cats.map(c=>`<option>${c.name}</option>`).join('')}</select></div>
+        <div class="form-group"><label class="form-label">尺寸 (cm)</label><input class="form-input" placeholder="长×宽×高"></div>
+        <div class="form-group"><label class="form-label">材质</label><select class="form-select"><option>白卡纸 300g</option><option>白卡纸 350g</option><option>牛卡 E楞</option><option>瓦楞 B楞</option><option>食品级纸</option></select></div>
+        <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" placeholder="pcs"></div>
+        <div class="form-group"><label class="form-label">印刷色数</label><select class="form-select"><option>4C+0C</option><option>4C+1C</option><option>4C+4C</option><option>1C+0C</option><option>1C+1C</option><option>0C (无印刷)</option></select></div>
+        <div class="form-group"><label class="form-label">表面处理</label><select class="form-select"><option>哑光覆膜</option><option>光面覆膜</option><option>Soft Touch</option><option>无覆膜</option><option>Spot UV</option><option>Emboss</option><option>Hot-stamp Foil</option></select></div>
+        <div class="form-group"><label class="form-label">预估单价 (RM)</label><input class="form-input" type="number" step="0.01"></div>
+        <div class="form-group"><label class="form-label">有效期</label><input class="form-input" type="date" value="2026-10-19"></div>
+      </div>
+      <div style="margin-top:16px;padding:16px;background:var(--gray-50);border-radius:8px">
+        <div class="flex justify-between mb-8"><span>小计:</span><span class="font-bold">RM 0.00</span></div>
+        <div class="flex justify-between mb-8"><span>SST (10%):</span><span class="font-bold">RM 0.00</span></div>
+        <div class="flex justify-between" style="font-size:16px"><span class="font-bold">总计:</span><span class="font-bold" style="color:var(--primary)">RM 0.00</span></div>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-secondary">保存草稿</button>
+        <button class="btn btn-primary" onclick="toast('报价单已生成')">生成报价单</button>
+      </div>
+    </div></div>`;
+}
+
+function renderPricebook(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">价格簿</h1><p class="page-desc">按盒型 × 数量阶梯维护基础单价</p></div><button class="btn btn-secondary btn-sm">📥 导入</button></div>
+    <div class="tabs"><div class="tab active">飞机盒</div><div class="tab">套筒盒</div><div class="tab">天地盖</div><div class="tab">手提盒</div><div class="tab">食品盒</div><div class="tab">纸袋</div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>SKU</th><th>尺寸(cm)</th><th>100pcs</th><th>300pcs</th><th>500pcs</th><th>1000pcs</th><th>2000pcs</th><th>3000pcs</th><th>5000pcs</th></tr></thead>
+    <tbody>
+      <tr><td class="td-id">M1-1</td><td>24×22×4</td><td>2.38</td><td>2.49</td><td>1.93</td><td>1.67</td><td>1.25</td><td>1.36</td><td>1.80</td></tr>
+      <tr><td class="td-id">M1-2</td><td>15×14×4.3</td><td>1.85</td><td>2.08</td><td>1.48</td><td>1.32</td><td>0.95</td><td>1.10</td><td>1.54</td></tr>
+      <tr><td class="td-id">M1-4</td><td>18.5×18.5×5</td><td>2.32</td><td>2.55</td><td>1.85</td><td>1.63</td><td>1.18</td><td>1.30</td><td>1.74</td></tr>
+      <tr><td class="td-id">M1-5</td><td>33×21.6×5</td><td>3.77</td><td>4.13</td><td>3.15</td><td>2.65</td><td>1.95</td><td>1.60</td><td>2.04</td></tr>
+    </tbody></table></div></div>`;
+}
+
+function renderQuoteTemplate(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">PDF 模板</h1><p class="page-desc">报价单 PDF 模板配置</p></div></div>
+    <div class="card"><div class="card-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">公司抬头</label><input class="form-input" value="United YL Printers Sdn Bhd"></div>
+        <div class="form-group"><label class="form-label">Logo</label><input class="form-input" type="file" accept="image/*"></div>
+        <div class="form-group full"><label class="form-label">付款条款</label><textarea class="form-textarea">50% 定金，50% 发货前付清。银行转账/TT。</textarea></div>
+        <div class="form-group full"><label class="form-label">交期说明</label><textarea class="form-textarea">确认打样后 10-14 个工作日完成生产。加急订单另议。</textarea></div>
+        <div class="form-group full"><label class="form-label">SST 说明</label><textarea class="form-textarea">以上价格需另加 10% SST (Sales & Service Tax)。</textarea></div>
+        <div class="form-group"><label class="form-label">默认有效期</label><input class="form-input" type="number" value="14"> 天</div>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('模板已保存')">保存模板</button></div>
+    </div></div>`;
+}
+
+// ========== ORDERS ==========
+function renderOrdersList(c) {
+  const orders = DM.get('orders');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">全部订单</h1><p class="page-desc">订单管理</p></div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>金额(RM)</th><th>定金状态</th><th>生产状态</th><th>预计交货</th><th>负责人</th><th>操作</th></tr></thead>
+    <tbody>${orders.map(o=>`<tr><td class="td-id">${o.id}</td><td class="td-name">${o.customer}</td><td>${o.amount.toFixed(2)}</td><td>${o.depositPaid?'<span class="badge badge-green">已付</span>':'<span class="badge badge-yellow">待付</span>'}</td><td>${productionBadge(o.productionStatus)}</td><td>${o.deliveryDate}</td><td>${o.assignee}</td><td><button class="btn btn-sm btn-secondary">详情</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function productionBadge(s) {
+  const m = {pending_deposit:'badge-gray',deposit_paid:'badge-blue',artwork:'badge-purple',proofing:'badge-yellow',confirming:'badge-yellow',producing:'badge-blue',shipping:'badge-purple',shipped:'badge-green',done:'badge-green'};
+  const labels = {pending_deposit:'待付定金',deposit_paid:'已付定金',artwork:'刀模/Artwork',proofing:'打样中',confirming:'待客户确认',producing:'生产中',shipping:'待发货',shipped:'已发货',done:'完成'};
+  return `<span class="badge ${m[s]||'badge-gray'}">${labels[s]||s}</span>`;
+}
+
+function renderProduction(c) {
+  const statuses = ['pending_deposit','deposit_paid','artwork','proofing','confirming','producing','shipping','shipped','done'];
+  const labels = {pending_deposit:'待付定金',deposit_paid:'已付定金',artwork:'刀模/Artwork',proofing:'打样中',confirming:'待确认',producing:'生产中',shipping:'待发货',shipped:'已发货',done:'完成'};
+  const orders = DM.get('orders');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">生产工单看板</h1><p class="page-desc">拖拽更改状态</p></div></div>
+    <div class="kanban">${statuses.map(s => {
+      const items = orders.filter(o => o.productionStatus === s);
+      return `<div class="kanban-col"><h4>${labels[s]} <span class="count">${items.length}</span></h4>${items.map(o=>`<div class="kanban-card"><div class="title">${o.id}</div><div class="meta">${o.customer}</div><div class="meta">RM ${o.amount.toFixed(2)}</div></div>`).join('') || '<div style="text-align:center;color:var(--gray-400);font-size:11px;padding:12px">空</div>'}</div>`;
+    }).join('')}</div>`;
+}
+
+function renderPayments(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">收款记录</h1><p class="page-desc">管理定金和尾款</p></div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>类型</th><th>金额(RM)</th><th>付款方式</th><th>到账日期</th><th>凭证</th></tr></thead>
+    <tbody><tr><td class="td-id">OD-2026-001</td><td class="td-name">L'Oréal Malaysia</td><td><span class="badge badge-blue">定金 50%</span></td><td>918.50</td><td>银行转账</td><td>2026-10-04</td><td><button class="btn btn-sm btn-secondary">查看</button></td></tr></tbody></table></div></div>`;
+}
+
+function renderDelivery(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">发货管理</h1><p class="page-desc">物流记录和配送跟踪</p></div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>配送区域</th><th>运费</th><th>快递单号</th><th>发货日期</th><th>预计送达</th><th>状态</th></tr></thead>
+    <tbody><tr><td class="td-id">OD-2026-001</td><td class="td-name">L'Oréal Malaysia</td><td>Kuala Lumpur</td><td>免费</td><td>-</td><td>-</td><td>2026-10-20</td><td><span class="badge badge-yellow">待发货</span></td></tr></tbody></table></div></div>`;
+}
+
+function renderDieline(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">刀模/Artwork 模板库</h1><p class="page-desc">40+ 现成刀模管理</p></div><button class="btn btn-primary">+ 上传刀模</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>编号</th><th>适用盒型</th><th>尺寸</th><th>刀模费</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>
+      <tr><td class="td-id">DIE-001</td><td>飞机盒</td><td>24×22×4</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary">下载</button></td></tr>
+      <tr><td class="td-id">DIE-002</td><td>飞机盒</td><td>15×14×4.3</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary">下载</button></td></tr>
+      <tr><td class="td-id">DIE-003</td><td>套筒盒</td><td>33×21.6×5</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary">下载</button></td></tr>
+    </tbody></table></div></div>`;
+}
+
+function renderProof(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">打样管理</h1><p class="page-desc">数字打样与空白盒 mock-up</p></div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>打样类型</th><th>状态</th><th>上传时间</th><th>操作</th></tr></thead>
+    <tbody><tr><td class="td-id">OD-2026-001</td><td class="td-name">L'Oréal Malaysia</td><td>数字打样 (颜色确认)</td><td><span class="badge badge-yellow">待客户确认</span></td><td>2026-10-04</td><td><button class="btn btn-sm btn-secondary">查看</button> <button class="btn btn-sm btn-primary">发送确认</button></td></tr></tbody></table></div></div>`;
+}
+
+// ========== PRODUCTS ==========
+function renderCategories(c) {
+  const cats = DM.get('categories');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">盒型分类</h1><p class="page-desc">管理产品分类</p></div><button class="btn btn-primary" onclick="openCategoryModal()">+ 新建分类</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>排序</th><th>图标</th><th>名称</th><th>Slug</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>${cats.map(cat=>`<tr><td>${cat.sort}</td><td>${cat.icon}</td><td class="td-name">${cat.name}</td><td>${cat.slug}</td><td>${cat.active?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary">编辑</button> <button class="btn btn-sm btn-danger">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openCategoryModal() {
+  showModal('新建分类', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="f_name"></div>
+      <div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="f_slug"></div>
+      <div class="form-group"><label class="form-label">图标</label><input class="form-input" id="f_icon" value="📦"></div>
+      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="1"></div>
+    </div>
+  `, () => {
+    const cats = DM.get('categories');
+    cats.push({id:DM.genId('CAT'),name:val('f_name'),slug:val('f_slug')||val('f_name').toLowerCase().replace(/\s+/g,'-'),icon:val('f_icon'),sort:parseInt(val('f_sort'))||1,active:true});
+    DM.set('categories', cats);
+    toast('分类已创建'); renderPage(currentPageId);
+  });
+}
+
+function renderProductsList(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">商品列表</h1><p class="page-desc">管理所有产品</p></div><button class="btn btn-primary">+ 新建商品</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>分类</th><th>起步价</th><th>MOQ</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>
+      <tr><td class="td-name">飞机盒 Mailer Box</td><td>飞机盒</td><td>RM 1.67</td><td>100 pcs</td><td><span class="badge badge-green">上架</span></td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
+      <tr><td class="td-name">食品盒 Food Box</td><td>食品盒</td><td>RM 0.15</td><td>500 pcs</td><td><span class="badge badge-green">上架</span></td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
+      <tr><td class="td-name">精装盒 Rigid Box</td><td>精装盒</td><td>RM 0.25</td><td>200 pcs</td><td><span class="badge badge-green">上架</span></td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
+      <tr><td class="td-name">纸袋 Paper Bag</td><td>纸袋</td><td>RM 0.10</td><td>500 pcs</td><td><span class="badge badge-green">上架</span></td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
+    </tbody></table></div></div>`;
+}
+
+function renderPrintingMeta(c) {
+  const options = ['0C (无印刷)','1C 单色','4C 四色','4C+0C','4C+1C','4C+4C','1C+0C','1C+1C','Flexo 1C','Flexo 2C','Brown Base','White Base','Laserfoil'];
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">印刷色数库</h1><p class="page-desc">管理印刷选项</p></div><button class="btn btn-primary">+ 新增选项</button></div>
+    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map(o=>`<span class="badge badge-blue" style="padding:8px 16px;font-size:13px">${o}</span>`).join('')}</div></div></div>`;
+}
+
+function renderFinishMeta(c) {
+  const options = ['哑光覆膜','光面覆膜','柔触感 Soft Touch','无覆膜','Spot UV','Emboss','Deboss','Hot-stamp Foil'];
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">表面处理库</h1><p class="page-desc">管理表面处理选项</p></div><button class="btn btn-primary">+ 新增选项</button></div>
+    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map(o=>`<span class="badge badge-purple" style="padding:8px 16px;font-size:13px">${o}</span>`).join('')}</div></div></div>`;
+}
+
+function renderMaterialMeta(c) {
+  const materials = [{name:'白卡纸 300g',fsc:true,food:false},{name:'白卡纸 350g',fsc:true,food:false},{name:'牛卡 E楞',fsc:false,food:false},{name:'瓦楞 B楞',fsc:false,food:false},{name:'食品级纸',fsc:true,food:true}];
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">材质库</h1><p class="page-desc">管理材质选项</p></div><button class="btn btn-primary">+ 新增材质</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>材质名称</th><th>FSC 认证</th><th>食品级</th><th>操作</th></tr></thead>
+    <tbody>${materials.map(m=>`<tr><td class="td-name">${m.name}</td><td>${m.fsc?'✅':'❌'}</td><td>${m.food?'✅':'❌'}</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+// ========== CONTENT ==========
+function renderArticles(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">文章管理</h1><p class="page-desc">博客/资讯内容</p></div><button class="btn btn-primary">+ 新建文章</button></div>
+    <div class="card"><div class="card-body"><div class="empty"><div class="icon">📝</div><p>暂无文章，点击上方按钮创建</p></div></div></div>`;
+}
+
+function renderFAQ(c) {
+  const faqs = DM.get('faqs');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">FAQ 管理</h1><p class="page-desc">前台常见问题</p></div><button class="btn btn-primary" onclick="openFAQModal()">+ 新建 FAQ</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>分类</th><th>问题</th><th>回答</th><th>排序</th><th>操作</th></tr></thead>
+    <tbody>${faqs.map(f=>`<tr><td><span class="badge badge-blue">${f.category}</span></td><td class="td-name">${f.question}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.answer}</td><td>${f.sort}</td><td><button class="btn btn-sm btn-secondary">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteFAQ('${f.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openFAQModal() {
+  showModal('新建 FAQ', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">分类</label><select class="form-select" id="f_category"><option>MOQ</option><option>交期</option><option>配送</option><option>Artwork</option><option>认证</option><option>价格</option></select></div>
+      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="1"></div>
+      <div class="form-group full"><label class="form-label">问题 *</label><input class="form-input" id="f_question"></div>
+      <div class="form-group full"><label class="form-label">回答 *</label><textarea class="form-textarea" id="f_answer" rows="4"></textarea></div>
+    </div>
+  `, () => {
+    const faqs = DM.get('faqs');
+    faqs.push({id:DM.genId('FAQ'),category:val('f_category'),question:val('f_question'),answer:val('f_answer'),sort:parseInt(val('f_sort'))||1});
+    DM.set('faqs', faqs);
+    toast('FAQ 已创建'); renderPage(currentPageId);
+  });
+}
+
+function deleteFAQ(id) {
+  if (!confirm('确定删除？')) return;
+  DM.set('faqs', DM.get('faqs').filter(f=>f.id!==id));
+  toast('FAQ 已删除'); renderPage(currentPageId);
+}
+
+function renderBanner(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">首页 Banner</h1><p class="page-desc">Hero 区域配置</p></div></div>
+    <div class="card"><div class="card-body">
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">主标题</label><input class="form-input" value="Custom Packaging That Elevates Your Brand"></div>
+        <div class="form-group full"><label class="form-label">副标题</label><textarea class="form-textarea" rows="2">From design to delivery — we manufacture premium printed boxes, bags, and labels for businesses worldwide.</textarea></div>
+        <div class="form-group"><label class="form-label">CTA 1 文案</label><input class="form-input" value="Request Free Quote"></div>
+        <div class="form-group"><label class="form-label">CTA 2 文案</label><input class="form-input" value="Explore Products"></div>
+        <div class="form-group full"><label class="form-label">背景图</label><input class="form-input" type="file" accept="image/*"></div>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('Banner 已保存')">保存</button></div>
+    </div></div>`;
+}
+
+function renderAdvantages(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">优势图标区</h1><p class="page-desc">4 个核心卖点</p></div></div>
+    <div class="card"><div class="card-body">
+      ${['Custom Solutions|Tailored packaging design|📦','Fast Turnaround|15-25 day production cycle|⏱️','Factory Direct|Competitive pricing, no middleman|🏭','Global Shipping|Reliable worldwide delivery|🌍'].map((item,i) => {
+        const [title,desc,icon] = item.split('|');
+        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:24px">${icon}</span><div style="flex:1"><div class="form-input" style="font-weight:600;margin-bottom:4px" contenteditable>${title}</div><div class="form-input" style="font-size:12px;color:var(--gray-500)" contenteditable>${desc}</div></div></div>`;
+      }).join('')}
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+    </div></div>`;
+}
+
+function renderStats(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">数据展示</h1><p class="page-desc">About 区域数字配置</p></div></div>
+    <div class="card"><div class="card-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">数字 1</label><input class="form-input" value="30+"></div>
+        <div class="form-group"><label class="form-label">标签 1</label><input class="form-input" value="Years Est."></div>
+        <div class="form-group"><label class="form-label">数字 2</label><input class="form-input" value="500+"></div>
+        <div class="form-group"><label class="form-label">标签 2</label><input class="form-input" value="Clients Served"></div>
+        <div class="form-group"><label class="form-label">数字 3</label><input class="form-input" value="40+"></div>
+        <div class="form-group"><label class="form-label">标签 3</label><input class="form-input" value="Ready Moulds"></div>
+        <div class="form-group"><label class="form-label">数字 4</label><input class="form-input" value="50+"></div>
+        <div class="form-group"><label class="form-label">标签 4</label><input class="form-input" value="Countries Exported"></div>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+    </div></div>`;
+}
+
+function renderTestimonials(c) {
+  const items = DM.get('testimonials');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">客户评价</h1><p class="page-desc">管理客户评价</p></div><button class="btn btn-primary" onclick="openTestimonialModal()">+ 新建评价</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>头像</th><th>姓名</th><th>职位</th><th>公司</th><th>评分</th><th>评价</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>${items.map(t=>`<tr><td><div style="width:32px;height:32px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px">${t.avatar}</div></td><td class="td-name">${t.name}</td><td>${t.position}</td><td>${t.company}</td><td>${'⭐'.repeat(t.rating)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.content}</td><td>${t.active?'<span class="badge badge-green">展示</span>':'<span class="badge badge-gray">隐藏</span>'}</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openTestimonialModal() {
+  showModal('新建评价', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name"></div>
+      <div class="form-group"><label class="form-label">职位</label><input class="form-input" id="f_position"></div>
+      <div class="form-group"><label class="form-label">公司</label><input class="form-input" id="f_company"></div>
+      <div class="form-group"><label class="form-label">评分</label><select class="form-select" id="f_rating"><option>5</option><option>4</option><option>3</option></select></div>
+      <div class="form-group full"><label class="form-label">评价内容 *</label><textarea class="form-textarea" id="f_content" rows="3"></textarea></div>
+    </div>
+  `, () => {
+    const items = DM.get('testimonials');
+    items.push({id:DM.genId('T'),name:val('f_name'),position:val('f_position'),company:val('f_company'),rating:parseInt(val('f_rating')),content:val('f_content'),avatar:val('f_name')[0]||'?',active:true});
+    DM.set('testimonials', items);
+    toast('评价已创建'); renderPage(currentPageId);
+  });
+}
+
+function renderClients(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">合作品牌墙</h1><p class="page-desc">管理展示的客户 Logo</p></div><button class="btn btn-primary">+ 上传 Logo</button></div>
+    <div class="card"><div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
+        ${["L'ORÉAL","AMAZON","SHOPEE","LAZADA","NESTLÉ","UNILEVER"].map(n=>`<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;font-weight:700;color:var(--gray-400);font-size:14px;letter-spacing:2px">${n}</div>`).join('')}
+      </div>
+    </div></div>`;
+}
+
+function renderAbout(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">About 关于我们</h1><p class="page-desc">编辑 About 页面内容</p></div></div>
+    <div class="card"><div class="card-body">
+      <div class="form-group"><label class="form-label">公司介绍</label><textarea class="form-textarea" rows="4">Jiulian Packaging (United YL Printers Sdn Bhd) has been a trusted packaging partner since 2008. With over 30 years of combined experience, we serve 500+ clients across 50+ countries.</textarea></div>
+      <div class="form-group"><label class="form-label">工厂地址</label><input class="form-input" value="Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur"></div>
+      <div class="form-group"><label class="form-label">认证勾选</label>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px">
+          ${['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ'].map(cert=>`<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" checked> ${cert}</label>`).join('')}
+        </div>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+    </div></div>`;
+}
+
+function renderProcess(c) {
+  const steps = [{title:'Enquire & Quote',desc:'Submit your requirements via our 60-second quote form',days:'1-2 days'},{title:'Artwork & Die-Line',desc:'Upload your artwork or use our 40+ ready moulds',days:'2-3 days'},{title:'Proof & Mock-Up',desc:'Digital proof for color + blank mock-up for structure',days:'3-5 days'},{title:'Production',desc:'Mass production with strict QC at every stage',days:'10-14 days'},{title:'Free Delivery',desc:'Free delivery within KL & Selangor',days:'1-3 days'}];
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">How We Work</h1><p class="page-desc">5 步流程配置</p></div></div>
+    <div class="card"><div class="card-body">${steps.map((s,i)=>`<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--gray-100)"><div style="width:40px;height:40px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${i+1}</div><div style="flex:1"><div style="font-weight:600;color:var(--gray-900);margin-bottom:4px" contenteditable>${s.title}</div><div style="font-size:13px;color:var(--gray-500);margin-bottom:4px" contenteditable>${s.desc}</div><span class="badge badge-blue">${s.days}</span></div></div>`).join('')}<div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div></div></div>`;
+}
+
+function renderPrintingGuide(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">印刷指南</h1><p class="page-desc">0C/1C/4C 说明及术语</p></div></div>
+    <div class="card"><div class="card-body">
+      <div class="form-group"><label class="form-label">指南内容</label><textarea class="form-textarea" rows="12">## Reading the Code
+
+The printing code format is: [Front]C[Back]C
+
+- **0C** = No printing (plain)
+- **1C** = Single color print (Flexo)
+- **4C** = Full color CMYK print
+
+### Common Combinations:
+- **4C+0C**: Full color outside, plain inside
+- **4C+1C**: Full color outside, single color inside
+- **4C+4C**: Full color both sides
+- **1C+0C**: Single color outside, plain inside
+
+### Other Terms:
+- **Flexo**: Flexographic printing (cost-effective for simple designs)
+- **Brown Base**: Kraft/natural brown material
+- **White Base**: White cardboard material
+- **Laserfoil**: Metallic foil stamping effect</textarea></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+    </div></div>`;
+}
+
+// ========== FORMS ==========
+function renderFormsList(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">表单列表</h1><p class="page-desc">管理系统表单</p></div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>表单名称</th><th>类型</th><th>提交数</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>
+      <tr><td class="td-name">免费报价表单</td><td>报价</td><td>248</td><td><span class="badge badge-green">启用</span></td><td><button class="btn btn-sm btn-secondary" onclick="navigateTo('forms-quote-config','表单管理','报价表单配置')">配置字段</button></td></tr>
+      <tr><td class="td-name">联系我们表单</td><td>联系</td><td>86</td><td><span class="badge badge-green">启用</span></td><td><button class="btn btn-sm btn-secondary">配置字段</button></td></tr>
+    </tbody></table></div></div>`;
+}
+
+function renderQuoteConfig(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">报价表单配置</h1><p class="page-desc">字段设计器</p></div></div>
+    <div class="card"><div class="card-body">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${[['盒型','下拉选择',true],['尺寸 (cm)','文本输入',true],['采购数量','数字输入',true],['印刷方式','下拉选择',true],['表面处理','下拉选择',true],['特殊工艺','多选',false],['姓名','文本输入',true],['公司','文本输入',false],['电话','文本输入',true],['邮箱','邮箱输入',true],['备注','多行文本',false],['附件上传','文件上传',false]].map(([name,type,req])=>`<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--gray-50);border-radius:6px"><span style="width:20px;text-align:center">${req?'🔴':'⚪'}</span><span style="flex:1;font-weight:500">${name}</span><span class="badge badge-gray">${type}</span><span style="font-size:11px;color:var(--gray-400)">${req?'必填':'选填'}</span></div>`).join('')}
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('配置已保存')">保存配置</button></div>
+    </div></div>`;
+}
+
+function renderFormEntries(c) {
+  const leads = DM.get('leads');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">表单提交记录</h1><p class="page-desc">所有表单提交</p></div><button class="btn btn-secondary btn-sm">📥 导出 Excel</button></div>
+    <div class="toolbar"><div class="search"><input placeholder="搜索..."></div><select><option value="">全部表单</option><option>报价表单</option><option>联系表单</option></select></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>编号</th><th>表单</th><th>姓名</th><th>公司</th><th>盒型</th><th>数量</th><th>提交时间</th><th>操作</th></tr></thead>
+    <tbody>${leads.map(l=>`<tr><td class="td-id">${l.id}</td><td><span class="badge badge-blue">报价</span></td><td class="td-name">${l.name}</td><td>${l.company}</td><td>${l.boxType}</td><td>${l.quantity}</td><td>${l.created}</td><td><button class="btn btn-sm btn-secondary">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+// ========== MEDIA ==========
+function renderMedia(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">媒体库</h1><p class="page-desc">图片和文件管理</p></div><button class="btn btn-primary">+ 上传文件</button></div>
+    <div class="toolbar"><div class="search"><input placeholder="搜索文件..."></div><select><option>全部类型</option><option>图片</option><option>PDF</option><option>其他</option></select></div>
+    <div class="card"><div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
+        ${['产品图-飞机盒.jpg','产品图-食品盒.jpg','Banner-bg.png','Logo-Loreal.png','ISO证书.jpg','FSC证书.jpg'].map(f=>`<div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;cursor:pointer"><div style="height:100px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:24px">🖼️</div><div style="padding:8px;font-size:11px;color:var(--gray-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f}</div></div>`).join('')}
+      </div>
+    </div></div>`;
+}
+
+// ========== CASES ==========
+function renderCasesList(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">案例列表</h1><p class="page-desc">客户案例展示</p></div><button class="btn btn-primary">+ 新建案例</button></div>
+    <div class="card"><div class="card-body"><div class="empty"><div class="icon">🎓</div><p>暂无案例，点击上方按钮创建</p></div></div></div>`;
+}
+
+function renderCasesCategories(c) {
+  const cats = ['F&B','Retail','FMCG','Luxury','E-commerce'];
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">案例分类</h1><p class="page-desc">按行业分类</p></div><button class="btn btn-primary">+ 新建分类</button></div>
+    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${cats.map(c=>`<span class="badge badge-green" style="padding:8px 16px;font-size:13px">${c}</span>`).join('')}</div></div></div>`;
+}
+
+// ========== POLICIES ==========
+function renderPoliciesList(c) {
+  const policies = DM.get('policies');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">政策列表</h1><p class="page-desc">法定页面管理</p></div><button class="btn btn-primary">+ 新建政策</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>标题</th><th>Slug</th><th>更新时间</th><th>操作</th></tr></thead>
+    <tbody>${policies.map(p=>`<tr><td class="td-name">${p.title}</td><td>${p.slug}</td><td>${p.updated}</td><td><button class="btn btn-sm btn-secondary">编辑</button> <button class="btn btn-sm btn-danger">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+// ========== SETTINGS ==========
+function renderSettingsSite(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">基本信息</h1><p class="page-desc">站点和公司信息</p></div></div>
+    <div class="card"><div class="card-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">公司英文名</label><input class="form-input" value="United YL Printers Sdn Bhd"></div>
+        <div class="form-group"><label class="form-label">公司中文名</label><input class="form-input" value="玖联包装印刷"></div>
+        <div class="form-group"><label class="form-label">电话</label><input class="form-input" value="017-583 6916"></div>
+        <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" value="enquiry@uylprinter.com"></div>
+        <div class="form-group full"><label class="form-label">地址</label><input class="form-input" value="Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur"></div>
+        <div class="form-group"><label class="form-label">Google Maps</label><input class="form-input" placeholder="Maps 链接"></div>
+        <div class="form-group"><label class="form-label">Waze</label><input class="form-input" placeholder="Waze 链接"></div>
+        <div class="form-group"><label class="form-label">Facebook</label><input class="form-input" placeholder="FB 页面链接"></div>
+        <div class="form-group"><label class="form-label">Instagram</label><input class="form-input" placeholder="IG 链接"></div>
+        <div class="form-group"><label class="form-label">LinkedIn</label><input class="form-input" placeholder="LinkedIn 链接"></div>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+    </div></div>`;
+}
+
+function renderSettingsSEO(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">SEO 设置</h1><p class="page-desc">搜索引擎优化</p></div></div>
+    <div class="card"><div class="card-body">
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">全站 Title</label><input class="form-input" value="Jiulian Packaging — Premium Printing & Packaging Solutions"></div>
+        <div class="form-group full"><label class="form-label">全站 Description</label><textarea class="form-textarea" rows="2">Jiulian Packaging is a leading printing and packaging manufacturer offering custom boxes, bags, and labels for global brands.</textarea></div>
+        <div class="form-group full"><label class="form-label">Keywords</label><input class="form-input" value="packaging, printing, custom boxes, mailer box, food packaging, Malaysia"></div>
+        <div class="form-group"><label class="form-label">Google Analytics ID</label><input class="form-input" placeholder="G-XXXXXXXXXX"></div>
+        <div class="form-group"><label class="form-label">Google Search Console</label><input class="form-input" placeholder="验证码"></div>
+        <div class="form-group"><label class="form-label">Facebook Pixel ID</label><input class="form-input" placeholder="Pixel ID"></div>
+        <div class="form-group"><label class="form-label">OG 默认图</label><input class="form-input" type="file" accept="image/*"></div>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+    </div></div>`;
+}
+
+function renderSettingsNotifications(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">通知模板</h1><p class="page-desc">自动邮件通知配置</p></div></div>
+    <div class="card"><div class="card-body">
+      <div class="form-group"><label class="form-label">新询盘通知 (发送至)</label><input class="form-input" value="enquiry@uylprinter.com"></div>
+      <div class="form-group"><label class="form-label">新询盘邮件模板</label><textarea class="form-textarea" rows="3">新询盘通知：\n客户：{{客户名}}\n公司：{{公司}}\n盒型：{{盒型}}\n数量：{{数量}}\n\n请及时跟进。</textarea></div>
+      <div class="form-group"><label class="form-label">报价发出模板</label><textarea class="form-textarea" rows="3">尊敬的 {{客户名}}，\n\n感谢您的询价。附件是报价单 {{报价号}}，有效期 {{有效期}}。\n\n如有任何疑问请随时联系我们。</textarea></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+    </div></div>`;
+}
+
+function renderSettingsCerts(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">认证/资质</h1><p class="page-desc">上传管理证书</p></div></div>
+    <div class="card"><div class="card-body">
+      ${['ISO 9001:2015','FSC Certified','Fogra 51'].map(cert=>`<div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><div style="flex:1"><span class="font-bold">${cert}</span></div><div style="width:60px;height:40px;background:var(--gray-100);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px">📄</div><label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" checked> 前台展示</label><button class="btn btn-sm btn-secondary">上传</button></div>`).join('')}
+    </div></div>`;
+}
+
+function renderSettingsShipping(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">配送区域</h1><p class="page-desc">配送范围和运费</p></div></div>
+    <div class="card mb-20"><div class="card-header"><span class="card-title">免费区域</span></div><div class="card-body">
+      <div style="display:flex;flex-wrap:wrap;gap:8px"><span class="badge badge-green" style="padding:8px 16px">Kuala Lumpur</span><span class="badge badge-green" style="padding:8px 16px">Selangor</span></div>
+    </div></div>
+    <div class="card"><div class="card-header"><span class="card-title">收费区域</span></div><div class="card-body">
+      <div class="table-wrap"><table><thead><tr><th>区域</th><th>运费系数</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr><td>Penang</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
+        <tr><td>Johor</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
+        <tr><td>Melaka</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
+        <tr><td>Ipoh</td><td>1.3x</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
+        <tr><td>East Malaysia</td><td>2.5x</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
+      </tbody></table></div>
+    </div></div>`;
+}
+
+function renderSettingsFinance(c) {
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">税率/货币</h1><p class="page-desc">财务参数配置</p></div></div>
+    <div class="card"><div class="card-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">SST 税率</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" value="10" style="width:80px"> <span>%</span></div></div>
+        <div class="form-group"><label class="form-label">货币</label><select class="form-select"><option>MYR (RM)</option><option>USD</option><option>SGD</option></select></div>
+        <div class="form-group"><label class="form-label">报价默认有效期</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" value="14" style="width:80px"> <span>天</span></div></div>
+        <div class="form-group"><label class="form-label">定金比例</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" value="50" style="width:80px"> <span>%</span></div></div>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+    </div></div>`;
+}
+
+function renderUsers(c) {
+  const users = DM.get('users');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">管理员列表</h1><p class="page-desc">系统用户管理</p></div><button class="btn btn-primary" onclick="openUserModal()">+ 新建管理员</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>用户名</th><th>姓名</th><th>角色</th><th>邮箱</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+    <tbody>${users.map(u=>`<tr><td class="td-name">${u.username}</td><td>${u.name}</td><td><span class="badge badge-blue">${u.role}</span></td><td>${u.email}</td><td>${u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">禁用</span>'}</td><td>${u.created}</td><td><button class="btn btn-sm btn-secondary">编辑</button> <button class="btn btn-sm btn-secondary">重置密码</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openUserModal() {
+  showModal('新建管理员', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">用户名 *</label><input class="form-input" id="f_username"></div>
+      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name"></div>
+      <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="f_email"></div>
+      <div class="form-group"><label class="form-label">角色</label><select class="form-select" id="f_role"><option>超级管理员</option><option>销售</option><option>设计</option><option>财务</option><option>运营</option></select></div>
+      <div class="form-group full"><label class="form-label">密码 *</label><input class="form-input" type="password" id="f_password"></div>
+    </div>
+  `, () => {
+    const users = DM.get('users');
+    users.push({id:DM.genId('U'),username:val('f_username'),name:val('f_name'),email:val('f_email'),role:val('f_role'),active:true,created:DM.now()});
+    DM.set('users', users);
+    toast('管理员已创建'); renderPage(currentPageId);
+  });
+}
+
+function renderRoles(c) {
+  const roles = [{name:'超级管理员',perms:'全部权限'},{name:'销售',perms:'线索管理、报价管理、订单管理'},{name:'设计',perms:'商品管理、内容管理、媒体库'},{name:'财务',perms:'订单管理(付款)、数据看板'},{name:'运营',perms:'内容管理、表单管理、案例、政策'}];
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">角色管理</h1><p class="page-desc">权限角色配置</p></div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>角色</th><th>权限范围</th><th>操作</th></tr></thead>
+    <tbody>${roles.map(r=>`<tr><td class="td-name">${r.name}</td><td>${r.perms}</td><td><button class="btn btn-sm btn-secondary">编辑权限</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function renderLogs(c) {
+  const logs = DM.get('logs');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">操作日志</h1><p class="page-desc">审计追溯</p></div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>时间</th><th>用户</th><th>操作</th><th>详情</th></tr></thead>
+    <tbody>${logs.map(l=>`<tr><td>${l.time}</td><td class="td-name">${l.user}</td><td><span class="badge badge-blue">${l.action}</span></td><td>${l.detail}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+// ========== UTILITIES ==========
+function val(id) { return document.getElementById(id)?.value?.trim() || '' }
+
+function showModal(title, bodyHtml, onSave, buttons) {
+  const modal = document.getElementById('modal');
+  const overlay = document.getElementById('modalOverlay');
+  const footerBtns = buttons ? buttons.map(b=>`<button class="btn ${b.cls}" id="modal-btn-${b.label}">${b.label}</button>`).join('') :
+    `<button class="btn btn-secondary" onclick="closeModal()">取消</button><button class="btn btn-primary" id="modalSaveBtn">保存</button>`;
+  modal.innerHTML = `
+    <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body">${bodyHtml}</div>
+    <div class="modal-footer">${footerBtns}</div>`;
+  overlay.classList.add('active');
+  if (buttons) {
+    buttons.forEach(b => {
+      document.getElementById('modal-btn-' + b.label)?.addEventListener('click', b.fn);
+    });
+  } else if (onSave) {
+    document.getElementById('modalSaveBtn')?.addEventListener('click', () => { onSave(); closeModal(); });
+  }
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active') }
+document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal() });
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function logout() {
+  if (confirm('确定退出登录？')) {
+    localStorage.removeItem('jiulian_admin_token');
+    localStorage.removeItem('jiulian_admin_user');
+    window.location.href = '/login.html';
+  }
+}
+
+function exportCSV(type) { toast('CSV 导出功能开发中') }
+function filterLeads(v) { toast('搜索: ' + v) }
+function filterLeadStatus(v) { toast('筛选: ' + v) }
+
+// ========== INIT ==========
+window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('jiulian_admin_token') !== 'authenticated') {
+    window.location.href = '/login.html';
+    return;
+  }
+  seedData();
+  renderSidebar();
+  navigateTo('dashboard-overview', '数据看板', '概览');
+  // Auto-expand first group
+  toggleGroup('dashboard');
+});
+</script>
+</body>
+</html>

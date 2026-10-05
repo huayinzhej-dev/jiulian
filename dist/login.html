@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理员登录 - 玖联包装后台系统</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #1a5632 0%, #0d3b1f 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 420px;
+      overflow: hidden;
+    }
+
+    .login-header {
+      background: linear-gradient(135deg, #1a5632 0%, #2d7a4a 100%);
+      padding: 40px 30px;
+      text-align: center;
+    }
+
+    .login-logo {
+      width: 80px;
+      height: 80px;
+      background: white;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      padding: 8px;
+    }
+    .login-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .login-title {
+      color: white;
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .login-subtitle {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+    }
+
+    .login-form {
+      padding: 40px 30px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    .form-label {
+      display: block;
+      color: #374151;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: #1a5632;
+      box-shadow: 0 0 0 3px rgba(26, 86, 50, 0.1);
+    }
+
+    .form-input.error {
+      border-color: #ef4444;
+    }
+
+    .error-message {
+      color: #ef4444;
+      font-size: 12px;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1a5632 0%, #2d7a4a 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(26, 86, 50, 0.3);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .login-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .forgot-password {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .forgot-password a {
+      color: #1a5632;
+      font-size: 14px;
+      text-decoration: none;
+    }
+
+    .forgot-password a:hover {
+      text-decoration: underline;
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #ef4444;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: slideIn 0.3s ease-out;
+      z-index: 1000;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-header">
+      <div class="login-logo"><img src="/images/logo.png" alt="玖联包装"></div>
+      <h1 class="login-title">玖联包装后台系统</h1>
+      <p class="login-subtitle">Jiulian Packaging Admin Portal</p>
+    </div>
+    
+    <form class="login-form" id="loginForm">
+      <div class="form-group">
+        <label class="form-label" for="username">用户名 / Username</label>
+        <input 
+          type="text" 
+          id="username" 
+          class="form-input" 
+          placeholder="请输入用户名"
+          autocomplete="username"
+        >
+        <div class="error-message" id="usernameError">请输入用户名</div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label" for="password">密码 / Password</label>
+        <input 
+          type="password" 
+          id="password" 
+          class="form-input" 
+          placeholder="请输入密码"
+          autocomplete="current-password"
+        >
+        <div class="error-message" id="passwordError">请输入密码</div>
+      </div>
+      
+      <button type="submit" class="login-btn" id="loginBtn">登录 / Login</button>
+      
+      <div class="forgot-password">
+        <a href="#" onclick="showDemoCredentials()">查看演示账号 / Demo Credentials</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // Demo credentials (in production, use proper backend authentication)
+    const DEMO_CREDENTIALS = {
+      username: 'admin',
+      password: 'jiulian2024'
+    };
+
+    const loginForm = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+
+    function showNotification(message) {
+      const notif = document.createElement('div');
+      notif.className = 'notification';
+      notif.textContent = message;
+      document.body.appendChild(notif);
+      setTimeout(() => notif.remove(), 3000);
+    }
+
+    function showDemoCredentials() {
+      alert(`演示账号信息 / Demo Credentials:\n\n用户名 / Username: ${DEMO_CREDENTIALS.username}\n密码 / Password: ${DEMO_CREDENTIALS.password}\n\n注意：这是演示账号，生产环境请使用正式账号`);
+    }
+
+    function validateForm() {
+      let isValid = true;
+      
+      // Reset errors
+      document.querySelectorAll('.error-message').forEach(el => el.classList.remove('show'));
+      document.querySelectorAll('.form-input').forEach(el => el.classList.remove('error'));
+      
+      // Validate username
+      if (!usernameInput.value.trim()) {
+        document.getElementById('usernameError').classList.add('show');
+        usernameInput.classList.add('error');
+        isValid = false;
+      }
+      
+      // Validate password
+      if (!passwordInput.value.trim()) {
+        document.getElementById('passwordError').classList.add('show');
+        passwordInput.classList.add('error');
+        isValid = false;
+      }
+      
+      return isValid;
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (!validateForm()) {
+        return;
+      }
+      
+      loginBtn.disabled = true;
+      loginBtn.textContent = '登录中...';
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+      
+      // Check credentials (in production, verify against backend)
+      if (username === DEMO_CREDENTIALS.username && password === DEMO_CREDENTIALS.password) {
+        // Save auth token
+        localStorage.setItem('jiulian_admin_token', 'authenticated');
+        localStorage.setItem('jiulian_admin_user', JSON.stringify({
+          username: username,
+          role: '超级管理员',
+          loginTime: new Date().toISOString()
+        }));
+        
+        showNotification('登录成功！正在跳转...');
+        
+        // Redirect to admin dashboard after short delay
+        setTimeout(() => {
+          window.location.href = '/admin.html';
+        }, 1000);
+      } else {
+        showNotification('用户名或密码错误，请重试');
+        loginBtn.disabled = false;
+        loginBtn.textContent = '登录 / Login';
+      }
+    });
+
+    // Check if already logged in
+    window.addEventListener('DOMContentLoaded', () => {
+      const token = localStorage.getItem('jiulian_admin_token');
+      if (token === 'authenticated') {
+        window.location.href = '/admin.html';
+      }
+    });
+
+    // Allow Enter key to submit
+    [usernameInput, passwordInput].forEach(input => {
+      input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          loginForm.dispatchEvent(new Event('submit'));
+        }
+      });
+    });
+  </script>
+</body>
+</html>
