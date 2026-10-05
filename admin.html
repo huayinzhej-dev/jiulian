@@ -625,7 +625,25 @@ function renderCustomers(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">客户库</h1><p class="page-desc">按公司聚合的客户列表</p></div><button class="btn btn-primary" onclick="openCustomerModal()">+ 新建客户</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>公司</th><th>联系人</th><th>电话</th><th>邮箱</th><th>累计订单</th><th>累计金额</th><th>等级</th><th>操作</th></tr></thead>
-    <tbody>${customers.map(c=>`<tr><td class="td-name">${c.company}</td><td>${c.contact}</td><td>${c.phone}</td><td>${c.email}</td><td>${c.orders}</td><td>RM ${c.totalAmount.toLocaleString()}</td><td><span class="badge ${c.level==='VIP'?'badge-purple':'badge-gray'}">${c.level}</span></td><td><button class="btn btn-sm btn-secondary">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${customers.map(c=>`<tr><td class="td-name">${c.company}</td><td>${c.contact}</td><td>${c.phone}</td><td>${c.email}</td><td>${c.orders}</td><td>RM ${c.totalAmount.toLocaleString()}</td><td><span class="badge ${c.level==='VIP'?'badge-purple':'badge-gray'}">${c.level}</span></td><td><button class="btn btn-sm btn-secondary" onclick="viewCustomer('${c.id}')">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function viewCustomer(id) {
+  const c = DM.get('customers').find(x => x.id === id);
+  if (!c) return;
+  showModal('客户详情', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">公司</label><div style="padding:8px 0;font-weight:600">${c.company}</div></div>
+      <div class="form-group"><label class="form-label">联系人</label><div style="padding:8px 0">${c.contact}</div></div>
+      <div class="form-group"><label class="form-label">电话</label><div style="padding:8px 0">${c.phone}</div></div>
+      <div class="form-group"><label class="form-label">邮箱</label><div style="padding:8px 0">${c.email}</div></div>
+      <div class="form-group"><label class="form-label">累计订单</label><div style="padding:8px 0">${c.orders}</div></div>
+      <div class="form-group"><label class="form-label">累计金额</label><div style="padding:8px 0">RM ${c.totalAmount.toLocaleString()}</div></div>
+      <div class="form-group"><label class="form-label">等级</label><div style="padding:8px 0"><span class="badge ${c.level==='VIP'?'badge-purple':'badge-gray'}">${c.level}</span></div></div>
+    </div>
+  `, null, [{label:'关闭',cls:'btn-secondary'}]);
+  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
+  document.getElementById('modalSaveBtn')?.remove();
 }
 
 function openCustomerModal() {
@@ -660,7 +678,48 @@ function renderQuotesList(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">报价单</h1><p class="page-desc">管理所有报价</p></div><button class="btn btn-primary" onclick="navigateTo('quotes-new','报价管理','新建报价')">+ 新建报价</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>报价单号</th><th>客户</th><th>产品</th><th>数量</th><th>总额(RM)</th><th>SST 10%</th><th>状态</th><th>有效期</th><th>操作</th></tr></thead>
-    <tbody>${quotes.map(q=>`<tr><td class="td-id">${q.id}</td><td class="td-name">${q.customer}</td><td>${q.product}</td><td>${q.quantity}</td><td>${q.subtotal.toFixed(2)}</td><td>${q.sst.toFixed(2)}</td><td>${statusBadge(q.status)}</td><td>${q.validUntil}</td><td><button class="btn btn-sm btn-secondary">查看</button> <button class="btn btn-sm btn-secondary">编辑</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${quotes.map(q=>`<tr><td class="td-id">${q.id}</td><td class="td-name">${q.customer}</td><td>${q.product}</td><td>${q.quantity}</td><td>${q.subtotal.toFixed(2)}</td><td>${q.sst.toFixed(2)}</td><td>${statusBadge(q.status)}</td><td>${q.validUntil}</td><td><button class="btn btn-sm btn-secondary" onclick="viewQuote('${q.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="editQuote('${q.id}')">编辑</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function viewQuote(id) {
+  const q = DM.get('quotes').find(x => x.id === id);
+  if (!q) return;
+  showModal('报价单详情 ' + q.id, `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${q.customer}</div></div>
+      <div class="form-group"><label class="form-label">产品</label><div style="padding:8px 0">${q.product}</div></div>
+      <div class="form-group"><label class="form-label">数量</label><div style="padding:8px 0">${q.quantity}</div></div>
+      <div class="form-group"><label class="form-label">总额</label><div style="padding:8px 0">RM ${q.subtotal.toFixed(2)}</div></div>
+      <div class="form-group"><label class="form-label">SST (10%)</label><div style="padding:8px 0">RM ${q.sst.toFixed(2)}</div></div>
+      <div class="form-group"><label class="form-label">合计</label><div style="padding:8px 0;font-weight:700;font-size:16px;color:var(--primary)">RM ${(q.subtotal + q.sst).toFixed(2)}</div></div>
+      <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0">${statusBadge(q.status)}</div></div>
+      <div class="form-group"><label class="form-label">有效期至</label><div style="padding:8px 0">${q.validUntil}</div></div>
+    </div>
+  `, null, [{label:'关闭',cls:'btn-secondary'}]);
+  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
+  document.getElementById('modalSaveBtn')?.remove();
+}
+
+function editQuote(id) {
+  const q = DM.get('quotes').find(x => x.id === id);
+  if (!q) return;
+  showModal('编辑报价 ' + q.id, `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">客户</label><input class="form-input" id="fq_customer" value="${q.customer}"></div>
+      <div class="form-group"><label class="form-label">产品</label><input class="form-input" id="fq_product" value="${q.product}"></div>
+      <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" id="fq_quantity" value="${q.quantity}"></div>
+      <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="fq_status"><option ${q.status==='draft'?'selected':''}>draft</option><option ${q.status==='sent'?'selected':''}>sent</option><option ${q.status==='approved'?'selected':''}>approved</option><option ${q.status==='rejected'?'selected':''}>rejected</option></select></div>
+      <div class="form-group"><label class="form-label">有效期至</label><input class="form-input" type="date" id="fq_validUntil" value="${q.validUntil}"></div>
+    </div>
+  `, () => {
+    q.customer = val('fq_customer');
+    q.product = val('fq_product');
+    q.quantity = parseInt(val('fq_quantity')) || q.quantity;
+    q.status = val('fq_status');
+    q.validUntil = val('fq_validUntil');
+    DM.set('quotes', DM.get('quotes'));
+    toast('报价已更新'); renderPage(currentPageId);
+  });
 }
 
 function renderQuoteNew(c) {
@@ -686,7 +745,7 @@ function renderQuoteNew(c) {
         <div class="flex justify-between" style="font-size:16px"><span class="font-bold">总计:</span><span class="font-bold" style="color:var(--primary)">RM 0.00</span></div>
       </div>
       <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
-        <button class="btn btn-secondary">保存草稿</button>
+        <button class="btn btn-secondary" onclick="toast('草稿已保存')">保存草稿</button>
         <button class="btn btn-primary" onclick="toast('报价单已生成')">生成报价单</button>
       </div>
     </div></div>`;
@@ -694,7 +753,7 @@ function renderQuoteNew(c) {
 
 function renderPricebook(c) {
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">价格簿</h1><p class="page-desc">按盒型 × 数量阶梯维护基础单价</p></div><button class="btn btn-secondary btn-sm">📥 导入</button></div>
+    <div class="page-header"><div><h1 class="page-title">价格簿</h1><p class="page-desc">按盒型 × 数量阶梯维护基础单价</p></div><button class="btn btn-secondary btn-sm" onclick="toast('导入功能开发中')">📥 导入</button></div>
     <div class="tabs"><div class="tab active">飞机盒</div><div class="tab">套筒盒</div><div class="tab">天地盖</div><div class="tab">手提盒</div><div class="tab">食品盒</div><div class="tab">纸袋</div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>SKU</th><th>尺寸(cm)</th><th>100pcs</th><th>300pcs</th><th>500pcs</th><th>1000pcs</th><th>2000pcs</th><th>3000pcs</th><th>5000pcs</th></tr></thead>
     <tbody>
@@ -727,7 +786,25 @@ function renderOrdersList(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">全部订单</h1><p class="page-desc">订单管理</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>金额(RM)</th><th>定金状态</th><th>生产状态</th><th>预计交货</th><th>负责人</th><th>操作</th></tr></thead>
-    <tbody>${orders.map(o=>`<tr><td class="td-id">${o.id}</td><td class="td-name">${o.customer}</td><td>${o.amount.toFixed(2)}</td><td>${o.depositPaid?'<span class="badge badge-green">已付</span>':'<span class="badge badge-yellow">待付</span>'}</td><td>${productionBadge(o.productionStatus)}</td><td>${o.deliveryDate}</td><td>${o.assignee}</td><td><button class="btn btn-sm btn-secondary">详情</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${orders.map(o=>`<tr><td class="td-id">${o.id}</td><td class="td-name">${o.customer}</td><td>${o.amount.toFixed(2)}</td><td>${o.depositPaid?'<span class="badge badge-green">已付</span>':'<span class="badge badge-yellow">待付</span>'}</td><td>${productionBadge(o.productionStatus)}</td><td>${o.deliveryDate}</td><td>${o.assignee}</td><td><button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function viewOrder(id) {
+  const o = DM.get('orders').find(x => x.id === id);
+  if (!o) return;
+  const statusLabels = {pending_deposit:'待付定金',deposit_paid:'已付定金',artwork:'刀模/Artwork',proofing:'打样中',confirming:'待客户确认',producing:'生产中',shipping:'待发货',shipped:'已发货',done:'完成'};
+  showModal('订单详情 ' + o.id, `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${o.customer}</div></div>
+      <div class="form-group"><label class="form-label">金额</label><div style="padding:8px 0">RM ${o.amount.toFixed(2)}</div></div>
+      <div class="form-group"><label class="form-label">定金状态</label><div style="padding:8px 0">${o.depositPaid?'<span class="badge badge-green">已付</span>':'<span class="badge badge-yellow">待付</span>'}</div></div>
+      <div class="form-group"><label class="form-label">生产状态</label><div style="padding:8px 0">${productionBadge(o.productionStatus)}</div></div>
+      <div class="form-group"><label class="form-label">预计交货</label><div style="padding:8px 0">${o.deliveryDate}</div></div>
+      <div class="form-group"><label class="form-label">负责人</label><div style="padding:8px 0">${o.assignee}</div></div>
+    </div>
+  `, null, [{label:'关闭',cls:'btn-secondary'}]);
+  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
+  document.getElementById('modalSaveBtn')?.remove();
 }
 
 function productionBadge(s) {
@@ -752,7 +829,7 @@ function renderPayments(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">收款记录</h1><p class="page-desc">管理定金和尾款</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>类型</th><th>金额(RM)</th><th>付款方式</th><th>到账日期</th><th>凭证</th></tr></thead>
-    <tbody><tr><td class="td-id">OD-2026-001</td><td class="td-name">L'Oréal Malaysia</td><td><span class="badge badge-blue">定金 50%</span></td><td>918.50</td><td>银行转账</td><td>2026-10-04</td><td><button class="btn btn-sm btn-secondary">查看</button></td></tr></tbody></table></div></div>`;
+    <tbody><tr><td class="td-id">OD-2026-001</td><td class="td-name">L'Oréal Malaysia</td><td><span class="badge badge-blue">定金 50%</span></td><td>918.50</td><td>银行转账</td><td>2026-10-04</td><td><button class="btn btn-sm btn-secondary" onclick="toast('凭证查看功能开发中')">查看</button></td></tr></tbody></table></div></div>`;
 }
 
 function renderDelivery(c) {
@@ -764,12 +841,12 @@ function renderDelivery(c) {
 
 function renderDieline(c) {
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">刀模/Artwork 模板库</h1><p class="page-desc">40+ 现成刀模管理</p></div><button class="btn btn-primary">+ 上传刀模</button></div>
+    <div class="page-header"><div><h1 class="page-title">刀模/Artwork 模板库</h1><p class="page-desc">40+ 现成刀模管理</p></div><button class="btn btn-primary" onclick="toast('上传功能开发中')">+ 上传刀模</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>编号</th><th>适用盒型</th><th>尺寸</th><th>刀模费</th><th>状态</th><th>操作</th></tr></thead>
     <tbody>
-      <tr><td class="td-id">DIE-001</td><td>飞机盒</td><td>24×22×4</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary">下载</button></td></tr>
-      <tr><td class="td-id">DIE-002</td><td>飞机盒</td><td>15×14×4.3</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary">下载</button></td></tr>
-      <tr><td class="td-id">DIE-003</td><td>套筒盒</td><td>33×21.6×5</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary">下载</button></td></tr>
+      <tr><td class="td-id">DIE-001</td><td>飞机盒</td><td>24×22×4</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary" onclick="toast('下载功能开发中')">下载</button></td></tr>
+      <tr><td class="td-id">DIE-002</td><td>飞机盒</td><td>15×14×4.3</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary" onclick="toast('下载功能开发中')">下载</button></td></tr>
+      <tr><td class="td-id">DIE-003</td><td>套筒盒</td><td>33×21.6×5</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary" onclick="toast('下载功能开发中')">下载</button></td></tr>
     </tbody></table></div></div>`;
 }
 
@@ -777,7 +854,7 @@ function renderProof(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">打样管理</h1><p class="page-desc">数字打样与空白盒 mock-up</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>打样类型</th><th>状态</th><th>上传时间</th><th>操作</th></tr></thead>
-    <tbody><tr><td class="td-id">OD-2026-001</td><td class="td-name">L'Oréal Malaysia</td><td>数字打样 (颜色确认)</td><td><span class="badge badge-yellow">待客户确认</span></td><td>2026-10-04</td><td><button class="btn btn-sm btn-secondary">查看</button> <button class="btn btn-sm btn-primary">发送确认</button></td></tr></tbody></table></div></div>`;
+    <tbody><tr><td class="td-id">OD-2026-001</td><td class="td-name">L'Oréal Malaysia</td><td>数字打样 (颜色确认)</td><td><span class="badge badge-yellow">待客户确认</span></td><td>2026-10-04</td><td><button class="btn btn-sm btn-secondary" onclick="toast('打样详情功能开发中')">查看</button> <button class="btn btn-sm btn-primary" onclick="toast('确认已发送')">发送确认</button></td></tr></tbody></table></div></div>`;
 }
 
 // ========== PRODUCTS ==========
@@ -786,23 +863,41 @@ function renderCategories(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">盒型分类</h1><p class="page-desc">管理产品分类</p></div><button class="btn btn-primary" onclick="openCategoryModal()">+ 新建分类</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>排序</th><th>图标</th><th>名称</th><th>Slug</th><th>状态</th><th>操作</th></tr></thead>
-    <tbody>${cats.map(cat=>`<tr><td>${cat.sort}</td><td>${cat.icon}</td><td class="td-name">${cat.name}</td><td>${cat.slug}</td><td>${cat.active?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary">编辑</button> <button class="btn btn-sm btn-danger">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${cats.map(cat=>`<tr><td>${cat.sort}</td><td>${cat.icon}</td><td class="td-name">${cat.name}</td><td>${cat.slug}</td><td>${cat.active?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openCategoryModal('${cat.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
-function openCategoryModal() {
-  showModal('新建分类', `
+function openCategoryModal(id) {
+  const cats = DM.get('categories');
+  const cat = id ? cats.find(x => x.id === id) : null;
+  const title = cat ? '编辑分类' : '新建分类';
+  showModal(title, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="f_name"></div>
-      <div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="f_slug"></div>
-      <div class="form-group"><label class="form-label">图标</label><input class="form-input" id="f_icon" value="📦"></div>
-      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="1"></div>
+      <div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="f_name" value="${cat?.name||''}"></div>
+      <div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="f_slug" value="${cat?.slug||''}"></div>
+      <div class="form-group"><label class="form-label">图标</label><input class="form-input" id="f_icon" value="${cat?.icon||'📦'}"></div>
+      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="${cat?.sort||1}"></div>
     </div>
   `, () => {
-    const cats = DM.get('categories');
-    cats.push({id:DM.genId('CAT'),name:val('f_name'),slug:val('f_slug')||val('f_name').toLowerCase().replace(/\s+/g,'-'),icon:val('f_icon'),sort:parseInt(val('f_sort'))||1,active:true});
+    const name = val('f_name');
+    if (!name) { toast('请填写分类名称'); return; }
+    if (cat) {
+      cat.name = name;
+      cat.slug = val('f_slug') || name.toLowerCase().replace(/\s+/g,'-');
+      cat.icon = val('f_icon');
+      cat.sort = parseInt(val('f_sort')) || 1;
+    } else {
+      cats.push({id:DM.genId('CAT'),name,slug:val('f_slug')||name.toLowerCase().replace(/\s+/g,'-'),icon:val('f_icon'),sort:parseInt(val('f_sort'))||1,active:true});
+    }
     DM.set('categories', cats);
-    toast('分类已创建'); renderPage(currentPageId);
+    toast(cat ? '分类已更新' : '分类已创建'); renderPage(currentPageId);
   });
+}
+
+function deleteCategory(id) {
+  if (!confirm('确定删除此分类？')) return;
+  const cats = DM.get('categories').filter(c => c.id !== id);
+  DM.set('categories', cats);
+  toast('分类已删除'); renderPage(currentPageId);
 }
 
 function renderProductsList(c) {
@@ -891,29 +986,29 @@ function deleteProduct(id) {
 function renderPrintingMeta(c) {
   const options = ['0C (无印刷)','1C 单色','4C 四色','4C+0C','4C+1C','4C+4C','1C+0C','1C+1C','Flexo 1C','Flexo 2C','Brown Base','White Base','Laserfoil'];
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">印刷色数库</h1><p class="page-desc">管理印刷选项</p></div><button class="btn btn-primary">+ 新增选项</button></div>
+    <div class="page-header"><div><h1 class="page-title">印刷色数库</h1><p class="page-desc">管理印刷选项</p></div><button class="btn btn-primary" onclick="toast('新增选项功能开发中')">+ 新增选项</button></div>
     <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map(o=>`<span class="badge badge-blue" style="padding:8px 16px;font-size:13px">${o}</span>`).join('')}</div></div></div>`;
 }
 
 function renderFinishMeta(c) {
   const options = ['哑光覆膜','光面覆膜','柔触感 Soft Touch','无覆膜','Spot UV','Emboss','Deboss','Hot-stamp Foil'];
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">表面处理库</h1><p class="page-desc">管理表面处理选项</p></div><button class="btn btn-primary">+ 新增选项</button></div>
+    <div class="page-header"><div><h1 class="page-title">表面处理库</h1><p class="page-desc">管理表面处理选项</p></div><button class="btn btn-primary" onclick="toast('新增选项功能开发中')">+ 新增选项</button></div>
     <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map(o=>`<span class="badge badge-purple" style="padding:8px 16px;font-size:13px">${o}</span>`).join('')}</div></div></div>`;
 }
 
 function renderMaterialMeta(c) {
   const materials = [{name:'白卡纸 300g',fsc:true,food:false},{name:'白卡纸 350g',fsc:true,food:false},{name:'牛卡 E楞',fsc:false,food:false},{name:'瓦楞 B楞',fsc:false,food:false},{name:'食品级纸',fsc:true,food:true}];
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">材质库</h1><p class="page-desc">管理材质选项</p></div><button class="btn btn-primary">+ 新增材质</button></div>
+    <div class="page-header"><div><h1 class="page-title">材质库</h1><p class="page-desc">管理材质选项</p></div><button class="btn btn-primary" onclick="toast('新增材质功能开发中')">+ 新增材质</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>材质名称</th><th>FSC 认证</th><th>食品级</th><th>操作</th></tr></thead>
-    <tbody>${materials.map(m=>`<tr><td class="td-name">${m.name}</td><td>${m.fsc?'✅':'❌'}</td><td>${m.food?'✅':'❌'}</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${materials.map((m,i)=>`<tr><td class="td-name">${m.name}</td><td>${m.fsc?'✅':'❌'}</td><td>${m.food?'✅':'❌'}</td><td><button class="btn btn-sm btn-secondary" onclick="toast('材质编辑功能开发中')">编辑</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 // ========== CONTENT ==========
 function renderArticles(c) {
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">文章管理</h1><p class="page-desc">博客/资讯内容</p></div><button class="btn btn-primary">+ 新建文章</button></div>
+    <div class="page-header"><div><h1 class="page-title">文章管理</h1><p class="page-desc">博客/资讯内容</p></div><button class="btn btn-primary" onclick="toast('文章编辑功能开发中')">+ 新建文章</button></div>
     <div class="card"><div class="card-body"><div class="empty"><div class="icon">📝</div><p>暂无文章，点击上方按钮创建</p></div></div></div>`;
 }
 
@@ -922,22 +1017,35 @@ function renderFAQ(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">FAQ 管理</h1><p class="page-desc">前台常见问题</p></div><button class="btn btn-primary" onclick="openFAQModal()">+ 新建 FAQ</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>分类</th><th>问题</th><th>回答</th><th>排序</th><th>操作</th></tr></thead>
-    <tbody>${faqs.map(f=>`<tr><td><span class="badge badge-blue">${f.category}</span></td><td class="td-name">${f.question}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.answer}</td><td>${f.sort}</td><td><button class="btn btn-sm btn-secondary">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteFAQ('${f.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${faqs.map(f=>`<tr><td><span class="badge badge-blue">${f.category}</span></td><td class="td-name">${f.question}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.answer}</td><td>${f.sort}</td><td><button class="btn btn-sm btn-secondary" onclick="openFAQModal('${f.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteFAQ('${f.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
-function openFAQModal() {
-  showModal('新建 FAQ', `
+function openFAQModal(id) {
+  const faqs = DM.get('faqs');
+  const f = id ? faqs.find(x => x.id === id) : null;
+  const title = f ? '编辑 FAQ' : '新建 FAQ';
+  const cats = ['MOQ','交期','配送','Artwork','认证','价格'];
+  showModal(title, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">分类</label><select class="form-select" id="f_category"><option>MOQ</option><option>交期</option><option>配送</option><option>Artwork</option><option>认证</option><option>价格</option></select></div>
-      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="1"></div>
-      <div class="form-group full"><label class="form-label">问题 *</label><input class="form-input" id="f_question"></div>
-      <div class="form-group full"><label class="form-label">回答 *</label><textarea class="form-textarea" id="f_answer" rows="4"></textarea></div>
+      <div class="form-group"><label class="form-label">分类</label><select class="form-select" id="f_category">${cats.map(c=>`<option ${f?.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="${f?.sort||1}"></div>
+      <div class="form-group full"><label class="form-label">问题 *</label><input class="form-input" id="f_question" value="${f?.question||''}"></div>
+      <div class="form-group full"><label class="form-label">回答 *</label><textarea class="form-textarea" id="f_answer" rows="4">${f?.answer||''}</textarea></div>
     </div>
   `, () => {
-    const faqs = DM.get('faqs');
-    faqs.push({id:DM.genId('FAQ'),category:val('f_category'),question:val('f_question'),answer:val('f_answer'),sort:parseInt(val('f_sort'))||1});
+    const question = val('f_question');
+    const answer = val('f_answer');
+    if (!question || !answer) { toast('请填写问题和回答'); return; }
+    if (f) {
+      f.category = val('f_category');
+      f.question = question;
+      f.answer = answer;
+      f.sort = parseInt(val('f_sort')) || 1;
+    } else {
+      faqs.push({id:DM.genId('FAQ'),category:val('f_category'),question,answer,sort:parseInt(val('f_sort'))||1});
+    }
     DM.set('faqs', faqs);
-    toast('FAQ 已创建'); renderPage(currentPageId);
+    toast(f ? 'FAQ 已更新' : 'FAQ 已创建'); renderPage(currentPageId);
   });
 }
 
@@ -997,29 +1105,49 @@ function renderTestimonials(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">客户评价</h1><p class="page-desc">管理客户评价</p></div><button class="btn btn-primary" onclick="openTestimonialModal()">+ 新建评价</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>头像</th><th>姓名</th><th>职位</th><th>公司</th><th>评分</th><th>评价</th><th>状态</th><th>操作</th></tr></thead>
-    <tbody>${items.map(t=>`<tr><td><div style="width:32px;height:32px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px">${t.avatar}</div></td><td class="td-name">${t.name}</td><td>${t.position}</td><td>${t.company}</td><td>${'⭐'.repeat(t.rating)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.content}</td><td>${t.active?'<span class="badge badge-green">展示</span>':'<span class="badge badge-gray">隐藏</span>'}</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${items.map(t=>`<tr><td><div style="width:32px;height:32px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px">${t.avatar}</div></td><td class="td-name">${t.name}</td><td>${t.position}</td><td>${t.company}</td><td>${'⭐'.repeat(t.rating)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.content}</td><td>${t.active?'<span class="badge badge-green">展示</span>':'<span class="badge badge-gray">隐藏</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openTestimonialModal('${t.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteTestimonial('${t.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
-function openTestimonialModal() {
-  showModal('新建评价', `
+function openTestimonialModal(id) {
+  const items = DM.get('testimonials');
+  const t = id ? items.find(x => x.id === id) : null;
+  const title = t ? '编辑评价' : '新建评价';
+  showModal(title, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name"></div>
-      <div class="form-group"><label class="form-label">职位</label><input class="form-input" id="f_position"></div>
-      <div class="form-group"><label class="form-label">公司</label><input class="form-input" id="f_company"></div>
-      <div class="form-group"><label class="form-label">评分</label><select class="form-select" id="f_rating"><option>5</option><option>4</option><option>3</option></select></div>
-      <div class="form-group full"><label class="form-label">评价内容 *</label><textarea class="form-textarea" id="f_content" rows="3"></textarea></div>
+      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${t?.name||''}"></div>
+      <div class="form-group"><label class="form-label">职位</label><input class="form-input" id="f_position" value="${t?.position||''}"></div>
+      <div class="form-group"><label class="form-label">公司</label><input class="form-input" id="f_company" value="${t?.company||''}"></div>
+      <div class="form-group"><label class="form-label">评分</label><select class="form-select" id="f_rating">${[5,4,3].map(r=>`<option value="${r}" ${t?.rating===r?'selected':''}>${r}</option>`).join('')}</select></div>
+      <div class="form-group full"><label class="form-label">评价内容 *</label><textarea class="form-textarea" id="f_content" rows="3">${t?.content||''}</textarea></div>
     </div>
   `, () => {
-    const items = DM.get('testimonials');
-    items.push({id:DM.genId('T'),name:val('f_name'),position:val('f_position'),company:val('f_company'),rating:parseInt(val('f_rating')),content:val('f_content'),avatar:val('f_name')[0]||'?',active:true});
+    const name = val('f_name');
+    const content = val('f_content');
+    if (!name || !content) { toast('请填写姓名和评价内容'); return; }
+    if (t) {
+      t.name = name;
+      t.position = val('f_position');
+      t.company = val('f_company');
+      t.rating = parseInt(val('f_rating'));
+      t.content = content;
+      t.avatar = name[0] || '?';
+    } else {
+      items.push({id:DM.genId('T'),name,position:val('f_position'),company:val('f_company'),rating:parseInt(val('f_rating')),content,avatar:name[0]||'?',active:true});
+    }
     DM.set('testimonials', items);
-    toast('评价已创建'); renderPage(currentPageId);
+    toast(t ? '评价已更新' : '评价已创建'); renderPage(currentPageId);
   });
+}
+
+function deleteTestimonial(id) {
+  if (!confirm('确定删除此评价？')) return;
+  DM.set('testimonials', DM.get('testimonials').filter(t => t.id !== id));
+  toast('评价已删除'); renderPage(currentPageId);
 }
 
 function renderClients(c) {
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">合作品牌墙</h1><p class="page-desc">管理展示的客户 Logo</p></div><button class="btn btn-primary">+ 上传 Logo</button></div>
+    <div class="page-header"><div><h1 class="page-title">合作品牌墙</h1><p class="page-desc">管理展示的客户 Logo</p></div><button class="btn btn-primary" onclick="toast('Logo上传功能开发中')">+ 上传 Logo</button></div>
     <div class="card"><div class="card-body">
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
         ${["L'ORÉAL","AMAZON","SHOPEE","LAZADA","NESTLÉ","UNILEVER"].map(n=>`<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;font-weight:700;color:var(--gray-400);font-size:14px;letter-spacing:2px">${n}</div>`).join('')}
@@ -1083,7 +1211,7 @@ function renderFormsList(c) {
     <div class="card"><div class="table-wrap"><table><thead><tr><th>表单名称</th><th>类型</th><th>提交数</th><th>状态</th><th>操作</th></tr></thead>
     <tbody>
       <tr><td class="td-name">免费报价表单</td><td>报价</td><td>248</td><td><span class="badge badge-green">启用</span></td><td><button class="btn btn-sm btn-secondary" onclick="navigateTo('forms-quote-config','表单管理','报价表单配置')">配置字段</button></td></tr>
-      <tr><td class="td-name">联系我们表单</td><td>联系</td><td>86</td><td><span class="badge badge-green">启用</span></td><td><button class="btn btn-sm btn-secondary">配置字段</button></td></tr>
+      <tr><td class="td-name">联系我们表单</td><td>联系</td><td>86</td><td><span class="badge badge-green">启用</span></td><td><button class="btn btn-sm btn-secondary" onclick="toast('表单字段配置功能开发中')">配置字段</button></td></tr>
     </tbody></table></div></div>`;
 }
 
@@ -1101,16 +1229,33 @@ function renderQuoteConfig(c) {
 function renderFormEntries(c) {
   const leads = DM.get('leads');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">表单提交记录</h1><p class="page-desc">所有表单提交</p></div><button class="btn btn-secondary btn-sm">📥 导出 Excel</button></div>
+    <div class="page-header"><div><h1 class="page-title">表单提交记录</h1><p class="page-desc">所有表单提交</p></div><button class="btn btn-secondary btn-sm" onclick="toast('导出功能开发中')">📥 导出 Excel</button></div>
     <div class="toolbar"><div class="search"><input placeholder="搜索..."></div><select><option value="">全部表单</option><option>报价表单</option><option>联系表单</option></select></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>编号</th><th>表单</th><th>姓名</th><th>公司</th><th>盒型</th><th>数量</th><th>提交时间</th><th>操作</th></tr></thead>
-    <tbody>${leads.map(l=>`<tr><td class="td-id">${l.id}</td><td><span class="badge badge-blue">报价</span></td><td class="td-name">${l.name}</td><td>${l.company}</td><td>${l.boxType}</td><td>${l.quantity}</td><td>${l.created}</td><td><button class="btn btn-sm btn-secondary">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${leads.map(l=>`<tr><td class="td-id">${l.id}</td><td><span class="badge badge-blue">报价</span></td><td class="td-name">${l.name}</td><td>${l.company}</td><td>${l.boxType}</td><td>${l.quantity}</td><td>${l.created}</td><td><button class="btn btn-sm btn-secondary" onclick="viewLead('${l.id}')">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function viewLead(id) {
+  const l = DM.get('leads').find(x => x.id === id);
+  if (!l) return;
+  showModal('线索详情 ' + l.id, `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">姓名</label><div style="padding:8px 0;font-weight:600">${l.name}</div></div>
+      <div class="form-group"><label class="form-label">公司</label><div style="padding:8px 0">${l.company}</div></div>
+      <div class="form-group"><label class="form-label">盒型</label><div style="padding:8px 0">${l.boxType}</div></div>
+      <div class="form-group"><label class="form-label">数量</label><div style="padding:8px 0">${l.quantity}</div></div>
+      <div class="form-group"><label class="form-label">提交时间</label><div style="padding:8px 0">${l.created}</div></div>
+      <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0"><span class="badge badge-blue">${l.status || '新线索'}</span></div></div>
+    </div>
+  `, null, [{label:'关闭',cls:'btn-secondary'}]);
+  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
+  document.getElementById('modalSaveBtn')?.remove();
 }
 
 // ========== MEDIA ==========
 function renderMedia(c) {
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">媒体库</h1><p class="page-desc">图片和文件管理</p></div><button class="btn btn-primary">+ 上传文件</button></div>
+    <div class="page-header"><div><h1 class="page-title">媒体库</h1><p class="page-desc">图片和文件管理</p></div><button class="btn btn-primary" onclick="toast('文件上传功能开发中')">+ 上传文件</button></div>
     <div class="toolbar"><div class="search"><input placeholder="搜索文件..."></div><select><option>全部类型</option><option>图片</option><option>PDF</option><option>其他</option></select></div>
     <div class="card"><div class="card-body">
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
@@ -1122,14 +1267,14 @@ function renderMedia(c) {
 // ========== CASES ==========
 function renderCasesList(c) {
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">案例列表</h1><p class="page-desc">客户案例展示</p></div><button class="btn btn-primary">+ 新建案例</button></div>
+    <div class="page-header"><div><h1 class="page-title">案例列表</h1><p class="page-desc">客户案例展示</p></div><button class="btn btn-primary" onclick="toast('案例编辑功能开发中')">+ 新建案例</button></div>
     <div class="card"><div class="card-body"><div class="empty"><div class="icon">🎓</div><p>暂无案例，点击上方按钮创建</p></div></div></div>`;
 }
 
 function renderCasesCategories(c) {
   const cats = ['F&B','Retail','FMCG','Luxury','E-commerce'];
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">案例分类</h1><p class="page-desc">按行业分类</p></div><button class="btn btn-primary">+ 新建分类</button></div>
+    <div class="page-header"><div><h1 class="page-title">案例分类</h1><p class="page-desc">按行业分类</p></div><button class="btn btn-primary" onclick="toast('分类管理功能开发中')">+ 新建分类</button></div>
     <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${cats.map(c=>`<span class="badge badge-green" style="padding:8px 16px;font-size:13px">${c}</span>`).join('')}</div></div></div>`;
 }
 
@@ -1137,9 +1282,42 @@ function renderCasesCategories(c) {
 function renderPoliciesList(c) {
   const policies = DM.get('policies');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">政策列表</h1><p class="page-desc">法定页面管理</p></div><button class="btn btn-primary">+ 新建政策</button></div>
+    <div class="page-header"><div><h1 class="page-title">政策列表</h1><p class="page-desc">法定页面管理</p></div><button class="btn btn-primary" onclick="openPolicyModal()">+ 新建政策</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>标题</th><th>Slug</th><th>更新时间</th><th>操作</th></tr></thead>
-    <tbody>${policies.map(p=>`<tr><td class="td-name">${p.title}</td><td>${p.slug}</td><td>${p.updated}</td><td><button class="btn btn-sm btn-secondary">编辑</button> <button class="btn btn-sm btn-danger">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${policies.map(p=>`<tr><td class="td-name">${p.title}</td><td>${p.slug}</td><td>${p.updated}</td><td><button class="btn btn-sm btn-secondary" onclick="openPolicyModal('${p.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deletePolicy('${p.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openPolicyModal(id) {
+  const policies = DM.get('policies');
+  const p = id ? policies.find(x => x.id === id) : null;
+  const title = p ? '编辑政策' : '新建政策';
+  showModal(title, `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">标题 *</label><input class="form-input" id="f_title" value="${p?.title||''}"></div>
+      <div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="f_slug" value="${p?.slug||''}"></div>
+      <div class="form-group full"><label class="form-label">内容 *</label><textarea class="form-textarea" id="f_content" rows="6">${p?.content||''}</textarea></div>
+    </div>
+  `, () => {
+    const titleVal = val('f_title');
+    const content = val('f_content');
+    if (!titleVal || !content) { toast('请填写标题和内容'); return; }
+    if (p) {
+      p.title = titleVal;
+      p.slug = val('f_slug') || titleVal.toLowerCase().replace(/\s+/g,'-');
+      p.content = content;
+      p.updated = new Date().toISOString().slice(0,10);
+    } else {
+      policies.push({id:DM.genId('P'),title:titleVal,slug:val('f_slug')||titleVal.toLowerCase().replace(/\s+/g,'-'),content,updated:new Date().toISOString().slice(0,10)});
+    }
+    DM.set('policies', policies);
+    toast(p ? '政策已更新' : '政策已创建'); renderPage(currentPageId);
+  });
+}
+
+function deletePolicy(id) {
+  if (!confirm('确定删除此政策？')) return;
+  DM.set('policies', DM.get('policies').filter(p => p.id !== id));
+  toast('政策已删除'); renderPage(currentPageId);
 }
 
 // ========== SETTINGS ==========
@@ -1195,7 +1373,7 @@ function renderSettingsCerts(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">认证/资质</h1><p class="page-desc">上传管理证书</p></div></div>
     <div class="card"><div class="card-body">
-      ${['ISO 9001:2015','FSC Certified','Fogra 51'].map(cert=>`<div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><div style="flex:1"><span class="font-bold">${cert}</span></div><div style="width:60px;height:40px;background:var(--gray-100);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px">📄</div><label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" checked> 前台展示</label><button class="btn btn-sm btn-secondary">上传</button></div>`).join('')}
+      ${['ISO 9001:2015','FSC Certified','Fogra 51'].map(cert=>`<div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><div style="flex:1"><span class="font-bold">${cert}</span></div><div style="width:60px;height:40px;background:var(--gray-100);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px">📄</div><label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" checked> 前台展示</label><button class="btn btn-sm btn-secondary" onclick="toast('证书上传功能开发中')">上传</button></div>`).join('')}
     </div></div>`;
 }
 
@@ -1208,11 +1386,11 @@ function renderSettingsShipping(c) {
     <div class="card"><div class="card-header"><span class="card-title">收费区域</span></div><div class="card-body">
       <div class="table-wrap"><table><thead><tr><th>区域</th><th>运费系数</th><th>操作</th></tr></thead>
       <tbody>
-        <tr><td>Penang</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
-        <tr><td>Johor</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
-        <tr><td>Melaka</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
-        <tr><td>Ipoh</td><td>1.3x</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
-        <tr><td>East Malaysia</td><td>2.5x</td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
+        <tr><td>Penang</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary" onclick="toast('配送区域编辑功能开发中')">编辑</button></td></tr>
+        <tr><td>Johor</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary" onclick="toast('配送区域编辑功能开发中')">编辑</button></td></tr>
+        <tr><td>Melaka</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary" onclick="toast('配送区域编辑功能开发中')">编辑</button></td></tr>
+        <tr><td>Ipoh</td><td>1.3x</td><td><button class="btn btn-sm btn-secondary" onclick="toast('配送区域编辑功能开发中')">编辑</button></td></tr>
+        <tr><td>East Malaysia</td><td>2.5x</td><td><button class="btn btn-sm btn-secondary" onclick="toast('配送区域编辑功能开发中')">编辑</button></td></tr>
       </tbody></table></div>
     </div></div>`;
 }
@@ -1236,23 +1414,58 @@ function renderUsers(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">管理员列表</h1><p class="page-desc">系统用户管理</p></div><button class="btn btn-primary" onclick="openUserModal()">+ 新建管理员</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>用户名</th><th>姓名</th><th>角色</th><th>邮箱</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
-    <tbody>${users.map(u=>`<tr><td class="td-name">${u.username}</td><td>${u.name}</td><td><span class="badge badge-blue">${u.role}</span></td><td>${u.email}</td><td>${u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">禁用</span>'}</td><td>${u.created}</td><td><button class="btn btn-sm btn-secondary">编辑</button> <button class="btn btn-sm btn-secondary">重置密码</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${users.map(u=>`<tr><td class="td-name">${u.username}</td><td>${u.name}</td><td><span class="badge badge-blue">${u.role}</span></td><td>${u.email}</td><td>${u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">禁用</span>'}</td><td>${u.created}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button> <button class="btn btn-sm btn-secondary" onclick="resetUserPassword('${u.id}')">重置密码</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
-function openUserModal() {
-  showModal('新建管理员', `
+function openUserModal(id) {
+  const users = DM.get('users');
+  const user = id ? users.find(x => x.id === id) : null;
+  const title = user ? '编辑管理员' : '新建管理员';
+  showModal(title, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">用户名 *</label><input class="form-input" id="f_username"></div>
-      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name"></div>
-      <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="f_email"></div>
-      <div class="form-group"><label class="form-label">角色</label><select class="form-select" id="f_role"><option>超级管理员</option><option>销售</option><option>设计</option><option>财务</option><option>运营</option></select></div>
-      <div class="form-group full"><label class="form-label">密码 *</label><input class="form-input" type="password" id="f_password"></div>
+      <div class="form-group"><label class="form-label">用户名 *</label><input class="form-input" id="f_username" value="${user ? user.username : ''}"></div>
+      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${user ? user.name : ''}"></div>
+      <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="f_email" value="${user ? user.email : ''}"></div>
+      <div class="form-group"><label class="form-label">角色</label><select class="form-select" id="f_role"><option ${user?.role==='超级管理员'?'selected':''}>超级管理员</option><option ${user?.role==='销售'?'selected':''}>销售</option><option ${user?.role==='设计'?'selected':''}>设计</option><option ${user?.role==='财务'?'selected':''}>财务</option><option ${user?.role==='运营'?'selected':''}>运营</option></select></div>
+      ${user ? '<div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_active"><option value="true" '+(user.active?'selected':'')+'>启用</option><option value="false" '+(!user.active?'selected':'')+'>禁用</option></select></div>' : ''}
+      ${!user ? '<div class="form-group full"><label class="form-label">密码 *</label><input class="form-input" type="password" id="f_password"></div>' : ''}
     </div>
   `, () => {
-    const users = DM.get('users');
-    users.push({id:DM.genId('U'),username:val('f_username'),name:val('f_name'),email:val('f_email'),role:val('f_role'),active:true,created:DM.now()});
+    const username = val('f_username');
+    const name = val('f_name');
+    if (!username || !name) { toast('请填写必填字段'); return; }
+    if (user) {
+      user.username = username;
+      user.name = name;
+      user.email = val('f_email');
+      user.role = val('f_role');
+      const activeEl = document.getElementById('f_active');
+      if (activeEl) user.active = activeEl.value === 'true';
+    } else {
+      const password = val('f_password');
+      if (!password) { toast('请设置密码'); return; }
+      users.push({id:DM.genId('U'),username,name,email:val('f_email'),role:val('f_role'),active:true,created:DM.now()});
+    }
     DM.set('users', users);
-    toast('管理员已创建'); renderPage(currentPageId);
+    toast(user ? '管理员已更新' : '管理员已创建'); renderPage(currentPageId);
+  });
+}
+
+function resetUserPassword(id) {
+  const user = DM.get('users').find(x => x.id === id);
+  if (!user) return;
+  showModal('重置密码', `
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">用户</label><div style="padding:8px 0;font-weight:600">${user.name} (${user.username})</div></div>
+      <div class="form-group full"><label class="form-label">新密码 *</label><input class="form-input" type="password" id="f_newpw"></div>
+      <div class="form-group full"><label class="form-label">确认密码 *</label><input class="form-input" type="password" id="f_confirmpw"></div>
+    </div>
+  `, () => {
+    const pw = val('f_newpw');
+    const cpw = val('f_confirmpw');
+    if (!pw) { toast('请输入新密码'); return; }
+    if (pw !== cpw) { toast('两次密码不一致'); return; }
+    toast('密码已重置'); closeModal();
   });
 }
 
@@ -1261,7 +1474,7 @@ function renderRoles(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">角色管理</h1><p class="page-desc">权限角色配置</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>角色</th><th>权限范围</th><th>操作</th></tr></thead>
-    <tbody>${roles.map(r=>`<tr><td class="td-name">${r.name}</td><td>${r.perms}</td><td><button class="btn btn-sm btn-secondary">编辑权限</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${roles.map(r=>`<tr><td class="td-name">${r.name}</td><td>${r.perms}</td><td><button class="btn btn-sm btn-secondary" onclick="toast('角色权限编辑功能开发中')">编辑权限</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function renderLogs(c) {
