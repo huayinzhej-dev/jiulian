@@ -295,6 +295,14 @@ function seedData() {
   ];
   DM.set('orders', orders);
 
+  const products = [
+    {id:'PRD-01',name:'飞机盒 Mailer Box',nameZh:'飞机盒',categoryId:'CAT-01',category:'飞机盒',price:1.67,moq:100,moqUnit:'pcs',status:'active',image:'',desc:'Corrugated mailer box, eco-friendly and sturdy'},
+    {id:'PRD-02',name:'食品盒 Food Box',nameZh:'食品盒',categoryId:'CAT-07',category:'食品盒',price:0.15,moq:500,moqUnit:'pcs',status:'active',image:'',desc:'Food-grade paper box, safe for direct contact'},
+    {id:'PRD-03',name:'精装盒 Rigid Box',nameZh:'精装盒',categoryId:'CAT-12',category:'精装盒',price:0.25,moq:200,moqUnit:'pcs',status:'active',image:'',desc:'Premium rigid box with luxury finishing'},
+    {id:'PRD-04',name:'纸袋 Paper Bag',nameZh:'纸袋',categoryId:'CAT-08',category:'纸袋',price:0.10,moq:500,moqUnit:'pcs',status:'active',image:'',desc:'Custom printed paper bag with handles'}
+  ];
+  DM.set('products', products);
+
   const categories = [
     {id:'CAT-01',name:'飞机盒',slug:'mailer-box',icon:'📦',sort:1,active:true},
     {id:'CAT-02',name:'套筒盒',slug:'sleeve-box',icon:'🎁',sort:2,active:true},
@@ -795,15 +803,86 @@ function openCategoryModal() {
 }
 
 function renderProductsList(c) {
+  const products = DM.get('products');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">商品列表</h1><p class="page-desc">管理所有产品</p></div><button class="btn btn-primary">+ 新建商品</button></div>
+    <div class="page-header"><div><h1 class="page-title">商品列表</h1><p class="page-desc">管理所有产品</p></div><button class="btn btn-primary" onclick="openProductModal()">+ 新建商品</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>分类</th><th>起步价</th><th>MOQ</th><th>状态</th><th>操作</th></tr></thead>
-    <tbody>
-      <tr><td class="td-name">飞机盒 Mailer Box</td><td>飞机盒</td><td>RM 1.67</td><td>100 pcs</td><td><span class="badge badge-green">上架</span></td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
-      <tr><td class="td-name">食品盒 Food Box</td><td>食品盒</td><td>RM 0.15</td><td>500 pcs</td><td><span class="badge badge-green">上架</span></td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
-      <tr><td class="td-name">精装盒 Rigid Box</td><td>精装盒</td><td>RM 0.25</td><td>200 pcs</td><td><span class="badge badge-green">上架</span></td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
-      <tr><td class="td-name">纸袋 Paper Bag</td><td>纸袋</td><td>RM 0.10</td><td>500 pcs</td><td><span class="badge badge-green">上架</span></td><td><button class="btn btn-sm btn-secondary">编辑</button></td></tr>
-    </tbody></table></div></div>`;
+    <tbody>${products.length === 0 ? '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999">暂无商品，点击上方按钮创建</td></tr>' :
+    products.map(p=>`<tr><td class="td-name">${p.name}</td><td>${p.category}</td><td>RM ${p.price.toFixed(2)}</td><td>${p.moq} ${p.moqUnit}</td><td>${p.status==='active'?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openProductModal('${p.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openProductModal(id) {
+  const products = DM.get('products');
+  const categories = DM.get('categories');
+  const p = id ? products.find(x => x.id === id) : null;
+  const title = p ? '编辑商品' : '新建商品';
+
+  showModal(title, `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">商品名称 (英文) *</label><input class="form-input" id="f_name" value="${p?.name||''}" placeholder="e.g. Mailer Box"></div>
+      <div class="form-group"><label class="form-label">商品名称 (中文)</label><input class="form-input" id="f_nameZh" value="${p?.nameZh||''}" placeholder="e.g. 飞机盒"></div>
+      <div class="form-group"><label class="form-label">分类 *</label><select class="form-select" id="f_category">
+        <option value="">-- 选择分类 --</option>
+        ${categories.map(cat=>`<option value="${cat.id}" ${p?.categoryId===cat.id?'selected':''}>${cat.name}</option>`).join('')}
+      </select></div>
+      <div class="form-group"><label class="form-label">起步价 (RM) *</label><input class="form-input" type="number" step="0.01" id="f_price" value="${p?.price||''}" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label">MOQ 数量 *</label><input class="form-input" type="number" id="f_moq" value="${p?.moq||''}" placeholder="100"></div>
+      <div class="form-group"><label class="form-label">MOQ 单位</label><select class="form-select" id="f_moqUnit">
+        <option value="pcs" ${p?.moqUnit==='pcs'?'selected':''}>pcs</option>
+        <option value="sets" ${p?.moqUnit==='sets'?'selected':''}>sets</option>
+        <option value="kg" ${p?.moqUnit==='kg'?'selected':''}>kg</option>
+      </select></div>
+      <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_status">
+        <option value="active" ${p?.status==='active'?'selected':''}>上架</option>
+        <option value="inactive" ${p?.status==='inactive'?'selected':''}>下架</option>
+      </select></div>
+      <div class="form-group" style="grid-column:span 2"><label class="form-label">商品描述</label><textarea class="form-input" id="f_desc" rows="3" placeholder="商品简短描述...">${p?.desc||''}</textarea></div>
+    </div>
+  `, () => {
+    const name = val('f_name');
+    const categorySelect = document.getElementById('f_category');
+    const categoryId = categorySelect.value;
+    const categoryName = categorySelect.options[categorySelect.selectedIndex]?.text || '';
+    if (!name) { toast('请填写商品名称'); return; }
+    if (!categoryId) { toast('请选择分类'); return; }
+
+    if (p) {
+      p.name = name;
+      p.nameZh = val('f_nameZh');
+      p.categoryId = categoryId;
+      p.category = categoryName;
+      p.price = parseFloat(val('f_price')) || 0;
+      p.moq = parseInt(val('f_moq')) || 0;
+      p.moqUnit = val('f_moqUnit');
+      p.status = val('f_status');
+      p.desc = val('f_desc');
+    } else {
+      products.push({
+        id: DM.genId('PRD'),
+        name,
+        nameZh: val('f_nameZh'),
+        categoryId,
+        category: categoryName,
+        price: parseFloat(val('f_price')) || 0,
+        moq: parseInt(val('f_moq')) || 0,
+        moqUnit: val('f_moqUnit'),
+        status: val('f_status'),
+        image: '',
+        desc: val('f_desc')
+      });
+    }
+    DM.set('products', products);
+    toast(p ? '商品已更新' : '商品已创建');
+    renderPage(currentPageId);
+  });
+}
+
+function deleteProduct(id) {
+  if (!confirm('确定删除此商品？')) return;
+  const products = DM.get('products').filter(p => p.id !== id);
+  DM.set('products', products);
+  toast('商品已删除');
+  renderPage(currentPageId);
 }
 
 function renderPrintingMeta(c) {
