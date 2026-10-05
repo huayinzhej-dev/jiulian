@@ -267,7 +267,7 @@ const DM = {
 
 // ========== SEED DATA ==========
 function seedData() {
-  if (DM.get('seeded', false)) return;
+  if (!DM.get('seeded', false)) {
   const leads = [
     {id:'LD-001',name:'John Smith',company:'L\'Oréal Malaysia',phone:'+60123456789',email:'john@loreal.com',source:'表单',boxType:'飞机盒',size:'24×22×4',quantity:1000,printing:'4C1C',finishing:'哑光覆膜',status:'new',assignee:'销售A',notes:'需要食品级材料',created:'2026-10-04 10:30',followUps:[]},
     {id:'LD-002',name:'Sarah Ahmad',company:'Shopee Foods',phone:'+60198765432',email:'sarah@shopee.com',source:'电话',boxType:'食品盒',size:'15×14×4.3',quantity:2000,printing:'4C4C',finishing:'光面覆膜',status:'quoted',assignee:'销售B',notes:'急单，需10天内交货',created:'2026-10-04 09:15',followUps:[]},
@@ -294,14 +294,6 @@ function seedData() {
     {id:'OD-2026-001',quoteId:'QT-2026-001',customer:"L'Oréal Malaysia",amount:1837,depositPaid:true,depositAmount:918.5,productionStatus:'artwork',deliveryDate:'2026-10-20',assignee:'生产A',created:'2026-10-04 14:00'},
   ];
   DM.set('orders', orders);
-
-  const products = [
-    {id:'PRD-01',name:'飞机盒 Mailer Box',nameZh:'飞机盒',categoryId:'CAT-01',category:'飞机盒',price:1.67,moq:100,moqUnit:'pcs',status:'active',image:'',desc:'Corrugated mailer box, eco-friendly and sturdy'},
-    {id:'PRD-02',name:'食品盒 Food Box',nameZh:'食品盒',categoryId:'CAT-07',category:'食品盒',price:0.15,moq:500,moqUnit:'pcs',status:'active',image:'',desc:'Food-grade paper box, safe for direct contact'},
-    {id:'PRD-03',name:'精装盒 Rigid Box',nameZh:'精装盒',categoryId:'CAT-12',category:'精装盒',price:0.25,moq:200,moqUnit:'pcs',status:'active',image:'',desc:'Premium rigid box with luxury finishing'},
-    {id:'PRD-04',name:'纸袋 Paper Bag',nameZh:'纸袋',categoryId:'CAT-08',category:'纸袋',price:0.10,moq:500,moqUnit:'pcs',status:'active',image:'',desc:'Custom printed paper bag with handles'}
-  ];
-  DM.set('products', products);
 
   const categories = [
     {id:'CAT-01',name:'飞机盒',slug:'mailer-box',icon:'📦',sort:1,active:true},
@@ -361,6 +353,17 @@ function seedData() {
   DM.set('logs', logs);
 
   DM.set('seeded', true);
+  }
+
+  if (!DM.get('products') || DM.get('products').length === 0) {
+    const products = [
+      {id:'PRD-01',name:'飞机盒 Mailer Box',nameZh:'飞机盒',categoryId:'CAT-01',category:'飞机盒',price:1.67,moq:100,moqUnit:'pcs',status:'active',image:'',desc:'Corrugated mailer box, eco-friendly and sturdy'},
+      {id:'PRD-02',name:'食品盒 Food Box',nameZh:'食品盒',categoryId:'CAT-07',category:'食品盒',price:0.15,moq:500,moqUnit:'pcs',status:'active',image:'',desc:'Food-grade paper box, safe for direct contact'},
+      {id:'PRD-03',name:'精装盒 Rigid Box',nameZh:'精装盒',categoryId:'CAT-12',category:'精装盒',price:0.25,moq:200,moqUnit:'pcs',status:'active',image:'',desc:'Premium rigid box with luxury finishing'},
+      {id:'PRD-04',name:'纸袋 Paper Bag',nameZh:'纸袋',categoryId:'CAT-08',category:'纸袋',price:0.10,moq:500,moqUnit:'pcs',status:'active',image:'',desc:'Custom printed paper bag with handles'}
+    ];
+    DM.set('products', products);
+  }
 }
 
 // ========== RENDER SIDEBAR ==========
