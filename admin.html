@@ -303,6 +303,15 @@ function seedData() {
     DM.set('payments', payments);
   }
 
+  if (!DM.get('dielines') || DM.get('dielines').length === 0) {
+    const dielines = [
+      {id:'DIE-001',boxType:'飞机盒',size:'24×22×4',fee:'已收',status:'available',fileName:'mailer-box-24x22x4.ai',uploaded:'2026-09-15',uploader:'管理员'},
+      {id:'DIE-002',boxType:'飞机盒',size:'15×14×4.3',fee:'已收',status:'available',fileName:'mailer-box-15x14x4.3.ai',uploaded:'2026-09-15',uploader:'管理员'},
+      {id:'DIE-003',boxType:'套筒盒',size:'33×21.6×5',fee:'已收',status:'available',fileName:'sleeve-box-33x21.6x5.ai',uploaded:'2026-09-20',uploader:'管理员'}
+    ];
+    DM.set('dielines', dielines);
+  }
+
   const categories = [
     {id:'CAT-01',name:'飞机盒',slug:'mailer-box',icon:'📦',sort:1,active:true},
     {id:'CAT-02',name:'套筒盒',slug:'sleeve-box',icon:'🎁',sort:2,active:true},
@@ -873,14 +882,52 @@ function renderDelivery(c) {
 }
 
 function renderDieline(c) {
+  const dielines = DM.get('dielines');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">刀模/Artwork 模板库</h1><p class="page-desc">40+ 现成刀模管理</p></div><button class="btn btn-primary" onclick="toast('上传功能开发中')">+ 上传刀模</button></div>
+    <div class="page-header"><div><h1 class="page-title">刀模/Artwork 模板库</h1><p class="page-desc">40+ 现成刀模管理</p></div><button class="btn btn-primary" onclick="openUploadDieModal()">+ 上传刀模</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>编号</th><th>适用盒型</th><th>尺寸</th><th>刀模费</th><th>状态</th><th>操作</th></tr></thead>
-    <tbody>
-      <tr><td class="td-id">DIE-001</td><td>飞机盒</td><td>24×22×4</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary" onclick="toast('下载功能开发中')">下载</button></td></tr>
-      <tr><td class="td-id">DIE-002</td><td>飞机盒</td><td>15×14×4.3</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary" onclick="toast('下载功能开发中')">下载</button></td></tr>
-      <tr><td class="td-id">DIE-003</td><td>套筒盒</td><td>33×21.6×5</td><td>已收</td><td><span class="badge badge-green">可用</span></td><td><button class="btn btn-sm btn-secondary" onclick="toast('下载功能开发中')">下载</button></td></tr>
-    </tbody></table></div></div>`;
+    <tbody>${dielines.map(d=>`<tr><td class="td-id">${d.id}</td><td>${d.boxType}</td><td>${d.size}</td><td>${d.fee}</td><td><span class="badge ${d.status==='available'?'badge-green':'badge-gray'}">${d.status==='available'?'可用':'不可用'}</span></td><td><button class="btn btn-sm btn-secondary" onclick="downloadDie('${d.id}')">下载</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openUploadDieModal() {
+  const cats = DM.get('categories');
+  showModal('上传刀模', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">适用盒型 *</label><select class="form-select" id="f_die_boxtype">${cats.map(c=>`<option>${c.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">尺寸 (cm) *</label><input class="form-input" id="f_die_size" placeholder="长×宽×高"></div>
+      <div class="form-group"><label class="form-label">刀模费</label><select class="form-select" id="f_die_fee"><option>已收</option><option>未收</option><option>免费</option></select></div>
+      <div class="form-group full"><label class="form-label">上传文件 *</label><input class="form-input" type="file" id="f_die_file" accept=".ai,.pdf,.dxf,.dwg,.svg"></div>
+    </div>
+  `, () => {
+    const boxType = val('f_die_boxtype');
+    const size = val('f_die_size');
+    const fee = val('f_die_fee');
+    if (!boxType || !size) { toast('请填写必填字段'); return; }
+    const dielines = DM.get('dielines');
+    const newId = 'DIE-' + String(dielines.length + 1).padStart(3, '0');
+    dielines.push({id:newId,boxType,size,fee,status:'available',fileName:'',uploaded:DM.now().split(' ')[0],uploader:'管理员'});
+    DM.set('dielines', dielines);
+    toast('刀模已上传'); renderPage(currentPageId);
+  });
+}
+
+function downloadDie(id) {
+  const d = DM.get('dielines').find(x => x.id === id);
+  if (!d) return;
+  showModal('下载刀模', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">编号</label><div style="padding:8px 0;font-weight:600">${d.id}</div></div>
+      <div class="form-group"><label class="form-label">适用盒型</label><div style="padding:8px 0">${d.boxType}</div></div>
+      <div class="form-group"><label class="form-label">尺寸</label><div style="padding:8px 0">${d.size}</div></div>
+      <div class="form-group"><label class="form-label">文件名</label><div style="padding:8px 0">${d.fileName || '未上传文件'}</div></div>
+      <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${d.uploaded}</div></div>
+    </div>
+    <div style="margin-top:16px;padding:12px;background:var(--gray-50);border-radius:6px;font-size:13px;color:var(--gray-600)">
+      提示：静态演示环境暂不支持真实文件下载。生产环境将连接文件存储服务。
+    </div>
+  `, null, [{label:'关闭',cls:'btn-secondary'}]);
+  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
+  document.getElementById('modalSaveBtn')?.remove();
 }
 
 function renderProof(c) {
