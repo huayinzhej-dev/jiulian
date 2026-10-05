@@ -260,6 +260,7 @@ const MENU = [
 // ========== DATA MANAGER ==========
 const DM = {
   get(key, def=[]) { try { return JSON.parse(localStorage.getItem('jl_'+key)) || def } catch { return def } },
+  has(key) { return localStorage.getItem('jl_'+key) !== null },
   set(key, val) { localStorage.setItem('jl_'+key, JSON.stringify(val)) },
   genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2,3).toUpperCase() },
   now() { return new Date().toISOString().slice(0,16).replace('T',' ') }
@@ -380,6 +381,93 @@ function seedData() {
       {id:'PRD-04',name:'纸袋 Paper Bag',nameZh:'纸袋',categoryId:'CAT-08',category:'纸袋',price:0.10,moq:500,moqUnit:'pcs',status:'active',image:'',desc:'Custom printed paper bag with handles'}
     ];
     DM.set('products', products);
+  }
+  if (!DM.has('printingOptions')) {
+    DM.set('printingOptions', ['0C (无印刷)','1C 单色','4C 四色','4C+0C','4C+1C','4C+4C','1C+0C','1C+1C','Flexo 1C','Flexo 2C','Brown Base','White Base','Laserfoil']);
+  }
+  if (!DM.has('finishingOptions')) {
+    DM.set('finishingOptions', ['哑光覆膜','光面覆膜','柔触感 Soft Touch','无覆膜','Spot UV','Emboss','Deboss','Hot-stamp Foil']);
+  }
+  if (!DM.has('materials')) {
+    DM.set('materials', [{id:'MAT-01',name:'白卡纸 300g',fsc:true,food:false},{id:'MAT-02',name:'白卡纸 350g',fsc:true,food:false},{id:'MAT-03',name:'牛卡 E楞',fsc:false,food:false},{id:'MAT-04',name:'瓦楞 B楞',fsc:false,food:false},{id:'MAT-05',name:'食品级纸',fsc:true,food:true}]);
+  }
+  if (!DM.has('articles')) {
+    DM.set('articles', [{id:'ART-01',title:'How to Choose the Right Packaging for Your E-commerce Brand',category:'Guide',status:'published',created:'2026-09-15',updated:'2026-09-20'},{id:'ART-02',title:'FSC Certified Packaging: Why It Matters for Your Brand',category:'Sustainability',status:'published',created:'2026-09-10',updated:'2026-09-10'}]);
+  }
+  if (!DM.has('clients')) {
+    DM.set('clients', [{id:'CL-01',name:"L'ORÉAL",active:true},{id:'CL-02',name:'AMAZON',active:true},{id:'CL-03',name:'SHOPEE',active:true},{id:'CL-04',name:'LAZADA',active:true},{id:'CL-05',name:'NESTLÉ',active:true},{id:'CL-06',name:'UNILEVER',active:true}]);
+  }
+  if (!DM.has('mediaFiles')) {
+    DM.set('mediaFiles', [{id:'MED-01',name:'产品图-飞机盒.jpg',type:'image',size:'2.4 MB',uploaded:'2026-10-01'},{id:'MED-02',name:'产品图-食品盒.jpg',type:'image',size:'1.8 MB',uploaded:'2026-10-01'},{id:'MED-03',name:'Banner-bg.png',type:'image',size:'5.2 MB',uploaded:'2026-09-28'},{id:'MED-04',name:'Logo-Loreal.png',type:'image',size:'0.3 MB',uploaded:'2026-09-25'},{id:'MED-05',name:'ISO证书.jpg',type:'image',size:'1.1 MB',uploaded:'2026-09-20'},{id:'MED-06',name:'FSC证书.jpg',type:'image',size:'0.9 MB',uploaded:'2026-09-20'}]);
+  }
+  if (!DM.has('cases')) {
+    DM.set('cases', [{id:'CASE-01',title:'L\'Oréal Gift Box Series',category:'Luxury',client:"L'Oréal Malaysia",status:'published',created:'2026-09-15'},{id:'CASE-02',title:'Shopee Food Packaging Line',category:'F&B',client:'Shopee Foods',status:'published',created:'2026-09-10'}]);
+  }
+  if (!DM.has('caseCategories')) {
+    DM.set('caseCategories', ['F&B','Retail','FMCG','Luxury','E-commerce']);
+  }
+  if (!DM.has('shippingZones')) {
+    DM.set('shippingZones', [{id:'SZ-01',region:'Penang',rate:'1.5x',active:true},{id:'SZ-02',region:'Johor',rate:'1.5x',active:true},{id:'SZ-03',region:'Melaka',rate:'1.5x',active:true},{id:'SZ-04',region:'Ipoh',rate:'1.3x',active:true},{id:'SZ-05',region:'East Malaysia',rate:'2.5x',active:true}]);
+  }
+  if (!DM.has('roles')) {
+    DM.set('roles', [{id:'R-01',name:'超级管理员',perms:['全部权限']},{id:'R-02',name:'销售',perms:['线索管理','报价管理','订单管理']},{id:'R-03',name:'设计',perms:['商品管理','内容管理','媒体库']},{id:'R-04',name:'财务',perms:['订单管理(付款)','数据看板']},{id:'R-05',name:'运营',perms:['内容管理','表单管理','案例','政策']}]);
+  }
+  if (!DM.has('proofs')) {
+    DM.set('proofs', [{id:'PF-001',orderId:'OD-2026-001',customer:"L'Oréal Malaysia",type:'数字打样 (颜色确认)',status:'pending_confirm',uploaded:'2026-10-04',fileUrl:''}]);
+  }
+  if (!DM.has('settings_site')) {
+    DM.set('settings_site', {enName:'United YL Printers Sdn Bhd',zhName:'玖联包装印刷',phone:'017-583 6916',email:'enquiry@uylprinter.com',address:'Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur',googleMaps:'',waze:'',facebook:'',instagram:'',linkedin:''});
+  }
+  if (!DM.has('settings_seo')) {
+    DM.set('settings_seo', {title:'Jiulian Packaging — Premium Printing & Packaging Solutions',description:'Jiulian Packaging is a leading printing and packaging manufacturer offering custom boxes, bags, and labels for global brands.',keywords:'packaging, printing, custom boxes, mailer box, food packaging, Malaysia',gaId:'',gscId:'',fbPixel:''});
+  }
+  if (!DM.has('settings_notifications')) {
+    DM.set('settings_notifications', {notifyEmail:'enquiry@uylprinter.com',leadTemplate:'新询盘通知：\n客户：{{客户名}}\n公司：{{公司}}\n盒型：{{盒型}}\n数量：{{数量}}\n\n请及时跟进。',quoteTemplate:'尊敬的 {{客户名}}，\n\n感谢您的询价。附件是报价单 {{报价号}}，有效期 {{有效期}}。\n\n如有任何疑问请随时联系我们。'});
+  }
+  if (!DM.has('settings_finance')) {
+    DM.set('settings_finance', {sstRate:10,currency:'MYR (RM)',validDays:14,depositPercent:50});
+  }
+  if (!DM.has('settings_about')) {
+    DM.set('settings_about', {intro:'Jiulian Packaging (United YL Printers Sdn Bhd) has been a trusted packaging partner since 2008. With over 30 years of combined experience, we serve 500+ clients across 50+ countries.',address:'Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur',certs:['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ']});
+  }
+  if (!DM.has('settings_process')) {
+    DM.set('settings_process', [{title:'Enquire & Quote',desc:'Submit your requirements via our 60-second quote form',days:'1-2 days'},{title:'Artwork & Die-Line',desc:'Upload your artwork or use our 40+ ready moulds',days:'2-3 days'},{title:'Proof & Mock-Up',desc:'Digital proof for color + blank mock-up for structure',days:'3-5 days'},{title:'Production',desc:'Mass production with strict QC at every stage',days:'10-14 days'},{title:'Free Delivery',desc:'Free delivery within KL & Selangor',days:'1-3 days'}]);
+  }
+  if (!DM.has('settings_printing_guide')) {
+    DM.set('settings_printing_guide', '## Reading the Code\n\nThe printing code format is: [Front]C[Back]C\n\n- **0C** = No printing (plain)\n- **1C** = Single color print (Flexo)\n- **4C** = Full color CMYK print\n\n### Common Combinations:\n- **4C+0C**: Full color outside, plain inside\n- **4C+1C**: Full color outside, single color inside\n- **4C+4C**: Full color both sides\n- **1C+0C**: Single color outside, plain inside\n\n### Other Terms:\n- **Flexo**: Flexographic printing (cost-effective for simple designs)\n- **Brown Base**: Kraft/natural brown material\n- **White Base**: White cardboard material\n- **Laserfoil**: Metallic foil stamping effect');
+  }
+  if (!DM.has('pricebook')) {
+    DM.set('pricebook', {
+      '飞机盒': [
+        {sku:'M1-1',size:'24×22×4',p:[2.38,2.49,1.93,1.67,1.25,1.36,1.80]},
+        {sku:'M1-2',size:'15×14×4.3',p:[1.85,2.08,1.48,1.32,0.95,1.10,1.54]},
+        {sku:'M1-4',size:'18.5×18.5×5',p:[2.32,2.55,1.85,1.63,1.18,1.30,1.74]},
+        {sku:'M1-5',size:'33×21.6×5',p:[3.77,4.13,3.15,2.65,1.95,1.60,2.04]}
+      ],
+      '套筒盒': [
+        {sku:'S1-1',size:'20×15×5',p:[2.60,2.40,2.05,1.82,1.42,1.28,1.65]},
+        {sku:'S1-2',size:'25×18×6',p:[3.10,2.88,2.45,2.18,1.72,1.55,1.98]}
+      ],
+      '天地盖': [
+        {sku:'T1-1',size:'22×22×8',p:[4.20,3.95,3.42,3.05,2.55,2.32,2.78]},
+        {sku:'T1-2',size:'30×20×10',p:[5.40,5.10,4.45,3.98,3.32,3.05,3.60]}
+      ],
+      '手提盒': [
+        {sku:'H1-1',size:'25×20×10',p:[3.85,3.55,3.05,2.72,2.25,2.05,2.48]},
+        {sku:'H1-2',size:'32×25×12',p:[4.95,4.60,3.98,3.55,2.95,2.68,3.25]}
+      ],
+      '食品盒': [
+        {sku:'F1-1',size:'15×15×6',p:[0.42,0.38,0.32,0.26,0.21,0.18,0.15]},
+        {sku:'F1-2',size:'18×12×7',p:[0.55,0.50,0.42,0.35,0.28,0.24,0.20]}
+      ],
+      '纸袋': [
+        {sku:'B1-1',size:'21×11×27',p:[0.85,0.78,0.65,0.52,0.42,0.36,0.30]},
+        {sku:'B1-2',size:'25×18×33',p:[1.15,1.05,0.88,0.72,0.58,0.50,0.42]}
+      ]
+    });
+  }
+  if (!DM.has('contactFormConfig')) {
+    DM.set('contactFormConfig', [{name:'姓名',type:'文本输入',required:true},{name:'邮箱',type:'邮箱输入',required:true},{name:'电话',type:'文本输入',required:false},{name:'公司',type:'文本输入',required:false},{name:'留言',type:'多行文本',required:true}]);
   }
 }
 
@@ -550,8 +638,14 @@ function renderDashboardTodo(c) {
 }
 
 // ========== LEADS ==========
+const LEAD_PAGE_SIZE = 10;
+let leadPage = 1, leadSearch = '', leadStatusFilter = '';
+
+function filterLeads(v) { leadSearch = (v||'').toLowerCase(); leadPage = 1; applyLeadFilter(); }
+function filterLeadStatus(v) { leadStatusFilter = v||''; leadPage = 1; applyLeadFilter(); }
+
 function renderLeadsPool(c) {
-  const leads = DM.get('leads');
+  leadSearch = ''; leadStatusFilter = ''; leadPage = 1;
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">线索池</h1><p class="page-desc">全部线索管理</p></div><button class="btn btn-primary" onclick="openLeadModal()">+ 新建线索</button></div>
     <div class="toolbar"><div class="search"><input placeholder="搜索客户名/公司..." oninput="filterLeads(this.value)"></div>
@@ -559,9 +653,35 @@ function renderLeadsPool(c) {
       <button class="btn btn-secondary btn-sm" onclick="exportCSV('leads')">📥 导出CSV</button>
     </div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>编号</th><th>来源</th><th>姓名</th><th>公司</th><th>电话</th><th>盒型</th><th>数量</th><th>状态</th><th>负责人</th><th>创建时间</th><th>操作</th></tr></thead>
-    <tbody id="leadsTableBody">${leads.map(l=>leadRow(l)).join('')}</tbody></table></div>
-    <div class="pagination"><span>共 ${leads.length} 条</span><div class="page-btns"><button class="active">1</button></div></div></div>`;
+    <tbody id="leadsTableBody"></tbody></table></div>
+    <div class="pagination"><span id="leadsCount"></span><div class="page-btns" id="leadsPages"></div></div></div>`;
+  applyLeadFilter();
 }
+
+function filteredLeads() {
+  let rows = DM.get('leads');
+  if (leadSearch) rows = rows.filter(l => (l.name+' '+l.company+' '+l.phone+' '+l.email).toLowerCase().includes(leadSearch));
+  if (leadStatusFilter) rows = rows.filter(l => l.status === leadStatusFilter);
+  return rows;
+}
+
+function applyLeadFilter() {
+  const body = document.getElementById('leadsTableBody');
+  if (!body) return;
+  const rows = filteredLeads();
+  const totalPages = Math.max(1, Math.ceil(rows.length / LEAD_PAGE_SIZE));
+  if (leadPage > totalPages) leadPage = totalPages;
+  const start = (leadPage - 1) * LEAD_PAGE_SIZE;
+  const pageRows = rows.slice(start, start + LEAD_PAGE_SIZE);
+  body.innerHTML = pageRows.length ? pageRows.map(l=>leadRow(l)).join('') : `<tr><td colspan="11" style="text-align:center;padding:40px;color:#999">无匹配结果</td></tr>`;
+  const filtering = leadSearch || leadStatusFilter;
+  document.getElementById('leadsCount').textContent = `共 ${rows.length} 条${filtering ? `（已筛选，总计 ${DM.get('leads').length} 条）` : ''}`;
+  document.getElementById('leadsPages').innerHTML = totalPages > 1
+    ? Array.from({length:totalPages},(_,i)=>`<button class="${i+1===leadPage?'active':''}" onclick="gotoLeadPage(${i+1})">${i+1}</button>`).join('')
+    : '';
+}
+
+function gotoLeadPage(n) { leadPage = n; applyLeadFilter(); }
 
 function leadRow(l) {
   return `<tr><td class="td-id">${l.id}</td><td><span class="badge badge-gray">${l.source}</span></td><td class="td-name">${l.name}</td><td>${l.company}</td><td>${l.phone}</td><td>${l.boxType}</td><td>${l.quantity}</td><td>${statusBadge(l.status)}</td><td>${l.assignee}</td><td>${l.created}</td><td><button class="btn btn-sm btn-secondary" onclick="viewLead('${l.id}')">查看</button> <button class="btn btn-sm btn-danger" onclick="deleteLead('${l.id}')">删除</button></td></tr>`;
@@ -623,9 +743,27 @@ function viewLead(id) {
       <div style="grid-column:1/-1"><strong>跟进记录:</strong> ${l.followUps?.length ? l.followUps.map(f=>`<div style="padding:6px 0;border-bottom:1px solid var(--gray-100)">${f.time} - ${f.method} - ${f.content}</div>`).join('') : '暂无跟进记录'}</div>
     </div>
   `, null, [
-    {label:'转报价',cls:'btn-primary',fn:()=>{closeModal();toast('已转为报价单')}},
+    {label:'转报价',cls:'btn-primary',fn:()=>{convertLeadToQuote(l);closeModal();}},
     {label:'关闭',cls:'btn-secondary',fn:closeModal}
   ]);
+}
+
+function convertLeadToQuote(l) {
+  const quotes = DM.get('quotes');
+  const unitPrice = 1.5;
+  const subtotal = +(unitPrice * l.quantity).toFixed(2);
+  const sst = +(subtotal * 0.1).toFixed(2);
+  const q = {id:DM.genId('QT'), leadId:l.id, customer:l.company||l.name, product:l.boxType, size:l.size,
+             quantity:l.quantity, unitPrice, subtotal, sst, total:+(subtotal+sst).toFixed(2),
+             status:'draft', validUntil:new Date(Date.now()+14*864e5).toISOString().slice(0,10),
+             creator:'管理员', created:DM.now()};
+  quotes.push(q);
+  DM.set('quotes', quotes);
+  const leads = DM.get('leads');
+  const lead = leads.find(x => x.id === l.id);
+  if (lead) { lead.status = 'quoted'; DM.set('leads', leads); }
+  toast('已生成报价单 ' + q.id + '（RM ' + q.total.toFixed(2) + '）');
+  navigateTo('quotes-list','报价管理','报价单');
 }
 
 function deleteLead(id) {
@@ -762,38 +900,107 @@ function renderQuoteNew(c) {
         <div class="flex justify-between" style="font-size:16px"><span class="font-bold">总计:</span><span class="font-bold" style="color:var(--primary)">RM 0.00</span></div>
       </div>
       <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="toast('草稿已保存')">保存草稿</button>
-        <button class="btn btn-primary" onclick="toast('报价单已生成')">生成报价单</button>
+        <button class="btn btn-secondary" onclick="saveQuoteDraft()">保存草稿</button>
+        <button class="btn btn-primary" onclick="generateQuote()">生成报价单</button>
       </div>
     </div></div>`;
 }
 
+function saveQuoteDraft() {
+  toast('草稿已保存');
+}
+
+function generateQuote() {
+  const quotes = DM.get('quotes');
+  quotes.push({id:DM.genId('QT'),leadId:'',customer:'(手动)',product:'',size:'',quantity:0,unitPrice:0,subtotal:0,sst:0,total:0,status:'draft',validUntil:'2026-10-19',creator:'管理员',created:DM.now()});
+  DM.set('quotes', quotes);
+  toast('报价单已生成'); navigateTo('quotes-list','报价','报价列表');
+}
+
+let pricebookTab = '飞机盒';
+const PB_TIERS = ['100','300','500','1000','2000','3000','5000'];
+
 function renderPricebook(c) {
+  const pb = DM.get('pricebook');
+  const tabs = Object.keys(pb);
+  if (!tabs.includes(pricebookTab)) pricebookTab = tabs[0] || '';
+  const rows = pb[pricebookTab] || [];
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">价格簿</h1><p class="page-desc">按盒型 × 数量阶梯维护基础单价</p></div><button class="btn btn-secondary btn-sm" onclick="toast('导入功能开发中')">📥 导入</button></div>
-    <div class="tabs"><div class="tab active">飞机盒</div><div class="tab">套筒盒</div><div class="tab">天地盖</div><div class="tab">手提盒</div><div class="tab">食品盒</div><div class="tab">纸袋</div></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>SKU</th><th>尺寸(cm)</th><th>100pcs</th><th>300pcs</th><th>500pcs</th><th>1000pcs</th><th>2000pcs</th><th>3000pcs</th><th>5000pcs</th></tr></thead>
-    <tbody>
-      <tr><td class="td-id">M1-1</td><td>24×22×4</td><td>2.38</td><td>2.49</td><td>1.93</td><td>1.67</td><td>1.25</td><td>1.36</td><td>1.80</td></tr>
-      <tr><td class="td-id">M1-2</td><td>15×14×4.3</td><td>1.85</td><td>2.08</td><td>1.48</td><td>1.32</td><td>0.95</td><td>1.10</td><td>1.54</td></tr>
-      <tr><td class="td-id">M1-4</td><td>18.5×18.5×5</td><td>2.32</td><td>2.55</td><td>1.85</td><td>1.63</td><td>1.18</td><td>1.30</td><td>1.74</td></tr>
-      <tr><td class="td-id">M1-5</td><td>33×21.6×5</td><td>3.77</td><td>4.13</td><td>3.15</td><td>2.65</td><td>1.95</td><td>1.60</td><td>2.04</td></tr>
-    </tbody></table></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">价格簿</h1><p class="page-desc">按盒型 × 数量阶梯维护基础单价（点击单元格可直接编辑，失焦自动保存）</p></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary btn-sm" onclick="openPricebookImport()">📥 导入</button>
+        <button class="btn btn-primary btn-sm" onclick="addPricebookRow()">+ 新增 SKU</button>
+      </div>
+    </div>
+    <div class="tabs">${tabs.map(t=>`<div class="tab ${t===pricebookTab?'active':''}" onclick="switchPriceTab('${t}')">${t}</div>`).join('')}</div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>SKU</th><th>尺寸(cm)</th>${PB_TIERS.map(t=>`<th>${t}pcs</th>`).join('')}<th>操作</th></tr></thead>
+    <tbody>${rows.length===0?`<tr><td colspan="${PB_TIERS.length+3}" style="text-align:center;padding:40px;color:#999">此盒型暂无价格，点击「新增 SKU」添加</td></tr>`:
+    rows.map((r,i)=>`<tr>
+      <td><input class="form-input pb-sku" data-i="${i}" value="${r.sku}" style="min-width:80px"></td>
+      <td><input class="form-input pb-size" data-i="${i}" value="${r.size}" style="min-width:110px"></td>
+      ${PB_TIERS.map((t,pi)=>`<td><input class="form-input pb-price" data-i="${i}" data-p="${pi}" type="number" step="0.01" value="${r.p[pi]??''}" style="width:76px;text-align:right"></td>`).join('')}
+      <td><button class="btn btn-sm btn-danger" onclick="deletePricebookRow(${i})">删除</button></td>
+    </tr>`).join('')}</tbody></table></div>
+    <div class="pagination"><span>共 ${rows.length} 个 SKU · ${pricebookTab}</span><div style="display:flex;gap:8px;align-items:center"><span class="text-sm text-gray">修改已自动保存</span></div></div></div>`;
+
+  c.querySelectorAll('.pb-sku').forEach(el => el.addEventListener('change', () => savePricebook(c)));
+  c.querySelectorAll('.pb-size').forEach(el => el.addEventListener('change', () => savePricebook(c)));
+  c.querySelectorAll('.pb-price').forEach(el => el.addEventListener('change', () => savePricebook(c)));
+}
+
+function savePricebook(c) {
+  const pb = DM.get('pricebook');
+  const rows = (pb[pricebookTab] = pb[pricebookTab] || []);
+  c.querySelectorAll('.pb-sku').forEach(el => { if(rows[el.dataset.i]) rows[el.dataset.i].sku = el.value.trim(); });
+  c.querySelectorAll('.pb-size').forEach(el => { if(rows[el.dataset.i]) rows[el.dataset.i].size = el.value.trim(); });
+  c.querySelectorAll('.pb-price').forEach(el => { if(rows[el.dataset.i]) rows[el.dataset.i].p[el.dataset.p] = el.value === '' ? '' : parseFloat(el.value); });
+  DM.set('pricebook', pb);
+  toast('价格已保存');
+}
+
+function switchPriceTab(t) { pricebookTab = t; renderPage(currentPageId); }
+
+function addPricebookRow() {
+  const pb = DM.get('pricebook');
+  if (!pricebookTab) { toast('请先选择盒型'); return; }
+  showModal('新增 SKU - ' + pricebookTab, `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">SKU 编号 *</label><input class="form-input" id="f_pb_sku" placeholder="e.g. M1-6"></div>
+      <div class="form-group"><label class="form-label">尺寸 (cm) *</label><input class="form-input" id="f_pb_size" placeholder="长×宽×高"></div>
+      ${PB_TIERS.map(t=>`<div class="form-group"><label class="form-label">${t} pcs (RM)</label><input class="form-input" type="number" step="0.01" id="f_pb_${t}"></div>`).join('')}
+    </div>
+  `, () => {
+    const sku = val('f_pb_sku'), size = val('f_pb_size');
+    if (!sku || !size) { toast('请填写 SKU 和尺寸'); return; }
+    pb[pricebookTab] = pb[pricebookTab] || [];
+    pb[pricebookTab].push({sku, size, p: PB_TIERS.map(t => val('f_pb_'+t) === '' ? '' : parseFloat(val('f_pb_'+t)))});
+    DM.set('pricebook', pb);
+    toast('SKU 已添加'); renderPage(currentPageId);
+  });
+}
+
+function deletePricebookRow(i) {
+  if (!confirm('确定删除此 SKU？')) return;
+  const pb = DM.get('pricebook');
+  pb[pricebookTab].splice(i, 1);
+  DM.set('pricebook', pb);
+  toast('SKU 已删除'); renderPage(currentPageId);
 }
 
 function renderQuoteTemplate(c) {
+  const tpl = DM.get('settings_quote_template', {header:'United YL Printers Sdn Bhd',terms:'50% 定金，50% 发货前付清。银行转账/TT。',delivery:'确认打样后 10-14 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">PDF 模板</h1><p class="page-desc">报价单 PDF 模板配置</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">公司抬头</label><input class="form-input" value="United YL Printers Sdn Bhd"></div>
+        <div class="form-group"><label class="form-label">公司抬头</label><input class="form-input" id="fs_header" value="${tpl.header||''}"></div>
         <div class="form-group"><label class="form-label">Logo</label><input class="form-input" type="file" accept="image/*"></div>
-        <div class="form-group full"><label class="form-label">付款条款</label><textarea class="form-textarea">50% 定金，50% 发货前付清。银行转账/TT。</textarea></div>
-        <div class="form-group full"><label class="form-label">交期说明</label><textarea class="form-textarea">确认打样后 10-14 个工作日完成生产。加急订单另议。</textarea></div>
-        <div class="form-group full"><label class="form-label">SST 说明</label><textarea class="form-textarea">以上价格需另加 10% SST (Sales & Service Tax)。</textarea></div>
-        <div class="form-group"><label class="form-label">默认有效期</label><input class="form-input" type="number" value="14"> 天</div>
+        <div class="form-group full"><label class="form-label">付款条款</label><textarea class="form-textarea" id="fs_terms" rows="2">${tpl.terms||''}</textarea></div>
+        <div class="form-group full"><label class="form-label">交期说明</label><textarea class="form-textarea" id="fs_delivery" rows="2">${tpl.delivery||''}</textarea></div>
+        <div class="form-group full"><label class="form-label">SST 说明</label><textarea class="form-textarea" id="fs_sst_desc" rows="2">${tpl.sst||''}</textarea></div>
+        <div class="form-group"><label class="form-label">默认有效期</label><input class="form-input" type="number" id="fs_validity" value="${tpl.validity||14}"> 天</div>
       </div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('模板已保存')">保存模板</button></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="DM.set('settings_quote_template',{header:val('fs_header'),terms:val('fs_terms'),delivery:val('fs_delivery'),sst:val('fs_sst_desc'),validity:val('fs_validity')});toast('模板已保存')">保存模板</button></div>
     </div></div>`;
 }
 
@@ -931,10 +1138,50 @@ function downloadDie(id) {
 }
 
 function renderProof(c) {
+  const proofs = DM.get('proofs');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">打样管理</h1><p class="page-desc">数字打样与空白盒 mock-up</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>打样类型</th><th>状态</th><th>上传时间</th><th>操作</th></tr></thead>
-    <tbody><tr><td class="td-id">OD-2026-001</td><td class="td-name">L'Oréal Malaysia</td><td>数字打样 (颜色确认)</td><td><span class="badge badge-yellow">待客户确认</span></td><td>2026-10-04</td><td><button class="btn btn-sm btn-secondary" onclick="toast('打样详情功能开发中')">查看</button> <button class="btn btn-sm btn-primary" onclick="toast('确认已发送')">发送确认</button></td></tr></tbody></table></div></div>`;
+    <tbody>${proofs.map(p=>`<tr><td class="td-id">${p.orderId}</td><td class="td-name">${p.customer}</td><td>${p.type}</td><td>${p.status==='confirmed'?'<span class="badge badge-green">已确认</span>':'<span class="badge badge-yellow">待客户确认</span>'}</td><td>${p.uploaded}</td><td><button class="btn btn-sm btn-secondary" onclick="viewProof('${p.id}')">查看</button> ${p.status!=='confirmed'?'<button class="btn btn-sm btn-primary" onclick="sendProofConfirm(\''+p.id+'\')">发送确认</button>':''}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function viewProof(id) {
+  const p = DM.get('proofs').find(x => x.id === id);
+  if (!p) return;
+  showModal('打样详情', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">订单号</label><div style="padding:8px 0;font-weight:600;color:var(--primary)">${p.orderId}</div></div>
+      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${p.customer}</div></div>
+      <div class="form-group"><label class="form-label">打样类型</label><div style="padding:8px 0">${p.type}</div></div>
+      <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0">${p.status==='confirmed'?'<span class="badge badge-green">已确认</span>':'<span class="badge badge-yellow">待客户确认</span>'}</div></div>
+      <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${p.uploaded}</div></div>
+      <div class="form-group"><label class="form-label">打样文件</label><div style="padding:8px 0">${p.fileUrl || '暂无文件'}</div></div>
+    </div>
+    <div style="margin-top:16px;padding:12px;background:var(--gray-50);border-radius:6px;font-size:13px;color:var(--gray-600)">
+      提示：打样文件将在此处预览。静态演示环境中暂不支持在线预览，生产环境将对接文件存储。
+    </div>
+  `, null, [{label:'关闭',cls:'btn-secondary'}]);
+  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
+  document.getElementById('modalSaveBtn')?.remove();
+}
+
+function sendProofConfirm(id) {
+  const proofs = DM.get('proofs');
+  const p = proofs.find(x => x.id === id);
+  if (!p) return;
+  showModal('发送打样确认', `
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${p.customer}</div></div>
+      <div class="form-group full"><label class="form-label">打样类型</label><div style="padding:8px 0">${p.type}</div></div>
+      <div class="form-group full"><label class="form-label">通知方式</label><select class="form-select" id="f_proof_notify"><option>WhatsApp</option><option>邮件</option><option>系统站内信</option></select></div>
+      <div class="form-group full"><label class="form-label">附言</label><textarea class="form-textarea" id="f_proof_note" rows="3">请查看附件中的打样效果，确认颜色和结构是否满意。如有修改意见请及时反馈。</textarea></div>
+    </div>
+  `, () => {
+    p.status = 'confirmed';
+    p.confirmedAt = DM.now();
+    DM.set('proofs', proofs);
+    toast('确认通知已发送'); renderPage(currentPageId);
+  });
 }
 
 // ========== PRODUCTS ==========
@@ -1064,32 +1311,135 @@ function deleteProduct(id) {
 }
 
 function renderPrintingMeta(c) {
-  const options = ['0C (无印刷)','1C 单色','4C 四色','4C+0C','4C+1C','4C+4C','1C+0C','1C+1C','Flexo 1C','Flexo 2C','Brown Base','White Base','Laserfoil'];
+  const options = DM.get('printingOptions');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">印刷色数库</h1><p class="page-desc">管理印刷选项</p></div><button class="btn btn-primary" onclick="toast('新增选项功能开发中')">+ 新增选项</button></div>
-    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map(o=>`<span class="badge badge-blue" style="padding:8px 16px;font-size:13px">${o}</span>`).join('')}</div></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">印刷色数库</h1><p class="page-desc">管理印刷选项</p></div><button class="btn btn-primary" onclick="addPrintingOption()">+ 新增选项</button></div>
+    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map(o=>`<span class="badge badge-blue" style="padding:8px 16px;font-size:13px;cursor:pointer" onclick="removePrintingOption('${o}')">${o} ×</span>`).join('')}</div></div></div>`;
+}
+
+function addPrintingOption() {
+  showModal('新增印刷选项', `
+    <div class="form-group"><label class="form-label">选项名称 *</label><input class="form-input" id="f_print_opt" placeholder="e.g. 2C+0C"></div>
+  `, () => {
+    const name = val('f_print_opt');
+    if (!name) { toast('请输入选项名称'); return; }
+    const opts = DM.get('printingOptions');
+    if (opts.includes(name)) { toast('选项已存在'); return; }
+    opts.push(name);
+    DM.set('printingOptions', opts);
+    toast('印刷选项已添加'); renderPage(currentPageId);
+  });
+}
+
+function removePrintingOption(name) {
+  if (!confirm('确定删除选项 "' + name + '"？')) return;
+  const opts = DM.get('printingOptions').filter(o => o !== name);
+  DM.set('printingOptions', opts);
+  toast('选项已删除'); renderPage(currentPageId);
 }
 
 function renderFinishMeta(c) {
-  const options = ['哑光覆膜','光面覆膜','柔触感 Soft Touch','无覆膜','Spot UV','Emboss','Deboss','Hot-stamp Foil'];
+  const options = DM.get('finishingOptions');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">表面处理库</h1><p class="page-desc">管理表面处理选项</p></div><button class="btn btn-primary" onclick="toast('新增选项功能开发中')">+ 新增选项</button></div>
-    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map(o=>`<span class="badge badge-purple" style="padding:8px 16px;font-size:13px">${o}</span>`).join('')}</div></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">表面处理库</h1><p class="page-desc">管理表面处理选项</p></div><button class="btn btn-primary" onclick="addFinishOption()">+ 新增选项</button></div>
+    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map(o=>`<span class="badge badge-purple" style="padding:8px 16px;font-size:13px;cursor:pointer" onclick="removeFinishOption('${o}')">${o} ×</span>`).join('')}</div></div></div>`;
+}
+
+function addFinishOption() {
+  showModal('新增表面处理选项', `
+    <div class="form-group"><label class="form-label">选项名称 *</label><input class="form-input" id="f_finish_opt" placeholder="e.g. Soft Touch Matte"></input></div>
+  `, () => {
+    const name = val('f_finish_opt');
+    if (!name) { toast('请输入选项名称'); return; }
+    const opts = DM.get('finishingOptions');
+    if (opts.includes(name)) { toast('选项已存在'); return; }
+    opts.push(name);
+    DM.set('finishingOptions', opts);
+    toast('表面处理选项已添加'); renderPage(currentPageId);
+  });
+}
+
+function removeFinishOption(name) {
+  if (!confirm('确定删除选项 "' + name + '"？')) return;
+  const opts = DM.get('finishingOptions').filter(o => o !== name);
+  DM.set('finishingOptions', opts);
+  toast('选项已删除'); renderPage(currentPageId);
 }
 
 function renderMaterialMeta(c) {
-  const materials = [{name:'白卡纸 300g',fsc:true,food:false},{name:'白卡纸 350g',fsc:true,food:false},{name:'牛卡 E楞',fsc:false,food:false},{name:'瓦楞 B楞',fsc:false,food:false},{name:'食品级纸',fsc:true,food:true}];
+  const materials = DM.get('materials');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">材质库</h1><p class="page-desc">管理材质选项</p></div><button class="btn btn-primary" onclick="toast('新增材质功能开发中')">+ 新增材质</button></div>
+    <div class="page-header"><div><h1 class="page-title">材质库</h1><p class="page-desc">管理材质选项</p></div><button class="btn btn-primary" onclick="openMaterialModal()">+ 新增材质</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>材质名称</th><th>FSC 认证</th><th>食品级</th><th>操作</th></tr></thead>
-    <tbody>${materials.map((m,i)=>`<tr><td class="td-name">${m.name}</td><td>${m.fsc?'✅':'❌'}</td><td>${m.food?'✅':'❌'}</td><td><button class="btn btn-sm btn-secondary" onclick="toast('材质编辑功能开发中')">编辑</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${materials.map(m=>`<tr><td class="td-name">${m.name}</td><td>${m.fsc?'✅':'❌'}</td><td>${m.food?'✅':'❌'}</td><td><button class="btn btn-sm btn-secondary" onclick="openMaterialModal('${m.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteMaterial('${m.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openMaterialModal(id) {
+  const mats = DM.get('materials');
+  const m = id ? mats.find(x => x.id === id) : null;
+  showModal(m ? '编辑材质' : '新增材质', `
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">材质名称 *</label><input class="form-input" id="f_mat_name" value="${m?.name||''}"></div>
+      <div class="form-group"><label class="form-label">FSC 认证</label><select class="form-select" id="f_mat_fsc"><option value="true" ${m?.fsc?'selected':''}>是</option><option value="false" ${!m?.fsc?'selected':''}>否</option></select></div>
+      <div class="form-group"><label class="form-label">食品级</label><select class="form-select" id="f_mat_food"><option value="true" ${m?.food?'selected':''}>是</option><option value="false" ${!m?.food?'selected':''}>否</option></select></div>
+    </div>
+  `, () => {
+    const name = val('f_mat_name');
+    if (!name) { toast('请填写材质名称'); return; }
+    const fsc = val('f_mat_fsc') === 'true';
+    const food = val('f_mat_food') === 'true';
+    if (m) { m.name = name; m.fsc = fsc; m.food = food; }
+    else { mats.push({id:DM.genId('MAT'),name,fsc,food}); }
+    DM.set('materials', mats);
+    toast(m ? '材质已更新' : '材质已添加'); renderPage(currentPageId);
+  });
+}
+
+function deleteMaterial(id) {
+  if (!confirm('确定删除此材质？')) return;
+  DM.set('materials', DM.get('materials').filter(m => m.id !== id));
+  toast('材质已删除'); renderPage(currentPageId);
 }
 
 // ========== CONTENT ==========
 function renderArticles(c) {
+  const articles = DM.get('articles');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">文章管理</h1><p class="page-desc">博客/资讯内容</p></div><button class="btn btn-primary" onclick="toast('文章编辑功能开发中')">+ 新建文章</button></div>
-    <div class="card"><div class="card-body"><div class="empty"><div class="icon">📝</div><p>暂无文章，点击上方按钮创建</p></div></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">文章管理</h1><p class="page-desc">博客/资讯内容</p></div><button class="btn btn-primary" onclick="openArticleModal()">+ 新建文章</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>标题</th><th>分类</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+    <tbody>${articles.length===0?'<tr><td colspan="5" style="text-align:center;padding:40px;color:#999">暂无文章</td></tr>':
+    articles.map(a=>`<tr><td class="td-name">${a.title}</td><td>${a.category}</td><td>${a.status==='published'?'<span class="badge badge-green">已发布</span>':'<span class="badge badge-gray">草稿</span>'}</td><td>${a.created}</td><td><button class="btn btn-sm btn-secondary" onclick="openArticleModal('${a.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteArticle('${a.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openArticleModal(id) {
+  const articles = DM.get('articles');
+  const a = id ? articles.find(x => x.id === id) : null;
+  showModal(a ? '编辑文章' : '新建文章', `
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">标题 *</label><input class="form-input" id="f_art_title" value="${a?.title||''}"></div>
+      <div class="form-group"><label class="form-label">分类</label><select class="form-select" id="f_art_cat"><option ${a?.category==='Guide'?'selected':''}>Guide</option><option ${a?.category==='Sustainability'?'selected':''}>Sustainability</option><option ${a?.category==='News'?'selected':''}>News</option><option ${a?.category==='Tips'?'selected':''}>Tips</option></select></div>
+      <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_art_status"><option value="draft" ${a?.status==='draft'?'selected':''}>草稿</option><option value="published" ${a?.status==='published'?'selected':''}>已发布</option></select></div>
+      <div class="form-group full"><label class="form-label">内容摘要</label><textarea class="form-textarea" id="f_art_excerpt" rows="3">${a?.excerpt||''}</textarea></div>
+      <div class="form-group full"><label class="form-label">正文内容</label><textarea class="form-textarea" id="f_art_content" rows="6">${a?.content||''}</textarea></div>
+    </div>
+  `, () => {
+    const title = val('f_art_title');
+    if (!title) { toast('请填写标题'); return; }
+    if (a) {
+      a.title = title; a.category = val('f_art_cat'); a.status = val('f_art_status');
+      a.excerpt = val('f_art_excerpt'); a.content = val('f_art_content'); a.updated = new Date().toISOString().slice(0,10);
+    } else {
+      articles.push({id:DM.genId('ART'),title,category:val('f_art_cat'),status:val('f_art_status'),excerpt:val('f_art_excerpt'),content:val('f_art_content'),created:new Date().toISOString().slice(0,10),updated:''});
+    }
+    DM.set('articles', articles);
+    toast(a ? '文章已更新' : '文章已创建'); renderPage(currentPageId);
+  });
+}
+
+function deleteArticle(id) {
+  if (!confirm('确定删除此文章？')) return;
+  DM.set('articles', DM.get('articles').filter(a => a.id !== id));
+  toast('文章已删除'); renderPage(currentPageId);
 }
 
 function renderFAQ(c) {
@@ -1140,44 +1490,52 @@ function renderBanner(c) {
     <div class="page-header"><div><h1 class="page-title">首页 Banner</h1><p class="page-desc">Hero 区域配置</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group full"><label class="form-label">主标题</label><input class="form-input" value="Custom Packaging That Elevates Your Brand"></div>
-        <div class="form-group full"><label class="form-label">副标题</label><textarea class="form-textarea" rows="2">From design to delivery — we manufacture premium printed boxes, bags, and labels for businesses worldwide.</textarea></div>
-        <div class="form-group"><label class="form-label">CTA 1 文案</label><input class="form-input" value="Request Free Quote"></div>
-        <div class="form-group"><label class="form-label">CTA 2 文案</label><input class="form-input" value="Explore Products"></div>
+        <div class="form-group full"><label class="form-label">主标题</label><input class="form-input" id="fs_banner_title" value="${(DM.get('settings_banner')||{}).title||'Custom Packaging That Elevates Your Brand'}"></div>
+        <div class="form-group full"><label class="form-label">副标题</label><textarea class="form-textarea" id="fs_banner_sub" rows="2">${(DM.get('settings_banner')||{}).subtitle||'From design to delivery — we manufacture premium printed boxes, bags, and labels for businesses worldwide.'}</textarea></div>
+        <div class="form-group"><label class="form-label">CTA 1 文案</label><input class="form-input" id="fs_banner_cta1" value="${(DM.get('settings_banner')||{}).cta1||'Request Free Quote'}"></div>
+        <div class="form-group"><label class="form-label">CTA 2 文案</label><input class="form-input" id="fs_banner_cta2" value="${(DM.get('settings_banner')||{}).cta2||'Explore Products'}"></div>
         <div class="form-group full"><label class="form-label">背景图</label><input class="form-input" type="file" accept="image/*"></div>
       </div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('Banner 已保存')">保存</button></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="DM.set('settings_banner',{title:val('fs_banner_title'),subtitle:val('fs_banner_sub'),cta1:val('fs_banner_cta1'),cta2:val('fs_banner_cta2')});toast('Banner 已保存')">保存</button></div>
     </div></div>`;
 }
 
 function renderAdvantages(c) {
+  const adv = DM.get('settings_advantages', [{title:'Custom Solutions',desc:'Tailored packaging design',icon:'📦'},{title:'Fast Turnaround',desc:'15-25 day production cycle',icon:'⏱️'},{title:'Factory Direct',desc:'Competitive pricing, no middleman',icon:'🏭'},{title:'Global Shipping',desc:'Reliable worldwide delivery',icon:'🌍'}]);
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">优势图标区</h1><p class="page-desc">4 个核心卖点</p></div></div>
     <div class="card"><div class="card-body">
-      ${['Custom Solutions|Tailored packaging design|📦','Fast Turnaround|15-25 day production cycle|⏱️','Factory Direct|Competitive pricing, no middleman|🏭','Global Shipping|Reliable worldwide delivery|🌍'].map((item,i) => {
-        const [title,desc,icon] = item.split('|');
-        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:24px">${icon}</span><div style="flex:1"><div class="form-input" style="font-weight:600;margin-bottom:4px" contenteditable>${title}</div><div class="form-input" style="font-size:12px;color:var(--gray-500)" contenteditable>${desc}</div></div></div>`;
-      }).join('')}
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+      ${adv.map((a,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:24px">${a.icon}</span><div style="flex:1"><input class="form-input adv-title" data-idx="${i}" value="${a.title}" style="font-weight:600;margin-bottom:4px"><input class="form-input adv-desc" data-idx="${i}" value="${a.desc}" style="font-size:12px;color:var(--gray-500)"></div></div>`).join('')}
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveAdvantages()">保存</button></div>
     </div></div>`;
 }
 
+function saveAdvantages() {
+  const adv = DM.get('settings_advantages', [{icon:'📦'},{icon:'⏱️'},{icon:'🏭'},{icon:'🌍'}]);
+  document.querySelectorAll('.adv-title').forEach(el => { adv[el.dataset.idx].title = el.value; });
+  document.querySelectorAll('.adv-desc').forEach(el => { adv[el.dataset.idx].desc = el.value; });
+  DM.set('settings_advantages', adv);
+  toast('已保存');
+}
+
 function renderStats(c) {
+  const st = DM.get('settings_stats', [{num:'30+',label:'Years Est.'},{num:'500+',label:'Clients Served'},{num:'40+',label:'Ready Moulds'},{num:'50+',label:'Countries Exported'}]);
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">数据展示</h1><p class="page-desc">About 区域数字配置</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">数字 1</label><input class="form-input" value="30+"></div>
-        <div class="form-group"><label class="form-label">标签 1</label><input class="form-input" value="Years Est."></div>
-        <div class="form-group"><label class="form-label">数字 2</label><input class="form-input" value="500+"></div>
-        <div class="form-group"><label class="form-label">标签 2</label><input class="form-input" value="Clients Served"></div>
-        <div class="form-group"><label class="form-label">数字 3</label><input class="form-input" value="40+"></div>
-        <div class="form-group"><label class="form-label">标签 3</label><input class="form-input" value="Ready Moulds"></div>
-        <div class="form-group"><label class="form-label">数字 4</label><input class="form-input" value="50+"></div>
-        <div class="form-group"><label class="form-label">标签 4</label><input class="form-input" value="Countries Exported"></div>
+        ${st.map((s,i)=>`<div class="form-group"><label class="form-label">数字 ${i+1}</label><input class="form-input stat-num" data-idx="${i}" value="${s.num}"></div><div class="form-group"><label class="form-label">标签 ${i+1}</label><input class="form-input stat-label" data-idx="${i}" value="${s.label}"></div>`).join('')}
       </div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveStats()">保存</button></div>
     </div></div>`;
+}
+
+function saveStats() {
+  const st = DM.get('settings_stats', [{},{},{},{}]);
+  document.querySelectorAll('.stat-num').forEach(el => { st[el.dataset.idx].num = el.value; });
+  document.querySelectorAll('.stat-label').forEach(el => { st[el.dataset.idx].label = el.value; });
+  DM.set('settings_stats', st);
+  toast('已保存');
 }
 
 function renderTestimonials(c) {
@@ -1226,62 +1584,88 @@ function deleteTestimonial(id) {
 }
 
 function renderClients(c) {
+  const clients = DM.get('clients');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">合作品牌墙</h1><p class="page-desc">管理展示的客户 Logo</p></div><button class="btn btn-primary" onclick="toast('Logo上传功能开发中')">+ 上传 Logo</button></div>
+    <div class="page-header"><div><h1 class="page-title">合作品牌墙</h1><p class="page-desc">管理展示的客户 Logo</p></div><button class="btn btn-primary" onclick="openClientModal()">+ 上传 Logo</button></div>
     <div class="card"><div class="card-body">
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
-        ${["L'ORÉAL","AMAZON","SHOPEE","LAZADA","NESTLÉ","UNILEVER"].map(n=>`<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;font-weight:700;color:var(--gray-400);font-size:14px;letter-spacing:2px">${n}</div>`).join('')}
+        ${clients.map(cl=>`<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;cursor:pointer;position:relative" onclick="openClientModal('${cl.id}')"><div style="font-weight:700;color:var(--gray-400);font-size:14px;letter-spacing:2px">${cl.name}</div>${!cl.active?'<span class="badge badge-gray" style="position:absolute;top:4px;right:4px;font-size:9px">隐藏</span>':''}</div>`).join('')}
       </div>
     </div></div>`;
+}
+
+function openClientModal(id) {
+  const clients = DM.get('clients');
+  const cl = id ? clients.find(x => x.id === id) : null;
+  showModal(cl ? '编辑品牌' : '上传品牌 Logo', `
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">品牌名称 *</label><input class="form-input" id="f_cl_name" value="${cl?.name||''}" placeholder="e.g. Nike"></div>
+      <div class="form-group full"><label class="form-label">Logo 图片</label><input class="form-input" type="file" accept="image/*" id="f_cl_logo"></div>
+      <div class="form-group"><label class="form-label">前台展示</label><select class="form-select" id="f_cl_active"><option value="true" ${cl?.active!==false?'selected':''}>展示</option><option value="false" ${cl?.active===false?'selected':''}>隐藏</option></select></div>
+    </div>
+    ${!cl?'<div style="margin-top:12px;padding:10px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-500)">提示：静态演示中 Logo 使用文字表示，生产环境将上传至文件存储。</div>':''}
+  `, () => {
+    const name = val('f_cl_name');
+    if (!name) { toast('请填写品牌名称'); return; }
+    const active = val('f_cl_active') === 'true';
+    if (cl) { cl.name = name; cl.active = active; }
+    else { clients.push({id:DM.genId('CL'),name,active}); }
+    DM.set('clients', clients);
+    toast(cl ? '品牌已更新' : '品牌已添加'); renderPage(currentPageId);
+  });
 }
 
 function renderAbout(c) {
+  const s = DM.get('settings_about');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">About 关于我们</h1><p class="page-desc">编辑 About 页面内容</p></div></div>
     <div class="card"><div class="card-body">
-      <div class="form-group"><label class="form-label">公司介绍</label><textarea class="form-textarea" rows="4">Jiulian Packaging (United YL Printers Sdn Bhd) has been a trusted packaging partner since 2008. With over 30 years of combined experience, we serve 500+ clients across 50+ countries.</textarea></div>
-      <div class="form-group"><label class="form-label">工厂地址</label><input class="form-input" value="Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur"></div>
+      <div class="form-group"><label class="form-label">公司介绍</label><textarea class="form-textarea" id="fs_aboutIntro" rows="4">${s.intro||''}</textarea></div>
+      <div class="form-group"><label class="form-label">工厂地址</label><input class="form-input" id="fs_aboutAddress" value="${s.address||''}"></div>
       <div class="form-group"><label class="form-label">认证勾选</label>
         <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px">
-          ${['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ'].map(cert=>`<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" checked> ${cert}</label>`).join('')}
+          ${['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ'].map(cert=>`<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" class="about-cert-cb" value="${cert}" ${s.certs?.includes(cert)?'checked':''}> ${cert}</label>`).join('')}
         </div>
       </div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsAbout()">保存</button></div>
     </div></div>`;
+}
+
+function saveSettingsAbout() {
+  const checked = [...document.querySelectorAll('.about-cert-cb:checked')].map(cb=>cb.value);
+  DM.set('settings_about', {intro:val('fs_aboutIntro'),address:val('fs_aboutAddress'),certs:checked});
+  toast('已保存');
 }
 
 function renderProcess(c) {
-  const steps = [{title:'Enquire & Quote',desc:'Submit your requirements via our 60-second quote form',days:'1-2 days'},{title:'Artwork & Die-Line',desc:'Upload your artwork or use our 40+ ready moulds',days:'2-3 days'},{title:'Proof & Mock-Up',desc:'Digital proof for color + blank mock-up for structure',days:'3-5 days'},{title:'Production',desc:'Mass production with strict QC at every stage',days:'10-14 days'},{title:'Free Delivery',desc:'Free delivery within KL & Selangor',days:'1-3 days'}];
+  const steps = DM.get('settings_process');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">How We Work</h1><p class="page-desc">5 步流程配置</p></div></div>
-    <div class="card"><div class="card-body">${steps.map((s,i)=>`<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--gray-100)"><div style="width:40px;height:40px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${i+1}</div><div style="flex:1"><div style="font-weight:600;color:var(--gray-900);margin-bottom:4px" contenteditable>${s.title}</div><div style="font-size:13px;color:var(--gray-500);margin-bottom:4px" contenteditable>${s.desc}</div><span class="badge badge-blue">${s.days}</span></div></div>`).join('')}<div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div></div></div>`;
+    <div class="card"><div class="card-body">${steps.map((s,i)=>`<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--gray-100)"><div style="width:40px;height:40px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${i+1}</div><div style="flex:1"><input class="form-input process-title" data-idx="${i}" value="${s.title}" style="font-weight:600;margin-bottom:4px"><input class="form-input process-desc" data-idx="${i}" value="${s.desc}" style="font-size:13px;margin-bottom:4px"><input class="form-input process-days" data-idx="${i}" value="${s.days}" style="width:120px;font-size:12px"></div></div>`).join('')}<div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsProcess()">保存</button></div></div></div>`;
+}
+
+function saveSettingsProcess() {
+  const steps = DM.get('settings_process');
+  document.querySelectorAll('.process-title').forEach(el => { steps[el.dataset.idx].title = el.value; });
+  document.querySelectorAll('.process-desc').forEach(el => { steps[el.dataset.idx].desc = el.value; });
+  document.querySelectorAll('.process-days').forEach(el => { steps[el.dataset.idx].days = el.value; });
+  DM.set('settings_process', steps);
+  toast('已保存');
 }
 
 function renderPrintingGuide(c) {
+  const content = DM.get('settings_printing_guide', '');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">印刷指南</h1><p class="page-desc">0C/1C/4C 说明及术语</p></div></div>
     <div class="card"><div class="card-body">
-      <div class="form-group"><label class="form-label">指南内容</label><textarea class="form-textarea" rows="12">## Reading the Code
-
-The printing code format is: [Front]C[Back]C
-
-- **0C** = No printing (plain)
-- **1C** = Single color print (Flexo)
-- **4C** = Full color CMYK print
-
-### Common Combinations:
-- **4C+0C**: Full color outside, plain inside
-- **4C+1C**: Full color outside, single color inside
-- **4C+4C**: Full color both sides
-- **1C+0C**: Single color outside, plain inside
-
-### Other Terms:
-- **Flexo**: Flexographic printing (cost-effective for simple designs)
-- **Brown Base**: Kraft/natural brown material
-- **White Base**: White cardboard material
-- **Laserfoil**: Metallic foil stamping effect</textarea></div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+      <div class="form-group"><label class="form-label">指南内容</label><textarea class="form-textarea" id="fs_guide_content" rows="12">${content}</textarea></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="savePrintingGuide()">保存</button></div>
     </div></div>`;
+}
+
+function savePrintingGuide() {
+  DM.set('settings_printing_guide', val('fs_guide_content'));
+  toast('已保存');
 }
 
 // ========== FORMS ==========
@@ -1291,7 +1675,7 @@ function renderFormsList(c) {
     <div class="card"><div class="table-wrap"><table><thead><tr><th>表单名称</th><th>类型</th><th>提交数</th><th>状态</th><th>操作</th></tr></thead>
     <tbody>
       <tr><td class="td-name">免费报价表单</td><td>报价</td><td>248</td><td><span class="badge badge-green">启用</span></td><td><button class="btn btn-sm btn-secondary" onclick="navigateTo('forms-quote-config','表单管理','报价表单配置')">配置字段</button></td></tr>
-      <tr><td class="td-name">联系我们表单</td><td>联系</td><td>86</td><td><span class="badge badge-green">启用</span></td><td><button class="btn btn-sm btn-secondary" onclick="toast('表单字段配置功能开发中')">配置字段</button></td></tr>
+      <tr><td class="td-name">联系我们表单</td><td>联系</td><td>86</td><td><span class="badge badge-green">启用</span></td><td><button class="btn btn-sm btn-secondary" onclick="openContactFormConfig()">配置字段</button></td></tr>
     </tbody></table></div></div>`;
 }
 
@@ -1302,60 +1686,156 @@ function renderQuoteConfig(c) {
       <div style="display:flex;flex-direction:column;gap:8px">
         ${[['盒型','下拉选择',true],['尺寸 (cm)','文本输入',true],['采购数量','数字输入',true],['印刷方式','下拉选择',true],['表面处理','下拉选择',true],['特殊工艺','多选',false],['姓名','文本输入',true],['公司','文本输入',false],['电话','文本输入',true],['邮箱','邮箱输入',true],['备注','多行文本',false],['附件上传','文件上传',false]].map(([name,type,req])=>`<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--gray-50);border-radius:6px"><span style="width:20px;text-align:center">${req?'🔴':'⚪'}</span><span style="flex:1;font-weight:500">${name}</span><span class="badge badge-gray">${type}</span><span style="font-size:11px;color:var(--gray-400)">${req?'必填':'选填'}</span></div>`).join('')}
       </div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('配置已保存')">保存配置</button></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('配置已保存');renderPage(currentPageId)">保存配置</button></div>
     </div></div>`;
 }
 
 function renderFormEntries(c) {
   const leads = DM.get('leads');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">表单提交记录</h1><p class="page-desc">所有表单提交</p></div><button class="btn btn-secondary btn-sm" onclick="toast('导出功能开发中')">📥 导出 Excel</button></div>
+    <div class="page-header"><div><h1 class="page-title">表单提交记录</h1><p class="page-desc">所有表单提交</p></div><button class="btn btn-secondary btn-sm" onclick="exportCSV('leads')">📥 导出 Excel</button></div>
     <div class="toolbar"><div class="search"><input placeholder="搜索..."></div><select><option value="">全部表单</option><option>报价表单</option><option>联系表单</option></select></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>编号</th><th>表单</th><th>姓名</th><th>公司</th><th>盒型</th><th>数量</th><th>提交时间</th><th>操作</th></tr></thead>
     <tbody>${leads.map(l=>`<tr><td class="td-id">${l.id}</td><td><span class="badge badge-blue">报价</span></td><td class="td-name">${l.name}</td><td>${l.company}</td><td>${l.boxType}</td><td>${l.quantity}</td><td>${l.created}</td><td><button class="btn btn-sm btn-secondary" onclick="viewLead('${l.id}')">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
-function viewLead(id) {
-  const l = DM.get('leads').find(x => x.id === id);
-  if (!l) return;
-  showModal('线索详情 ' + l.id, `
-    <div class="form-grid">
-      <div class="form-group"><label class="form-label">姓名</label><div style="padding:8px 0;font-weight:600">${l.name}</div></div>
-      <div class="form-group"><label class="form-label">公司</label><div style="padding:8px 0">${l.company}</div></div>
-      <div class="form-group"><label class="form-label">盒型</label><div style="padding:8px 0">${l.boxType}</div></div>
-      <div class="form-group"><label class="form-label">数量</label><div style="padding:8px 0">${l.quantity}</div></div>
-      <div class="form-group"><label class="form-label">提交时间</label><div style="padding:8px 0">${l.created}</div></div>
-      <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0"><span class="badge badge-blue">${l.status || '新线索'}</span></div></div>
-    </div>
-  `, null, [{label:'关闭',cls:'btn-secondary'}]);
-  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
-  document.getElementById('modalSaveBtn')?.remove();
-}
-
 // ========== MEDIA ==========
 function renderMedia(c) {
+  const files = DM.get('mediaFiles');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">媒体库</h1><p class="page-desc">图片和文件管理</p></div><button class="btn btn-primary" onclick="toast('文件上传功能开发中')">+ 上传文件</button></div>
-    <div class="toolbar"><div class="search"><input placeholder="搜索文件..."></div><select><option>全部类型</option><option>图片</option><option>PDF</option><option>其他</option></select></div>
+    <div class="page-header"><div><h1 class="page-title">媒体库</h1><p class="page-desc">图片和文件管理</p></div><button class="btn btn-primary" onclick="openMediaUpload()">+ 上传文件</button></div>
+    <div class="toolbar"><div class="search"><input placeholder="搜索文件..." oninput="filterMedia(this.value)"></div><select onchange="filterMediaType(this.value)"><option value="">全部类型</option><option value="image">图片</option><option value="pdf">PDF</option><option value="other">其他</option></select></div>
     <div class="card"><div class="card-body">
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
-        ${['产品图-飞机盒.jpg','产品图-食品盒.jpg','Banner-bg.png','Logo-Loreal.png','ISO证书.jpg','FSC证书.jpg'].map(f=>`<div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;cursor:pointer"><div style="height:100px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:24px">🖼️</div><div style="padding:8px;font-size:11px;color:var(--gray-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f}</div></div>`).join('')}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px" id="mediaGrid">
+        ${mediaGridHtml(files)}
       </div>
     </div></div>`;
+  mediaSearch = ''; mediaTypeFilter = '';
+}
+
+let mediaSearch = '', mediaTypeFilter = '';
+
+function mediaGridHtml(files) {
+  if (!files.length) return `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#999">暂无文件</div>`;
+  return files.map(f=>`<div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;cursor:pointer" onclick="viewMediaFile('${f.id}')"><div style="height:100px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:24px">${f.type==='image'?'🖼️':f.type==='pdf'?'📄':'📁'}</div><div style="padding:8px;font-size:11px;color:var(--gray-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div></div>`).join('');
+}
+
+function applyMediaFilter() {
+  const grid = document.getElementById('mediaGrid');
+  if (!grid) return;
+  let files = DM.get('mediaFiles');
+  if (mediaSearch) files = files.filter(f => f.name.toLowerCase().includes(mediaSearch));
+  if (mediaTypeFilter) files = files.filter(f => f.type === mediaTypeFilter);
+  grid.innerHTML = mediaGridHtml(files);
+}
+
+function filterMedia(v) { mediaSearch = (v||'').toLowerCase(); applyMediaFilter(); }
+function filterMediaType(v) { mediaTypeFilter = v||''; applyMediaFilter(); }
+
+function openMediaUpload() {
+  showModal('上传文件', `
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">选择文件 *</label><input class="form-input" type="file" id="f_media_file"></div>
+      <div class="form-group"><label class="form-label">文件分类</label><select class="form-select" id="f_media_type"><option value="image">图片</option><option value="pdf">PDF</option><option value="other">其他</option></select></div>
+      <div class="form-group"><label class="form-label">备注名称</label><input class="form-input" id="f_media_name" placeholder="可选，留空使用文件名"></div>
+    </div>
+    <div style="margin-top:12px;padding:10px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-500)">提示：静态演示环境中文件仅记录名称，不实际上传。生产环境将对接对象存储。</div>
+  `, () => {
+    const fileInput = document.getElementById('f_media_file');
+    const fileName = fileInput?.files?.[0]?.name || val('f_media_name') || '未命名文件';
+    const type = val('f_media_type');
+    const files = DM.get('mediaFiles');
+    files.push({id:DM.genId('MED'),name:fileName,type,size:'—',uploaded:new Date().toISOString().slice(0,10)});
+    DM.set('mediaFiles', files);
+    toast('文件已上传'); renderPage(currentPageId);
+  });
+}
+
+function viewMediaFile(id) {
+  const f = DM.get('mediaFiles').find(x => x.id === id);
+  if (!f) return;
+  showModal('文件详情', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">文件名</label><div style="padding:8px 0;font-weight:600">${f.name}</div></div>
+      <div class="form-group"><label class="form-label">类型</label><div style="padding:8px 0">${f.type}</div></div>
+      <div class="form-group"><label class="form-label">大小</label><div style="padding:8px 0">${f.size}</div></div>
+      <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${f.uploaded}</div></div>
+    </div>
+  `, null, [{label:'删除',cls:'btn-danger',fn:()=>{if(confirm('确定删除？')){DM.set('mediaFiles',DM.get('mediaFiles').filter(x=>x.id!==id));toast('已删除');closeModal();renderPage(currentPageId);}}},{label:'关闭',cls:'btn-secondary',fn:closeModal}]);
 }
 
 // ========== CASES ==========
 function renderCasesList(c) {
+  const cases = DM.get('cases');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">案例列表</h1><p class="page-desc">客户案例展示</p></div><button class="btn btn-primary" onclick="toast('案例编辑功能开发中')">+ 新建案例</button></div>
-    <div class="card"><div class="card-body"><div class="empty"><div class="icon">🎓</div><p>暂无案例，点击上方按钮创建</p></div></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">案例列表</h1><p class="page-desc">客户案例展示</p></div><button class="btn btn-primary" onclick="openCaseModal()">+ 新建案例</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>标题</th><th>分类</th><th>客户</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+    <tbody>${cases.length===0?'<tr><td colspan="6" style="text-align:center;padding:40px;color:#999">暂无案例</td></tr>':
+    cases.map(ca=>`<tr><td class="td-name">${ca.title}</td><td>${ca.category}</td><td>${ca.client}</td><td>${ca.status==='published'?'<span class="badge badge-green">已发布</span>':'<span class="badge badge-gray">草稿</span>'}</td><td>${ca.created}</td><td><button class="btn btn-sm btn-secondary" onclick="openCaseModal('${ca.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteCase('${ca.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openCaseModal(id) {
+  const cases = DM.get('cases');
+  const ca = id ? cases.find(x => x.id === id) : null;
+  const cats = DM.get('caseCategories');
+  showModal(ca ? '编辑案例' : '新建案例', `
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">标题 *</label><input class="form-input" id="f_case_title" value="${ca?.title||''}"></div>
+      <div class="form-group"><label class="form-label">分类</label><select class="form-select" id="f_case_cat">${cats.map(c=>`<option ${ca?.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">客户名称</label><input class="form-input" id="f_case_client" value="${ca?.client||''}"></div>
+      <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_case_status"><option value="draft" ${ca?.status==='draft'?'selected':''}>草稿</option><option value="published" ${ca?.status==='published'?'selected':''}>已发布</option></select></div>
+      <div class="form-group full"><label class="form-label">案例描述</label><textarea class="form-textarea" id="f_case_desc" rows="4">${ca?.desc||''}</textarea></div>
+    </div>
+  `, () => {
+    const title = val('f_case_title');
+    if (!title) { toast('请填写标题'); return; }
+    if (ca) { ca.title=title; ca.category=val('f_case_cat'); ca.client=val('f_case_client'); ca.status=val('f_case_status'); ca.desc=val('f_case_desc'); }
+    else { cases.push({id:DM.genId('CASE'),title,category:val('f_case_cat'),client:val('f_case_client'),status:val('f_case_status'),desc:val('f_case_desc'),created:new Date().toISOString().slice(0,10)}); }
+    DM.set('cases', cases);
+    toast(ca ? '案例已更新' : '案例已创建'); renderPage(currentPageId);
+  });
+}
+
+function deleteCase(id) {
+  if (!confirm('确定删除此案例？')) return;
+  DM.set('cases', DM.get('cases').filter(c => c.id !== id));
+  toast('案例已删除'); renderPage(currentPageId);
 }
 
 function renderCasesCategories(c) {
-  const cats = ['F&B','Retail','FMCG','Luxury','E-commerce'];
+  const cats = DM.get('caseCategories');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">案例分类</h1><p class="page-desc">按行业分类</p></div><button class="btn btn-primary" onclick="toast('分类管理功能开发中')">+ 新建分类</button></div>
-    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${cats.map(c=>`<span class="badge badge-green" style="padding:8px 16px;font-size:13px">${c}</span>`).join('')}</div></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">案例分类</h1><p class="page-desc">按行业分类</p></div><button class="btn btn-primary" onclick="addCaseCategory()">+ 新建分类</button></div>
+    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${cats.map(cat=>`<span class="badge badge-green" style="padding:8px 16px;font-size:13px;cursor:pointer" onclick="editCaseCategory('${cat}')">${cat} ✎</span>`).join('')}</div></div></div>`;
+}
+
+function addCaseCategory() {
+  showModal('新建案例分类', `
+    <div class="form-group"><label class="form-label">分类名称 *</label><input class="form-input" id="f_casecat" placeholder="e.g. Healthcare"></div>
+  `, () => {
+    const name = val('f_casecat');
+    if (!name) { toast('请输入分类名称'); return; }
+    const cats = DM.get('caseCategories');
+    if (cats.includes(name)) { toast('分类已存在'); return; }
+    cats.push(name);
+    DM.set('caseCategories', cats);
+    toast('分类已添加'); renderPage(currentPageId);
+  });
+}
+
+function editCaseCategory(old) {
+  showModal('编辑分类', `
+    <div class="form-group"><label class="form-label">分类名称</label><input class="form-input" id="f_casecat_edit" value="${old}"></div>
+    <div style="margin-top:12px"><button class="btn btn-danger btn-sm" onclick="if(confirm('确定删除？')){const c=DM.get('caseCategories').filter(x=>x!=='${old}');DM.set('caseCategories',c);toast('已删除');closeModal();renderPage(currentPageId);}">删除此分类</button></div>
+  `, () => {
+    const name = val('f_casecat_edit');
+    if (!name) { toast('请输入名称'); return; }
+    const cats = DM.get('caseCategories');
+    const idx = cats.indexOf(old);
+    if (idx >= 0) cats[idx] = name;
+    DM.set('caseCategories', cats);
+    toast('分类已更新'); renderPage(currentPageId);
+  });
 }
 
 // ========== POLICIES ==========
@@ -1402,91 +1882,156 @@ function deletePolicy(id) {
 
 // ========== SETTINGS ==========
 function renderSettingsSite(c) {
+  const s = DM.get('settings_site');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">基本信息</h1><p class="page-desc">站点和公司信息</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">公司英文名</label><input class="form-input" value="United YL Printers Sdn Bhd"></div>
-        <div class="form-group"><label class="form-label">公司中文名</label><input class="form-input" value="玖联包装印刷"></div>
-        <div class="form-group"><label class="form-label">电话</label><input class="form-input" value="017-583 6916"></div>
-        <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" value="enquiry@uylprinter.com"></div>
-        <div class="form-group full"><label class="form-label">地址</label><input class="form-input" value="Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur"></div>
-        <div class="form-group"><label class="form-label">Google Maps</label><input class="form-input" placeholder="Maps 链接"></div>
-        <div class="form-group"><label class="form-label">Waze</label><input class="form-input" placeholder="Waze 链接"></div>
-        <div class="form-group"><label class="form-label">Facebook</label><input class="form-input" placeholder="FB 页面链接"></div>
-        <div class="form-group"><label class="form-label">Instagram</label><input class="form-input" placeholder="IG 链接"></div>
-        <div class="form-group"><label class="form-label">LinkedIn</label><input class="form-input" placeholder="LinkedIn 链接"></div>
+        <div class="form-group"><label class="form-label">公司英文名</label><input class="form-input" id="fs_enName" value="${s.enName||''}"></div>
+        <div class="form-group"><label class="form-label">公司中文名</label><input class="form-input" id="fs_zhName" value="${s.zhName||''}"></div>
+        <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="fs_phone" value="${s.phone||''}"></div>
+        <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="fs_email" value="${s.email||''}"></div>
+        <div class="form-group full"><label class="form-label">地址</label><input class="form-input" id="fs_address" value="${s.address||''}"></div>
+        <div class="form-group"><label class="form-label">Google Maps</label><input class="form-input" id="fs_googleMaps" value="${s.googleMaps||''}" placeholder="Maps 链接"></div>
+        <div class="form-group"><label class="form-label">Waze</label><input class="form-input" id="fs_waze" value="${s.waze||''}" placeholder="Waze 链接"></div>
+        <div class="form-group"><label class="form-label">Facebook</label><input class="form-input" id="fs_facebook" value="${s.facebook||''}" placeholder="FB 页面链接"></div>
+        <div class="form-group"><label class="form-label">Instagram</label><input class="form-input" id="fs_instagram" value="${s.instagram||''}" placeholder="IG 链接"></div>
+        <div class="form-group"><label class="form-label">LinkedIn</label><input class="form-input" id="fs_linkedin" value="${s.linkedin||''}" placeholder="LinkedIn 链接"></div>
       </div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsSite()">保存</button></div>
     </div></div>`;
 }
 
+function saveSettingsSite() {
+  DM.set('settings_site', {
+    enName:val('fs_enName'), zhName:val('fs_zhName'), phone:val('fs_phone'),
+    email:val('fs_email'), address:val('fs_address'), googleMaps:val('fs_googleMaps'),
+    waze:val('fs_waze'), facebook:val('fs_facebook'), instagram:val('fs_instagram'), linkedin:val('fs_linkedin')
+  });
+  toast('已保存');
+}
+
 function renderSettingsSEO(c) {
+  const s = DM.get('settings_seo');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">SEO 设置</h1><p class="page-desc">搜索引擎优化</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group full"><label class="form-label">全站 Title</label><input class="form-input" value="Jiulian Packaging — Premium Printing & Packaging Solutions"></div>
-        <div class="form-group full"><label class="form-label">全站 Description</label><textarea class="form-textarea" rows="2">Jiulian Packaging is a leading printing and packaging manufacturer offering custom boxes, bags, and labels for global brands.</textarea></div>
-        <div class="form-group full"><label class="form-label">Keywords</label><input class="form-input" value="packaging, printing, custom boxes, mailer box, food packaging, Malaysia"></div>
-        <div class="form-group"><label class="form-label">Google Analytics ID</label><input class="form-input" placeholder="G-XXXXXXXXXX"></div>
-        <div class="form-group"><label class="form-label">Google Search Console</label><input class="form-input" placeholder="验证码"></div>
-        <div class="form-group"><label class="form-label">Facebook Pixel ID</label><input class="form-input" placeholder="Pixel ID"></div>
+        <div class="form-group full"><label class="form-label">全站 Title</label><input class="form-input" id="fs_title" value="${s.title||''}"></div>
+        <div class="form-group full"><label class="form-label">全站 Description</label><textarea class="form-textarea" id="fs_desc" rows="2">${s.description||''}</textarea></div>
+        <div class="form-group full"><label class="form-label">Keywords</label><input class="form-input" id="fs_keywords" value="${s.keywords||''}"></div>
+        <div class="form-group"><label class="form-label">Google Analytics ID</label><input class="form-input" id="fs_gaId" value="${s.gaId||''}" placeholder="G-XXXXXXXXXX"></div>
+        <div class="form-group"><label class="form-label">Google Search Console</label><input class="form-input" id="fs_gscId" value="${s.gscId||''}" placeholder="验证码"></div>
+        <div class="form-group"><label class="form-label">Facebook Pixel ID</label><input class="form-input" id="fs_fbPixel" value="${s.fbPixel||''}" placeholder="Pixel ID"></div>
         <div class="form-group"><label class="form-label">OG 默认图</label><input class="form-input" type="file" accept="image/*"></div>
       </div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsSEO()">保存</button></div>
     </div></div>`;
 }
 
+function saveSettingsSEO() {
+  DM.set('settings_seo', {title:val('fs_title'),description:val('fs_desc'),keywords:val('fs_keywords'),gaId:val('fs_gaId'),gscId:val('fs_gscId'),fbPixel:val('fs_fbPixel')});
+  toast('已保存');
+}
+
 function renderSettingsNotifications(c) {
+  const s = DM.get('settings_notifications');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">通知模板</h1><p class="page-desc">自动邮件通知配置</p></div></div>
     <div class="card"><div class="card-body">
-      <div class="form-group"><label class="form-label">新询盘通知 (发送至)</label><input class="form-input" value="enquiry@uylprinter.com"></div>
-      <div class="form-group"><label class="form-label">新询盘邮件模板</label><textarea class="form-textarea" rows="3">新询盘通知：\n客户：{{客户名}}\n公司：{{公司}}\n盒型：{{盒型}}\n数量：{{数量}}\n\n请及时跟进。</textarea></div>
-      <div class="form-group"><label class="form-label">报价发出模板</label><textarea class="form-textarea" rows="3">尊敬的 {{客户名}}，\n\n感谢您的询价。附件是报价单 {{报价号}}，有效期 {{有效期}}。\n\n如有任何疑问请随时联系我们。</textarea></div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+      <div class="form-group"><label class="form-label">新询盘通知 (发送至)</label><input class="form-input" id="fs_notifyEmail" value="${s.notifyEmail||''}"></div>
+      <div class="form-group"><label class="form-label">新询盘邮件模板</label><textarea class="form-textarea" id="fs_leadTemplate" rows="3">${s.leadTemplate||''}</textarea></div>
+      <div class="form-group"><label class="form-label">报价发出模板</label><textarea class="form-textarea" id="fs_quoteTemplate" rows="3">${s.quoteTemplate||''}</textarea></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsNotifications()">保存</button></div>
     </div></div>`;
+}
+
+function saveSettingsNotifications() {
+  DM.set('settings_notifications', {notifyEmail:val('fs_notifyEmail'),leadTemplate:val('fs_leadTemplate'),quoteTemplate:val('fs_quoteTemplate')});
+  toast('已保存');
 }
 
 function renderSettingsCerts(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">认证/资质</h1><p class="page-desc">上传管理证书</p></div></div>
     <div class="card"><div class="card-body">
-      ${['ISO 9001:2015','FSC Certified','Fogra 51'].map(cert=>`<div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><div style="flex:1"><span class="font-bold">${cert}</span></div><div style="width:60px;height:40px;background:var(--gray-100);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px">📄</div><label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" checked> 前台展示</label><button class="btn btn-sm btn-secondary" onclick="toast('证书上传功能开发中')">上传</button></div>`).join('')}
+      ${['ISO 9001:2015','FSC Certified','Fogra 51'].map(cert=>`<div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><div style="flex:1"><span class="font-bold">${cert}</span></div><div style="width:60px;height:40px;background:var(--gray-100);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px">📄</div><label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" checked> 前台展示</label><button class="btn btn-sm btn-secondary" onclick="uploadCert('${cert}')">上传</button></div>`).join('')}
     </div></div>`;
 }
 
 function renderSettingsShipping(c) {
+  const zones = DM.get('shippingZones');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">配送区域</h1><p class="page-desc">配送范围和运费</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">配送区域</h1><p class="page-desc">配送范围和运费</p></div><button class="btn btn-primary btn-sm" onclick="addShippingZone()">+ 添加区域</button></div>
     <div class="card mb-20"><div class="card-header"><span class="card-title">免费区域</span></div><div class="card-body">
       <div style="display:flex;flex-wrap:wrap;gap:8px"><span class="badge badge-green" style="padding:8px 16px">Kuala Lumpur</span><span class="badge badge-green" style="padding:8px 16px">Selangor</span></div>
     </div></div>
     <div class="card"><div class="card-header"><span class="card-title">收费区域</span></div><div class="card-body">
       <div class="table-wrap"><table><thead><tr><th>区域</th><th>运费系数</th><th>操作</th></tr></thead>
-      <tbody>
-        <tr><td>Penang</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary" onclick="toast('配送区域编辑功能开发中')">编辑</button></td></tr>
-        <tr><td>Johor</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary" onclick="toast('配送区域编辑功能开发中')">编辑</button></td></tr>
-        <tr><td>Melaka</td><td>1.5x</td><td><button class="btn btn-sm btn-secondary" onclick="toast('配送区域编辑功能开发中')">编辑</button></td></tr>
-        <tr><td>Ipoh</td><td>1.3x</td><td><button class="btn btn-sm btn-secondary" onclick="toast('配送区域编辑功能开发中')">编辑</button></td></tr>
-        <tr><td>East Malaysia</td><td>2.5x</td><td><button class="btn btn-sm btn-secondary" onclick="toast('配送区域编辑功能开发中')">编辑</button></td></tr>
-      </tbody></table></div>
+      <tbody>${zones.map(z=>`<tr><td>${z.region}</td><td>${z.rate}</td><td><button class="btn btn-sm btn-secondary" onclick="editShippingZone('${z.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteShippingZone('${z.id}')">删除</button></td></tr>`).join('')}</tbody></table></div>
     </div></div>`;
 }
 
+function editShippingZone(id) {
+  const zones = DM.get('shippingZones');
+  const z = zones.find(x => x.id === id);
+  if (!z) return;
+  showModal('编辑配送区域', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">区域名称 *</label><input class="form-input" id="f_sz_region" value="${z.region}"></div>
+      <div class="form-group"><label class="form-label">运费系数 *</label><input class="form-input" id="f_sz_rate" value="${z.rate}" placeholder="e.g. 1.5x"></div>
+    </div>
+  `, () => {
+    const region = val('f_sz_region');
+    const rate = val('f_sz_rate');
+    if (!region || !rate) { toast('请填写必填字段'); return; }
+    z.region = region; z.rate = rate;
+    DM.set('shippingZones', zones);
+    toast('区域已更新'); renderPage(currentPageId);
+  });
+}
+
+function addShippingZone() {
+  showModal('添加配送区域', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">区域名称 *</label><input class="form-input" id="f_sz_region" placeholder="e.g. Kedah"></div>
+      <div class="form-group"><label class="form-label">运费系数 *</label><input class="form-input" id="f_sz_rate" placeholder="e.g. 1.5x"></div>
+    </div>
+  `, () => {
+    const region = val('f_sz_region');
+    const rate = val('f_sz_rate');
+    if (!region || !rate) { toast('请填写必填字段'); return; }
+    const zones = DM.get('shippingZones');
+    zones.push({id:DM.genId('SZ'),region,rate,active:true});
+    DM.set('shippingZones', zones);
+    toast('区域已添加'); renderPage(currentPageId);
+  });
+}
+
+function deleteShippingZone(id) {
+  if (!confirm('确定删除此区域？')) return;
+  DM.set('shippingZones', DM.get('shippingZones').filter(z => z.id !== id));
+  toast('区域已删除'); renderPage(currentPageId);
+}
+
 function renderSettingsFinance(c) {
+  const s = DM.get('settings_finance');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">税率/货币</h1><p class="page-desc">财务参数配置</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">SST 税率</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" value="10" style="width:80px"> <span>%</span></div></div>
-        <div class="form-group"><label class="form-label">货币</label><select class="form-select"><option>MYR (RM)</option><option>USD</option><option>SGD</option></select></div>
-        <div class="form-group"><label class="form-label">报价默认有效期</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" value="14" style="width:80px"> <span>天</span></div></div>
-        <div class="form-group"><label class="form-label">定金比例</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" value="50" style="width:80px"> <span>%</span></div></div>
+        <div class="form-group"><label class="form-label">SST 税率</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" id="fs_sst" value="${s.sstRate||10}" style="width:80px"> <span>%</span></div></div>
+        <div class="form-group"><label class="form-label">货币</label><select class="form-select" id="fs_currency"><option ${s.currency==='MYR (RM)'?'selected':''}>MYR (RM)</option><option ${s.currency==='USD'?'selected':''}>USD</option><option ${s.currency==='SGD'?'selected':''}>SGD</option></select></div>
+        <div class="form-group"><label class="form-label">报价默认有效期</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" id="fs_validDays" value="${s.validDays||14}" style="width:80px"> <span>天</span></div></div>
+        <div class="form-group"><label class="form-label">定金比例</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" id="fs_deposit" value="${s.depositPercent||50}" style="width:80px"> <span>%</span></div></div>
       </div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('已保存')">保存</button></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsFinance()">保存</button></div>
     </div></div>`;
+}
+
+function saveSettingsFinance() {
+  DM.set('settings_finance', {sstRate:parseInt(val('fs_sst'))||10,currency:val('fs_currency'),validDays:parseInt(val('fs_validDays'))||14,depositPercent:parseInt(val('fs_deposit'))||50});
+  toast('已保存');
 }
 
 function renderUsers(c) {
@@ -1550,11 +2095,33 @@ function resetUserPassword(id) {
 }
 
 function renderRoles(c) {
-  const roles = [{name:'超级管理员',perms:'全部权限'},{name:'销售',perms:'线索管理、报价管理、订单管理'},{name:'设计',perms:'商品管理、内容管理、媒体库'},{name:'财务',perms:'订单管理(付款)、数据看板'},{name:'运营',perms:'内容管理、表单管理、案例、政策'}];
+  const roles = DM.get('roles');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">角色管理</h1><p class="page-desc">权限角色配置</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>角色</th><th>权限范围</th><th>操作</th></tr></thead>
-    <tbody>${roles.map(r=>`<tr><td class="td-name">${r.name}</td><td>${r.perms}</td><td><button class="btn btn-sm btn-secondary" onclick="toast('角色权限编辑功能开发中')">编辑权限</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${roles.map(r=>`<tr><td class="td-name">${r.name}</td><td>${r.perms.join('、')}</td><td><button class="btn btn-sm btn-secondary" onclick="editRole('${r.id}')">编辑权限</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function editRole(id) {
+  const roles = DM.get('roles');
+  const r = roles.find(x => x.id === id);
+  if (!r) return;
+  const allPerms = ['线索管理','报价管理','订单管理','商品管理','内容管理','媒体库','表单管理','案例','政策','数据看板','系统设置','管理员管理'];
+  showModal('编辑权限 - ' + r.name, `
+    <div class="form-group"><label class="form-label">角色名称</label><input class="form-input" id="f_role_name" value="${r.name}"></div>
+    <div class="form-group full"><label class="form-label">权限范围</label>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">
+        ${allPerms.map(p=>`<label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" class="role-perm-cb" value="${p}" ${r.perms.includes(p)||r.perms[0]==='全部权限'?'checked':''}> ${p}</label>`).join('')}
+      </div>
+    </div>
+  `, () => {
+    const name = val('f_role_name');
+    if (!name) { toast('请填写角色名称'); return; }
+    const checked = [...document.querySelectorAll('.role-perm-cb:checked')].map(cb=>cb.value);
+    r.name = name; r.perms = checked.length ? checked : ['无'];
+    DM.set('roles', roles);
+    toast('权限已更新'); renderPage(currentPageId);
+  });
 }
 
 function renderLogs(c) {
@@ -1606,9 +2173,59 @@ function logout() {
   }
 }
 
-function exportCSV(type) { toast('CSV 导出功能开发中') }
-function filterLeads(v) { toast('搜索: ' + v) }
-function filterLeadStatus(v) { toast('筛选: ' + v) }
+function exportCSV(type) {
+  let data = [];
+  if (type === 'leads') data = DM.get('leads');
+  else if (type === 'orders') data = DM.get('orders');
+  else if (type === 'quotes') data = DM.get('quotes');
+  if (!data.length) { toast('无数据可导出'); return; }
+  const keys = Object.keys(data[0]).filter(k => k !== 'followUps' && !Array.isArray(data[0][k]));
+  const csv = [keys.join(','), ...data.map(row => keys.map(k => '"'+(row[k]??'')+'"').join(','))].join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = type + '_export_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+  toast('已导出 ' + data.length + ' 条记录');
+}
+function openPricebookImport() {
+  showModal('导入价格簿', `
+    <div class="form-group"><label class="form-label">选择 CSV/Excel 文件</label><input class="form-input" type="file" accept=".csv,.xlsx,.xls" id="f_pb_file"></div>
+    <div style="margin-top:12px;padding:12px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-600)">
+      <b>格式要求：</b><br>SKU, 尺寸, 100pcs, 300pcs, 500pcs, 1000pcs, 2000pcs, 3000pcs, 5000pcs<br><br>
+      提示：静态演示环境中暂不支持文件解析。生产环境将自动解析并匹配 SKU 更新价格。
+    </div>
+  `, () => { toast('导入任务已提交'); closeModal(); });
+}
+
+function openContactFormConfig() {
+  const fields = DM.get('contactFormConfig');
+  showModal('联系表单字段配置', `
+    <div style="margin-bottom:12px"><button class="btn btn-sm btn-primary" onclick="this.nextElementSibling.style.display='block';this.style.display='none'">+ 添加字段</button><div style="display:none" class="form-grid"><div class="form-group"><input class="form-input" id="f_new_field" placeholder="字段名"></div><div class="form-group"><select class="form-select" id="f_new_field_type"><option>文本输入</option><option>邮箱输入</option><option>多行文本</option><option>下拉选择</option></select></div></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px">${fields.map((f,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--gray-50);border-radius:6px"><span style="width:20px;text-align:center">${f.required?'🔴':'⚪'}</span><span style="flex:1;font-weight:500">${f.name}</span><span class="badge badge-gray">${f.type}</span><button class="btn btn-sm btn-danger" onclick="removeContactField(${i})">×</button></div>`).join('')}</div>
+  `, () => {
+    const newName = val('f_new_field');
+    if (newName) {
+      fields.push({name:newName,type:val('f_new_field_type')||'文本输入',required:false});
+      DM.set('contactFormConfig', fields);
+    }
+    toast('配置已保存'); renderPage(currentPageId);
+  });
+}
+
+function removeContactField(idx) {
+  const fields = DM.get('contactFormConfig');
+  fields.splice(idx, 1);
+  DM.set('contactFormConfig', fields);
+  toast('字段已移除'); closeModal(); renderPage(currentPageId);
+}
+
+function uploadCert(name) {
+  showModal('上传证书 - ' + name, `
+    <div class="form-group"><label class="form-label">选择证书文件</label><input class="form-input" type="file" accept="image/*,.pdf"></div>
+    <div style="margin-top:12px;padding:10px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-500)">提示：静态演示环境中文件仅记录，不实际上传。</div>
+  `, () => { toast(name + ' 已上传'); closeModal(); });
+}
 
 // ========== INIT ==========
 window.addEventListener('DOMContentLoaded', () => {
