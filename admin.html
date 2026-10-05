@@ -295,6 +295,14 @@ function seedData() {
   ];
   DM.set('orders', orders);
 
+  if (!DM.get('payments') || DM.get('payments').length === 0) {
+    const payments = [
+      {id:'PAY-001',orderId:'OD-2026-001',orderNo:'OD-2026-001',customer:"L'Oréal Malaysia",type:'deposit',typeLabel:'定金 50%',amount:918.50,method:'银行转账',bankName:'Maybank',accountNo:'5123 4567 8901',accountName:'United YL Printers Sdn Bhd',date:'2026-10-04',receiptNo:'RCT-2026-001',status:'confirmed',note:'银行转账凭证已确认'},
+      {id:'PAY-002',orderId:'OD-2026-001',orderNo:'OD-2026-001',customer:"L'Oréal Malaysia",type:'final',typeLabel:'尾款 50%',amount:918.50,method:'银行转账',bankName:'Maybank',accountNo:'5123 4567 8901',accountName:'United YL Printers Sdn Bhd',date:'',receiptNo:'',status:'pending',note:'待生产完成后收取'}
+    ];
+    DM.set('payments', payments);
+  }
+
   const categories = [
     {id:'CAT-01',name:'飞机盒',slug:'mailer-box',icon:'📦',sort:1,active:true},
     {id:'CAT-02',name:'套筒盒',slug:'sleeve-box',icon:'🎁',sort:2,active:true},
@@ -826,10 +834,35 @@ function renderProduction(c) {
 }
 
 function renderPayments(c) {
+  const payments = DM.get('payments');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">收款记录</h1><p class="page-desc">管理定金和尾款</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>类型</th><th>金额(RM)</th><th>付款方式</th><th>到账日期</th><th>凭证</th></tr></thead>
-    <tbody><tr><td class="td-id">OD-2026-001</td><td class="td-name">L'Oréal Malaysia</td><td><span class="badge badge-blue">定金 50%</span></td><td>918.50</td><td>银行转账</td><td>2026-10-04</td><td><button class="btn btn-sm btn-secondary" onclick="toast('凭证查看功能开发中')">查看</button></td></tr></tbody></table></div></div>`;
+    <tbody>${payments.map(p=>`<tr><td class="td-id">${p.orderNo}</td><td class="td-name">${p.customer}</td><td><span class="badge badge-blue">${p.typeLabel}</span></td><td>${p.amount.toFixed(2)}</td><td>${p.method}</td><td>${p.date || '-'}</td><td><button class="btn btn-sm btn-secondary" onclick="viewPayment('${p.id}')">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function viewPayment(id) {
+  const p = DM.get('payments').find(x => x.id === id);
+  if (!p) return;
+  const statusMap = {confirmed:'badge-green',pending:'badge-yellow',rejected:'badge-red'};
+  const statusLabels = {confirmed:'已确认',pending:'待确认',rejected:'已拒绝'};
+  showModal('收款凭证 ' + p.receiptNo, `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">订单号</label><div style="padding:8px 0;font-weight:600">${p.orderNo}</div></div>
+      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0">${p.customer}</div></div>
+      <div class="form-group"><label class="form-label">类型</label><div style="padding:8px 0"><span class="badge badge-blue">${p.typeLabel}</span></div></div>
+      <div class="form-group"><label class="form-label">金额</label><div style="padding:8px 0;font-weight:700;font-size:16px;color:var(--primary)">RM ${p.amount.toFixed(2)}</div></div>
+      <div class="form-group"><label class="form-label">付款方式</label><div style="padding:8px 0">${p.method}</div></div>
+      <div class="form-group"><label class="form-label">银行</label><div style="padding:8px 0">${p.bankName}</div></div>
+      <div class="form-group"><label class="form-label">收款账号</label><div style="padding:8px 0">${p.accountNo}</div></div>
+      <div class="form-group"><label class="form-label">收款户名</label><div style="padding:8px 0">${p.accountName}</div></div>
+      <div class="form-group"><label class="form-label">到账日期</label><div style="padding:8px 0">${p.date || '-'}</div></div>
+      <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0"><span class="badge ${statusMap[p.status]||'badge-gray'}">${statusLabels[p.status]||p.status}</span></div></div>
+      <div class="form-group full"><label class="form-label">备注</label><div style="padding:8px 0">${p.note || '-'}</div></div>
+    </div>
+  `, null, [{label:'关闭',cls:'btn-secondary'}]);
+  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
+  document.getElementById('modalSaveBtn')?.remove();
 }
 
 function renderDelivery(c) {
