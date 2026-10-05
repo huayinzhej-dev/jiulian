@@ -183,7 +183,7 @@
 <body>
   <div class="login-container">
     <div class="login-header">
-      <div class="login-logo"><img src="/images/logo.png" alt="玖联包装"></div>
+      <div class="login-logo"><img src="images/logo.png" alt="玖联包装"></div>
       <h1 class="login-title">玖联包装后台系统</h1>
       <p class="login-subtitle">Jiulian Packaging Admin Portal</p>
     </div>
@@ -299,7 +299,7 @@
         
         // Redirect to admin dashboard after short delay
         setTimeout(() => {
-          window.location.href = '/admin.html';
+          window.location.href = 'admin.html';
         }, 1000);
       } else {
         showNotification('用户名或密码错误，请重试');
@@ -312,7 +312,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       const token = localStorage.getItem('jiulian_admin_token');
       if (token === 'authenticated') {
-        window.location.href = '/admin.html';
+        window.location.href = 'admin.html';
       }
     });
 

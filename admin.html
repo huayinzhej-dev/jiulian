@@ -193,7 +193,7 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">
-        <div class="logo-icon"><img src="/images/logo.png" alt="玖联包装"></div>
+        <div class="logo-icon"><img src="images/logo.png" alt="玖联包装"></div>
         <div class="logo-text"><h1>玖联包装</h1><p>管理后台 v2.0</p></div>
       </div>
     </div>
@@ -1227,7 +1227,7 @@ function logout() {
   if (confirm('确定退出登录？')) {
     localStorage.removeItem('jiulian_admin_token');
     localStorage.removeItem('jiulian_admin_user');
-    window.location.href = '/login.html';
+    window.location.href = 'login.html';
   }
 }
 
@@ -1238,7 +1238,7 @@ function filterLeadStatus(v) { toast('筛选: ' + v) }
 // ========== INIT ==========
 window.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('jiulian_admin_token') !== 'authenticated') {
-    window.location.href = '/login.html';
+    window.location.href = 'login.html';
     return;
   }
   seedData();
