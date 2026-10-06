@@ -139,18 +139,15 @@ ul { list-style: none; }
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--gray-200);
   transition: box-shadow var(--transition);
-  display: flex;
-  align-items: center;
 }
 .header.scrolled { box-shadow: var(--shadow-sm); }
-
-.nav-logo-outer {
+/* Logo 与导航必须待在同一个 1200px 居中容器里，
+   否则 .header 的 flex 会把 .container 压成内容宽度，整条导航就飘出正文中轴 */
+.header-inner {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  padding-left: 24px;
-  flex-shrink: 0;
+  gap: 28px;
+  height: 72px;
 }
 
 .logo-image {
@@ -162,11 +159,9 @@ ul { list-style: none; }
 .nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  height: 72px;
-  padding-left: 0;
+  justify-content: flex-end;
+  gap: 28px;
   flex: 1;
-  margin-left: -5px;
 }
 
 .nav-logo {
@@ -197,7 +192,18 @@ ul { list-style: none; }
 
 .nav-menu {
   display: flex;
+  align-items: center;
   gap: 20px;
+}
+/* 每个导航项用同一种盒模型，否则 inline 与 flex 混排会让两组文字差 4px 高低 */
+.nav-menu > li {
+  display: flex;
+  align-items: center;
+}
+.nav-menu > li > a {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .nav-menu a {
   font-size: 13px;
@@ -513,11 +519,14 @@ ul { list-style: none; }
 
 .why-us-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 64px;
   align-items: center;
 }
 
+.why-us-text {
+  min-width: 0;
+}
 .why-us-text p {
   font-size: 16px;
   color: var(--gray-600);
@@ -527,7 +536,7 @@ ul { list-style: none; }
 
 .why-us-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -538,6 +547,7 @@ ul { list-style: none; }
   padding: 28px 24px;
   text-align: center;
   transition: transform var(--transition);
+  min-width: 0;
 }
 .stat-card:hover { transform: translateY(-2px); }
 
@@ -917,23 +927,14 @@ ul { list-style: none; }
 .nav-dropdown {
   position: relative;
 }
-.nav-dropdown > a {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.nav-dropdown > a::after {
-  content: '';
+/* 小三角单独成元素，把 ::after 还给所有导航项共用的橙色下划线 */
+.nav-caret {
   width: 0;
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 4px solid currentColor;
-  position: static;
-  background: none;
-}
-.nav-dropdown > a:hover::after {
-  width: 0;
+  flex-shrink: 0;
 }
 .dropdown-menu {
   position: absolute;
@@ -980,7 +981,7 @@ ul { list-style: none; }
 }
 .cert-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
 }
 .cert-card {
@@ -1038,6 +1039,9 @@ ul { list-style: none; }
 .cert-icon-iso {
   background: #F3E5F5;
   color: #7B1FA2;
+}
+.cert-text {
+  min-width: 0;
 }
 .cert-text h3 {
   font-size: 15px;
@@ -1381,6 +1385,7 @@ ul { list-style: none; }
 }
 .pricing-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 20px;
 }
@@ -1434,10 +1439,12 @@ ul { list-style: none; }
 }
 .modal-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
 }
 .modal-actions .btn {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* ===== WhatsApp Floating Button ===== */
@@ -1488,13 +1495,14 @@ ul { list-style: none; }
 }
 .guide-content {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 32px;
   max-width: 900px;
   margin: 0 auto;
 }
 .guide-step {
   text-align: center;
+  min-width: 0;
 }
 .guide-step-num {
   display: flex;
@@ -1523,7 +1531,9 @@ ul { list-style: none; }
 }
 .guide-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* 必须用 minmax(0,1fr)：写成 1fr 时列宽下限是内容宽度，
+     "Matte Lamination" 这类长词会把三列撑到 507px，超出 453px 容器，整页出现横向拖动 */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
 }
 .guide-card {
@@ -1532,6 +1542,7 @@ ul { list-style: none; }
   border-radius: var(--radius-md);
   border: 1px solid var(--gray-200);
   transition: all var(--transition);
+  min-width: 0;
 }
 .guide-card:hover {
   border-color: var(--orange-500);
@@ -1836,19 +1847,29 @@ ul { list-style: none; }
 @media (max-width: 1024px) {
   .advantages-grid { grid-template-columns: repeat(2, 1fr); }
   .products-grid { grid-template-columns: repeat(2, 1fr); }
-  .cert-grid { grid-template-columns: repeat(2, 1fr); }
-  .why-us-grid { grid-template-columns: 1fr; gap: 40px; }
+  .cert-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .why-us-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
   .testimonials-grid { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .about-grid { grid-template-columns: 1fr; gap: 40px; }
 }
 
 @media (max-width: 768px) {
-  .cert-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cert-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .cert-card { padding: 16px 14px; gap: 12px; }
   .cert-icon { width: 40px; height: 40px; }
   .cert-text h3 { font-size: 14px; }
   .cert-text p { font-size: 12px; }
+
+  /* 手机上一列只有 135px，装不下 20px 标题，所以减到两列并收窄内边距 */
+  .guide-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .guide-card { padding: 20px 18px; }
+  .guide-card h4 { font-size: 18px; margin-bottom: 8px; }
+
+  /* 36px 的 "99.2%" 在 320px 屏上会顶破两列统计卡 */
+  .stat-card { padding: 20px 14px; }
+  .stat-number { font-size: 28px; }
+  .stat-label { font-size: 13px; }
 
   .nav-menu {
     position: fixed;
@@ -1857,6 +1878,7 @@ ul { list-style: none; }
     right: 0;
     background: var(--white);
     flex-direction: column;
+    align-items: stretch;
     gap: 0;
     padding: 16px 24px;
     border-bottom: 1px solid var(--gray-200);
@@ -1872,12 +1894,19 @@ ul { list-style: none; }
     pointer-events: all;
   }
   .nav-menu li { padding: 12px 0; }
+  /* 桌面端 li 是横排 flex；竖排菜单里要让标签在上、子菜单在下 */
+  .nav-menu > li { flex-direction: column; align-items: stretch; }
   .nav-toggle { display: flex; }
   .nav-cta { display: none; }
   .logo-image { height: 56px; }
 
   .nav-dropdown .dropdown-menu {
     position: static;
+    /* 基础规则里的 translateX(-50%) 在 static 下依然生效，会把子菜单往左推出去，必须清掉 */
+    transform: none;
+    /* 触屏没有 hover，子菜单不能靠 :hover 才显示，否则它看不见却又占着两百多像素 */
+    opacity: 1;
+    visibility: visible;
     box-shadow: none;
     border: none;
     padding: 8px 0 0 16px;
@@ -1929,6 +1958,17 @@ ul { list-style: none; }
   .cert-modal-image img { max-height: 260px; }
   .cert-modal-info { padding: 24px; }
   .cert-modal-title { font-size: 22px; }
+}
+
+/* 320px 这类小屏上，两列认证卡片放不下「Certification」这种长单词，
+   只能靠缩小图标和内边距把一行塞进去，而不是让整页可以左右拖 */
+@media (max-width: 380px) {
+  .cert-grid { gap: 8px; }
+  .cert-card { padding: 14px 10px; gap: 8px; }
+  .cert-icon { width: 32px; height: 32px; }
+  .cert-text h3 { font-size: 13px; }
+  .cert-text p { font-size: 11px; }
+  .guide-content { grid-template-columns: minmax(0, 1fr); gap: 24px; }
 }
 
 /* ===== Animations ===== */
