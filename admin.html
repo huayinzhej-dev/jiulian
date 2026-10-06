@@ -299,7 +299,7 @@ const CLOUD = {
 // 这些是演示用的业务/内容数据。接上后端后不再自动灌进共享库，
 // 否则同事会看到 L'Oréal、Shopee 这类假线索；需要时在系统设置里手动导入。
 const DEMO_KEYS = new Set(['leads','customers','quotes','orders','payments','dielines','logs',
-                           'products','mediaFiles','cases','clients','articles','proofs','testimonials']);
+                           'products','mediaFiles','cases','clients','articles','proofs','testimonials','users']);
 
 const Sync = {
   cfg: window.JL_SB || {},
@@ -475,8 +475,27 @@ const Sync = {
   }
 };
 
-// 首次打开时本机里往往还是我塞的演示数据，这些不该被当成"同事录的真实内容"上传
-const DEMO_SEED_IDS = new Set(['LD-001','C-001','QT-2026-001','OD-2026-001','PAY-001','DIE-001','L-001','PRD-01','MED-01','CASE-01','CL-01','ART-01','PF-001','T-01']);
+// 首次打开时本机里往往还是我塞的演示数据，这些不该被当成"同事录的真实内容"上传。
+// ⚠️ 必须列出 seedData() 里每一个演示 id：只写每类第一条的话，LD-002 这类残留演示数据
+//    会被「上传到服务器」当成同事的劳动成果，把假线索灌进全公司共享库。
+//    改演示数据时要同步这里。
+const DEMO_SEED_IDS = new Set([
+  'LD-001','LD-002','LD-003','LD-004','LD-005',
+  'C-001','C-002','C-003',
+  'QT-2026-001','QT-2026-002',
+  'OD-2026-001',
+  'PAY-001','PAY-002',
+  'DIE-001','DIE-002','DIE-003',
+  'L-001','L-002','L-003',
+  'PRD-01','PRD-02','PRD-03','PRD-04',
+  'MED-01','MED-02','MED-03','MED-04','MED-05','MED-06',
+  'CASE-01','CASE-02',
+  'CL-01','CL-02','CL-03','CL-04','CL-05','CL-06',
+  'ART-01','ART-02',
+  'PF-001',
+  'T-01','T-02','T-03',
+  'U-01','U-02','U-03'
+]);
 
 function syncOnChipClick() {
   if (!Sync.ready) { navigateTo('settings-cloud','系统设置','后端状态'); return }
