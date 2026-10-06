@@ -91,12 +91,16 @@
     header.classList.toggle('scrolled', window.scrollY > 20);
   }, { passive: true });
 
-  document.querySelectorAll('.faq-question').forEach(btn => {
-    btn.addEventListener('click', () => {
+  // FAQ 折叠：用委托绑在容器上，因为内容可能随后由后台数据重新渲染
+  const faqList = document.querySelector('.faq-list');
+  if (faqList) {
+    faqList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.faq-question');
+      if (!btn) return;
       const item = btn.closest('.faq-item');
       const isOpen = item.classList.contains('active');
 
-      document.querySelectorAll('.faq-item.active').forEach(openItem => {
+      faqList.querySelectorAll('.faq-item.active').forEach(openItem => {
         openItem.classList.remove('active');
         openItem.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
       });
@@ -106,28 +110,41 @@
         btn.setAttribute('aria-expanded', 'true');
       }
     });
-  });
+  }
 
   // Product Modal
-  document.querySelectorAll('.product-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const nameEn = card.dataset.nameEn;
-      const nameZh = card.dataset.nameZh;
-      const descEn = card.dataset.descEn;
-      const descZh = card.dataset.descZh;
-      const price = card.dataset.price;
-      const moq = card.dataset.moq;
+  function openProductModalFromCard(card) {
+    const nameEn = card.dataset.nameEn;
+    const nameZh = card.dataset.nameZh;
+    const descEn = card.dataset.descEn;
+    const descZh = card.dataset.descZh;
+    const price = card.dataset.price;
+    const moq = card.dataset.moq;
 
-      document.getElementById('modalProductName').textContent = currentLang === 'en' ? nameEn : nameZh;
-      document.getElementById('modalProductDesc').textContent = currentLang === 'en' ? descEn : descZh;
-      document.getElementById('modalPrice').textContent = currentLang === 'en' ? `from RM ${price}` : `起价 RM ${price}`;
-      document.getElementById('modalMOQ').textContent = currentLang === 'en' ? `MOQ: ${moq} pcs` : `起订量: ${moq}件`;
+    const zh = currentLang === 'zh';
+    document.getElementById('modalProductName').textContent = zh ? nameZh : nameEn;
+    document.getElementById('modalProductDesc').textContent = zh ? descZh : descEn;
+    // 后台没填价格/起订量时整行藏掉，别显示「起价 RM 0.00」这种假数字
+    const showLine = (id, txt) => {
+      const el = document.getElementById(id);
+      el.textContent = txt;
+      el.style.display = txt ? '' : 'none';
+    };
+    showLine('modalPrice', price ? (zh ? `起价 RM ${price}` : `from RM ${price}`) : '');
+    showLine('modalMOQ', moq ? (zh ? `起订量: ${moq}件` : `MOQ: ${moq} pcs`) : '');
 
-      renderPricingTable('M1');
-      productModal.classList.add('active');
-      document.body.style.overflow = 'hidden';
+    renderPricingTable('M1');
+    productModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  const productsGrid = document.querySelector('.products-grid');
+  if (productsGrid) {
+    productsGrid.addEventListener('click', (e) => {
+      const card = e.target.closest('.product-card');
+      if (card) openProductModalFromCard(card);
     });
-  });
+  }
 
   function renderPricingTable(tab) {
     const tbody = document.getElementById('pricingTableBody');
@@ -188,7 +205,7 @@
     if (notes) message += `\nNotes: ${notes}\n`;
 
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/60175836916?text=${encodedMessage}`, '_blank');
+    window.open(`https://wa.me/60167241814?text=${encodedMessage}`, '_blank');
 
     saveLead({ boxType, size, quantity, printing, finishing, name, company, notes });
   });
@@ -412,6 +429,195 @@
       closeCertModal();
     }
   });
+
+  // ===== 前台公开内容：从后端读取，读不到就保留页面里写死的兜底 =====
+  // 白名单必须与 supabase/schema.sql 的 jl_public_read_content 一致。
+  // 多列一个集合 = 对全网访客多暴露一类数据，所以这里绝不写「读全部」。
+  const PUBLIC_COLS = ['clients', 'products', 'testimonials', 'faqs'];
+  const ROW_COLS = new Set(['clients', 'products', 'testimonials', 'faqs']);
+
+  // 后台每段文字目前只存英文 + 可选中文，马来文沿用英文（与页面原有写法一致）
+  function i18nText(node, en, zh) {
+    node.setAttribute('data-en', en);
+    node.setAttribute('data-bm', en);
+    node.setAttribute('data-zh', zh || en);
+    node.textContent = en;
+    return node;
+  }
+
+  function make(tag, cls, en, zh) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (en != null) i18nText(n, String(en), zh);
+    return n;
+  }
+
+  // 只放行 http(s) 和站内相对路径，挡掉 javascript: 这类伪协议
+  function safeUrl(u) {
+    if (typeof u !== 'string') return '';
+    const s = u.trim();
+    if (/^https?:\/\//i.test(s)) return s;
+    if (s.indexOf('//') === 0) return '';
+    if (s.split(/[?#]/)[0].split('/')[0].indexOf(':') !== -1) return '';
+    // 项目里的图片叫「食品包装盒 (12).jpg」，空格不编码的话 img.src 加载不到
+    return s.replace(/ /g, '%20');
+  }
+
+  const PRODUCT_ICON = '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
+  const FAQ_CHEVRON = '<svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
+
+  function renderClients(list) {
+    const host = document.querySelector('.clients-logos');
+    const rows = (list || []).filter(c => c && c.name && c.active !== false);
+    if (!host || !rows.length) return false;
+    host.textContent = '';
+    rows.forEach(c => {
+      const box = make('div', 'client-logo');
+      const url = safeUrl(c.logoUrl || c.logo || c.image);
+      if (url) {
+        const img = document.createElement('img');
+        img.className = 'client-logo-img';
+        img.src = url;
+        img.alt = c.name;
+        img.loading = 'lazy';
+        box.appendChild(img);
+      } else {
+        box.appendChild(make('span', null, c.name));
+      }
+      host.appendChild(box);
+    });
+    return true;
+  }
+
+  function renderProducts(list) {
+    const host = document.querySelector('.products-grid');
+    const rows = (list || []).filter(p => p && p.name && p.status !== 'inactive');
+    if (!host || !rows.length) return false;
+    host.textContent = '';
+    rows.forEach(p => {
+      const card = make('div', 'product-card');
+      card.dataset.product = p.id || '';
+      card.dataset.nameEn = p.name;
+      card.dataset.nameZh = p.nameZh || p.name;
+      card.dataset.descEn = p.desc || '';
+      card.dataset.descZh = p.descZh || p.desc || '';
+      card.dataset.price = Number(p.price) > 0 ? Number(p.price).toFixed(2) : '';
+      card.dataset.moq = Number(p.moq) > 0 ? String(p.moq) : '';
+
+      const pic = make('div', 'product-image');
+      const url = safeUrl(p.image);
+      if (url) {
+        const img = document.createElement('img');
+        img.className = 'product-photo';
+        img.src = url;
+        img.alt = p.name;
+        img.loading = 'lazy';
+        pic.appendChild(img);
+      } else {
+        pic.innerHTML = PRODUCT_ICON;
+      }
+      card.appendChild(pic);
+
+      const info = make('div', 'product-info');
+      info.appendChild(make('h3', null, p.name, p.nameZh));
+      if (p.desc) info.appendChild(make('p', null, p.desc, p.descZh));
+
+      const meta = make('div', 'product-meta');
+      if (card.dataset.price) {
+        meta.appendChild(make('span', 'product-price', `from RM ${card.dataset.price}`, `起价 RM ${card.dataset.price}`));
+      }
+      if (card.dataset.moq) {
+        const unit = p.moqUnit || 'pcs';
+        meta.appendChild(make('span', 'product-moq', `MOQ: ${card.dataset.moq} ${unit}`, `起订量: ${card.dataset.moq}件`));
+      }
+      if (meta.childElementCount) info.appendChild(meta);
+      card.appendChild(info);
+      host.appendChild(card);
+    });
+    return true;
+  }
+
+  function renderTestimonials(list) {
+    const host = document.querySelector('.testimonials-grid');
+    const rows = (list || []).filter(t => t && t.content && t.active !== false);
+    if (!host || !rows.length) return false;
+    host.textContent = '';
+    rows.forEach(t => {
+      const card = make('div', 'testimonial-card');
+      const stars = Math.max(1, Math.min(5, parseInt(t.rating, 10) || 5));
+      card.appendChild(make('div', 'testimonial-stars', '★'.repeat(stars)));
+      card.appendChild(make('blockquote', null, `“${t.content}”`, t.contentZh ? `“${t.contentZh}”` : ''));
+
+      const author = make('div', 'testimonial-author');
+      author.appendChild(make('div', 'author-avatar', (t.avatar || (t.name || '?').charAt(0)).toUpperCase()));
+      const who = make('div');
+      if (t.name) who.appendChild(make('strong', null, t.name));
+      const role = [t.position, t.company].filter(Boolean).join(', ');
+      if (role) who.appendChild(make('span', null, role));
+      author.appendChild(who);
+      card.appendChild(author);
+      host.appendChild(card);
+    });
+    return true;
+  }
+
+  function renderFaqs(list) {
+    const host = document.querySelector('.faq-list');
+    const rows = (list || []).filter(f => f && f.question && f.answer)
+      .slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
+    if (!host || !rows.length) return false;
+    host.textContent = '';
+    rows.forEach(f => {
+      const item = make('div', 'faq-item');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'faq-question';
+      btn.setAttribute('aria-expanded', 'false');
+      btn.appendChild(make('span', null, f.question, f.questionZh));
+      btn.insertAdjacentHTML('beforeend', FAQ_CHEVRON);
+      const ans = make('div', 'faq-answer');
+      ans.appendChild(make('p', null, f.answer, f.answerZh));
+      item.appendChild(btn);
+      item.appendChild(ans);
+      host.appendChild(item);
+    });
+    return true;
+  }
+
+  async function loadPublicContent() {
+    if (!sb) return;
+    let rows;
+    try {
+      const { data, error } = await sb.from('jl_records')
+        .select('collection, payload')
+        .in('collection', PUBLIC_COLS);
+      if (error) return;
+      rows = data || [];
+    } catch (e) {
+      return;
+    }
+    if (!rows.length) return;
+
+    const bag = {};
+    rows.forEach(r => {
+      if (ROW_COLS.has(r.collection)) (bag[r.collection] = bag[r.collection] || []).push(r.payload);
+    });
+
+    let changed = false;
+    const parts = [
+      [renderClients, bag.clients],
+      [renderProducts, bag.products],
+      [renderTestimonials, bag.testimonials],
+      [renderFaqs, bag.faqs]
+    ];
+    parts.forEach(([fn, data]) => {
+      // 单个版块渲染失败不影响整页，保留写死内容
+      try { if (fn(data)) changed = true; } catch (e) {}
+    });
+    if (changed) switchLanguage(currentLang);
+  }
+
+  loadPublicContent();
 
   switchLanguage('en');
 })();

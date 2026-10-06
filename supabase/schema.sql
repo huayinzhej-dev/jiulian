@@ -26,7 +26,7 @@ create policy "jl_staff_full_access" on public.jl_records
   for all to authenticated
   using (true) with check (true);
 
--- 1.2 官网访客：只能「写入新线索」，读不到任何数据，也改不了已有记录
+-- 1.2 官网访客：可以「写入新线索」，但改不了已有记录
 --     只校验姓名非空，与官网现有表单字段保持一致（表单没有电话/邮箱栏）
 drop policy if exists "jl_public_insert_lead" on public.jl_records;
 create policy "jl_public_insert_lead" on public.jl_records
@@ -36,7 +36,24 @@ create policy "jl_public_insert_lead" on public.jl_records
     and coalesce(payload->>'name', '') <> ''
   );
 
--- 显式不给 anon 任何 select/update/delete 权限（RLS 默认拒绝，这里只是留痕说明）
+-- 除下面 1.3 的公开内容外，不给 anon 任何 select/update/delete 权限（RLS 默认拒绝）
+
+-- 1.3 官网访客：只读「前台要展示的公开内容」
+--     ⚠️ 这里必须是白名单枚举，绝不能写成 using(true)。
+--     一旦放开整表读权限，任何人拿官网页面上的 publishable key 就能读走
+--     全部客户线索、客户资料、报价、订单、付款记录和管理员账号。
+--     清单与 js/main.js 里的 PUBLIC_COLS 一一对应：前台多渲染一个版块，
+--     这里才多放一个集合，反过来砍掉前台版块时也要同步砍掉，别多给。
+--     policies / settings_* 目前前台是写死的，没走数据库，所以不放进来。
+drop policy if exists "jl_public_read_content" on public.jl_records;
+create policy "jl_public_read_content" on public.jl_records
+  for select to anon
+  using (
+    collection in ('clients', 'products', 'testimonials', 'faqs')
+  );
+-- 只读策略不写 with check，anon 依然改不了、删不掉任何一行
+-- 登录员工由 1.1 的 jl_staff_full_access 覆盖，不需要在这里重复授权
+
 
 
 -- ---------- 2. 文件存储桶（模切图 / 媒体库 / 资质证件）----------

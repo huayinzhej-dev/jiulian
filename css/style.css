@@ -438,6 +438,17 @@ ul { list-style: none; }
   letter-spacing: 3px;
   color: var(--gray-700);
 }
+/* 后台上传了品牌 Logo 时前台显示图片，没上传才退回文字 */
+.client-logo { min-width: 0; max-width: 100%; }
+.client-logo span { overflow-wrap: anywhere; }
+.client-logo-img {
+  display: block;
+  max-width: 160px;
+  max-height: 44px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
 
 /* ===== Products ===== */
 .products {
@@ -447,7 +458,9 @@ ul { list-style: none; }
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* 商品名/描述现在来自后台录入，长单词会顶开 1fr 轨道造成整页横向拖动，
+     所以轨道下限必须是 0 */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 28px;
 }
 
@@ -457,6 +470,7 @@ ul { list-style: none; }
   overflow: hidden;
   box-shadow: var(--shadow-sm);
   transition: transform var(--transition), box-shadow var(--transition);
+  min-width: 0;
 }
 .product-card:hover {
   transform: translateY(-4px);
@@ -469,6 +483,13 @@ ul { list-style: none; }
   justify-content: center;
   height: 220px;
   background: var(--orange-50);
+  overflow: hidden;
+}
+.product-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .product-info {
@@ -480,6 +501,7 @@ ul { list-style: none; }
   font-weight: 700;
   color: var(--gray-800);
   margin-bottom: 8px;
+  overflow-wrap: break-word;
 }
 
 .product-info p {
@@ -487,6 +509,7 @@ ul { list-style: none; }
   color: var(--gray-500);
   line-height: 1.6;
   margin-bottom: 16px;
+  overflow-wrap: break-word;
 }
 
 .product-meta {
@@ -574,7 +597,7 @@ ul { list-style: none; }
 
 .testimonials-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 28px;
 }
 
@@ -585,6 +608,7 @@ ul { list-style: none; }
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .testimonial-stars {
@@ -601,17 +625,21 @@ ul { list-style: none; }
   flex: 1;
   margin-bottom: 24px;
   font-style: italic;
+  overflow-wrap: break-word;
 }
 
 .testimonial-author {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
+.testimonial-author > div { min-width: 0; }
 
 .author-avatar {
   width: 44px;
   height: 44px;
+  flex-shrink: 0;
   background: var(--orange-600);
   color: var(--white);
   border-radius: 50%;
@@ -626,11 +654,13 @@ ul { list-style: none; }
   display: block;
   font-size: 15px;
   color: var(--gray-800);
+  overflow-wrap: break-word;
 }
 
 .testimonial-author span {
   font-size: 13px;
   color: var(--gray-400);
+  overflow-wrap: break-word;
 }
 
 /* ===== Process ===== */
@@ -722,6 +752,7 @@ ul { list-style: none; }
   transition: color var(--transition);
 }
 .faq-question:hover { color: var(--orange-600); }
+.faq-question > span { min-width: 0; overflow-wrap: break-word; }
 
 .faq-icon {
   flex-shrink: 0;
@@ -1846,10 +1877,10 @@ ul { list-style: none; }
 /* ===== Responsive ===== */
 @media (max-width: 1024px) {
   .advantages-grid { grid-template-columns: repeat(2, 1fr); }
-  .products-grid { grid-template-columns: repeat(2, 1fr); }
+  .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cert-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .why-us-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
-  .testimonials-grid { grid-template-columns: 1fr; }
+  .testimonials-grid { grid-template-columns: minmax(0, 1fr); }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .about-grid { grid-template-columns: 1fr; gap: 40px; }
 }
@@ -1930,7 +1961,7 @@ ul { list-style: none; }
   .advantages { margin-top: -32px; }
   .advantages-grid { grid-template-columns: 1fr; }
 
-  .products-grid { grid-template-columns: 1fr; }
+  .products-grid { grid-template-columns: minmax(0, 1fr); }
 
   .process-steps {
     flex-direction: column;
