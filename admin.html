@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>管理后台 - 玖联包装</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="js/sb-config.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     :root{
@@ -54,6 +56,14 @@
     .user-chip{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;background:var(--gray-50);border-radius:20px}
     .user-chip .avatar{width:28px;height:28px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
     .user-chip .name{font-size:12px;font-weight:500;color:var(--gray-700)}
+    .sync-chip{padding:5px 12px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--gray-200);background:var(--gray-50);color:var(--gray-500);white-space:nowrap}
+    .sync-chip.on{background:#e8f5ee;border-color:#b7dfc6;color:var(--primary)}
+    .sync-chip.warn{background:#fff5e6;border-color:#ffd591;color:#ad6800}
+    .sync-chip.err{background:#fdecec;border-color:#f5b5b5;color:var(--red)}
+    .banner{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px}
+    .banner-warn{background:#fffbe6;border:1px solid #ffe58f;color:#614700}
+    .banner-err{background:#fff1f0;border:1px solid #ffccc7;color:#820014}
+    .banner button{margin-left:auto;padding:6px 14px;border-radius:6px;border:1px solid currentColor;background:transparent;color:inherit;font-size:12px;cursor:pointer;font-weight:600}
     .btn-logout{padding:6px 14px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:6px;font-size:12px;cursor:pointer;color:var(--gray-600);transition:all .15s}
     .btn-logout:hover{background:var(--gray-200)}
 
@@ -204,9 +214,10 @@
     <header class="topbar">
       <div class="breadcrumb" id="breadcrumb">首页 / <span>数据看板</span></div>
       <div class="topbar-right">
+        <div class="sync-chip" id="syncChip" onclick="syncOnChipClick()">本机数据</div>
         <div class="user-chip">
-          <div class="avatar">管</div>
-          <div class="name">管理员</div>
+          <div class="avatar" id="userAvatar">管</div>
+          <div class="name" id="userName">管理员</div>
         </div>
         <button class="btn-logout" onclick="logout()">退出</button>
       </div>
@@ -253,22 +264,270 @@ const MENU = [
     {id:'policies-list',label:'政策列表'}
   ]},
   { id:'settings', icon:'⚙️', label:'系统设置', children:[
-    {id:'settings-site',label:'基本信息'},{id:'settings-seo',label:'SEO 设置'},{id:'settings-notifications',label:'通知模板'},{id:'settings-certs',label:'认证/资质'},{id:'settings-shipping',label:'配送区域'},{id:'settings-finance',label:'税率/货币'},{id:'settings-users',label:'管理员列表'},{id:'settings-roles',label:'角色管理'},{id:'settings-logs',label:'操作日志'}
+    {id:'settings-site',label:'基本信息'},{id:'settings-seo',label:'SEO 设置'},{id:'settings-notifications',label:'通知模板'},{id:'settings-certs',label:'认证/资质'},{id:'settings-shipping',label:'配送区域'},{id:'settings-finance',label:'税率/货币'},{id:'settings-users',label:'管理员列表'},{id:'settings-roles',label:'角色管理'},{id:'settings-cloud',label:'后端状态'},{id:'settings-logs',label:'操作日志'}
   ]}
 ];
 
 // ========== DATA MANAGER ==========
+// DM.get 保持同步：云数据在启动时已整体拉到 localStorage 作为镜像，
+// 所有渲染函数无需改写。写操作先落本地，再按行做差异上传。
 const DM = {
   get(key, def=[]) { try { return JSON.parse(localStorage.getItem('jl_'+key)) || def } catch { return def } },
   has(key) { return localStorage.getItem('jl_'+key) !== null },
-  set(key, val) { localStorage.setItem('jl_'+key, JSON.stringify(val)) },
+  set(key, val) {
+    const prev = Sync.ready && !Sync.muted ? DM.get(key, null) : null;
+    localStorage.setItem('jl_'+key, JSON.stringify(val));
+    if (Sync.ready && !Sync.muted) Sync.track(key, prev, val);
+  },
+  raw(key, val) { localStorage.setItem('jl_'+key, JSON.stringify(val)) },
   genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2,3).toUpperCase() },
   now() { return new Date().toISOString().slice(0,16).replace('T',' ') }
 };
 
+// ========== CLOUD SYNC ==========
+// row: 数组里每个对象带 id，一行一条，改动只上传受影响的那几条
+// doc: 整体是一个对象/无 id 数组，整份覆盖到一行
+const CLOUD = {
+  row: ['leads','customers','quotes','orders','payments','dielines','categories','faqs','testimonials',
+        'policies','users','logs','products','materials','articles','clients','mediaFiles','cases',
+        'shippingZones','roles','proofs'],
+  doc: ['printingOptions','finishingOptions','caseCategories','settings_site','settings_seo',
+        'settings_notifications','settings_finance','settings_about','settings_process',
+        'settings_printing_guide','settings_advantages','settings_stats','settings_banner',
+        'settings_quote_template','settings_certs','pricebook','contactFormConfig']
+};
+// 这些是演示用的业务/内容数据。接上后端后不再自动灌进共享库，
+// 否则同事会看到 L'Oréal、Shopee 这类假线索；需要时在系统设置里手动导入。
+const DEMO_KEYS = new Set(['leads','customers','quotes','orders','payments','dielines','logs',
+                           'products','mediaFiles','cases','clients','articles','proofs','testimonials']);
+
+const Sync = {
+  cfg: window.JL_SB || {},
+  client: null,
+  ready: false,
+  muted: false,          // 启动灌种子期间不上传
+  q: [],                 // 待上传操作
+  fails: 0,              // 失败待重试条数
+  timer: null,
+  running: false,
+  user: null,
+  lastPull: 0,
+  msg: '',
+
+  async init() {
+    if (!this.cfg.url || !this.cfg.key) { this.msg = '未配置后端'; return false }
+    if (!window.supabase || !window.supabase.createClient) { this.msg = 'SDK 未加载'; return false }
+    try {
+      this.client = window.supabase.createClient(this.cfg.url, this.cfg.key, {
+        auth: { persistSession: true, autoRefreshToken: true }
+      });
+      const { data, error } = await this.client.from('jl_records').select('id').limit(1);
+      if (error) { this.msg = '连不上数据库'; this.errMsg = error.message; return false }
+      this.ready = true;
+      return true;
+    } catch (e) { this.msg = '后端异常'; this.errMsg = e.message; return false }
+  },
+
+  // 登录态：Supabase Auth 托管密码与会话，本地不留凭据
+  async currentUser() {
+    const { data } = await this.client.auth.getSession();
+    return data && data.session ? data.session.user : null;
+  },
+
+  async signIn(email, password) {
+    const { data, error } = await this.client.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+    return data.user;
+  },
+
+  async signOut() { try { await this.client.auth.signOut() } catch (e) {} },
+
+  // 返回 loginable：注册接口是否顺手给了会话。
+  // anon key 下 email_confirm 参数会被 GoTrue 忽略，所以只能事后判断，不能强制跳过邮箱验证。
+  async signUp(email, password, name) {
+    const { data, error } = await this.client.auth.signUp({ email, password, options: { data: { name } } });
+    if (error) throw new Error(error.message);
+    return { user: data.user, loginable: !!(data.session && data.session.access_token) };
+  },
+
+  // ---------- 写：差异上传 ----------
+  track(key, prev, next) {
+    if (!CLOUD.row.includes(key) && !CLOUD.doc.includes(key)) return;
+    if (CLOUD.doc.includes(key)) {
+      this.push({ t:'doc', col:key, rid:key, payload:next });
+      return;
+    }
+    const a = Array.isArray(prev) ? prev : [];
+    const b = Array.isArray(next) ? next : [];
+    const before = new Map();
+    a.forEach(x => { if (x && x.id != null) before.set(String(x.id), x) });
+    b.forEach(x => {
+      if (!x || x.id == null) return;
+      const id = String(x.id), old = before.get(id);
+      before.delete(id);
+      if (!old || JSON.stringify(old) !== JSON.stringify(x)) this.push({ t:'row', col:key, rid:key+':'+id, payload:x });
+    });
+    before.forEach((_, id) => this.push({ t:'del', rid:key+':'+id }));
+  },
+
+  push(op) {
+    this.q.push(op);
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.flush(), 350);
+  },
+
+  async flush() {
+    if (this.running || !this.q.length) { this.badge(); return }
+    this.running = true;
+    const batch = this.q.splice(0, this.q.length);
+    for (const op of batch) {
+      const req = op.t === 'del'
+        ? this.client.from('jl_records').delete().eq('id', op.rid)
+        : this.client.from('jl_records').upsert({ id: op.rid, collection: op.col, payload: op.payload, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+      const { error } = await req;
+      if (error) {
+        this.q.push(op); this.fails++;
+        this.msg = '上传失败'; this.errMsg = error.message;
+      } else if (this.fails) this.fails--;
+    }
+    this.running = false;
+    if (this.q.length) setTimeout(() => this.flush(), 4000);
+    this.badge();
+  },
+
+  // ---------- 读：整体拉取 ----------
+  async pullAll() {
+    const rows = [];
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await this.client.from('jl_records').select('id,collection,payload').range(from, from + PAGE - 1).order('id');
+      if (error) throw new Error(error.message);
+      rows.push(...(data || []));
+      if (!data || data.length < PAGE) break;
+    }
+    const byCol = {};
+    rows.forEach(r => (byCol[r.collection] = byCol[r.collection] || []).push(r));
+    CLOUD.row.forEach(k => { DM.raw(k, (byCol[k] || []).map(r => r.payload)) });
+    CLOUD.doc.forEach(k => { if (byCol[k] && byCol[k].length) DM.raw(k, byCol[k][0].payload) });
+    this.lastPull = Date.now();
+    return rows.length;
+  },
+
+  // 一次性把本机旧数据推上服务器（同事此前各自录入的内容）
+  async migrateLocalUp() {
+    const backup = JSON.parse(localStorage.getItem('jl_presync_backup') || '{}');
+    let n = 0;
+    Object.keys(backup).forEach(k => { n += Array.isArray(backup[k]) ? backup[k].length : 1 });
+    this.muted = true;
+    Object.keys(backup).forEach(k => DM.raw(k, backup[k]));
+    this.muted = false;
+    CLOUD.row.forEach(k => { if (backup[k]) this.track(k, [], backup[k]) });
+    CLOUD.doc.forEach(k => { if (backup[k] !== undefined) this.push({ t:'doc', col:k, rid:k, payload:backup[k] }) });
+    await this.flush();
+    if (this.q.length) { toast('有 ' + this.q.length + ' 条上传失败，稍后点右上角重试'); return n }
+    localStorage.removeItem('jl_presync_backup');
+    localStorage.setItem('jl_migrated_up', '1');
+    return n;
+  },
+
+  // 记下本机已有内容，供"上传到服务器"用；演示数据本身不算同事的劳动成果，排除掉
+  snapshotLocal() {
+    if (localStorage.getItem('jl_migrated_up') || localStorage.getItem('jl_presync_backup')) return 0;
+    const snap = {}; let n = 0;
+    CLOUD.row.forEach(k => {
+      const v = DM.get(k, null);
+      if (!Array.isArray(v) || !v.length) return;
+      const keep = DEMO_KEYS.has(k) ? v.filter(x => !(x && DEMO_SEED_IDS.has(String(x.id)))) : v;
+      if (keep.length) { snap[k] = keep; n += keep.length }
+    });
+    CLOUD.doc.forEach(k => {
+      const v = DM.get(k, null);
+      if (v !== null && v !== undefined) { snap[k] = v; n += 1 }
+    });
+    if (n) localStorage.setItem('jl_presync_backup', JSON.stringify(snap));
+    return n;
+  },
+
+  badge() {
+    const el = document.getElementById('syncChip');
+    if (!el) return;
+    el.className = 'sync-chip ' + (!this.ready ? '' : this.fails ? 'err' : this.q.length ? 'warn' : 'on');
+    if (!this.ready) el.textContent = this.msg === '未配置后端' ? '本机数据' : (this.msg || '未连接');
+    else if (this.fails) el.textContent = '上传失败 ' + this.q.length + ' 条';
+    else if (this.q.length) el.textContent = '同步中 ' + this.q.length + ' 条';
+    else el.textContent = '已同步 · ' + new Date(this.lastPull || Date.now()).toTimeString().slice(0,5);
+  },
+
+  async retry() {
+    this.fails = 0; this.msg = '';
+    await this.flush();
+    if (!this.q.length) toast('全部数据已同步到服务器');
+  },
+
+  // 关页/退出前把队列清空，避免最后几条改动没上传
+  async drain(timeoutMs = 8000) {
+    if (!this.ready) return;
+    const t0 = Date.now();
+    while (this.q.length && Date.now() - t0 < timeoutMs) {
+      await this.flush();
+      if (this.q.length) await new Promise(r => setTimeout(r, 300));
+    }
+  }
+};
+
+// 首次打开时本机里往往还是我塞的演示数据，这些不该被当成"同事录的真实内容"上传
+const DEMO_SEED_IDS = new Set(['LD-001','C-001','QT-2026-001','OD-2026-001','PAY-001','DIE-001','L-001','PRD-01','MED-01','CASE-01','CL-01','ART-01','PF-001','T-01']);
+
+function syncOnChipClick() {
+  if (!Sync.ready) { navigateTo('settings-cloud','系统设置','后端状态'); return }
+  if (Sync.fails || Sync.q.length) { Sync.retry(); return }
+  Sync.pullAll().then(n => { toast('已拉取服务器最新数据（' + n + ' 条）'); renderPage(currentPageId); Sync.badge() })
+    .catch(e => toast('刷新失败：' + e.message));
+}
+
+function showBanner(kind, html) {
+  const c = document.getElementById('content');
+  if (!c) return;
+  const d = document.createElement('div');
+  d.className = 'banner banner-' + kind;
+  d.innerHTML = html;
+  c.insertBefore(d, c.firstChild);
+}
+
+// ========== 云存储 ==========
+// 文件真正传到 Supabase Storage 的 jl-uploads 桶，返回公网地址，全员可见
+async function cloudUpload(file, dir) {
+  if (!Sync.ready) throw new Error('未连接后端，无法上传文件');
+  if (!file) throw new Error('请先选择文件');
+  if (file.size > 20 * 1024 * 1024) throw new Error('文件超过 20MB');
+  const safe = String(file.name || 'file').replace(/[^\w.\-]+/g, '_').slice(-80);
+  const path = dir + '/' + new Date().toISOString().slice(0,10) + '-' + Date.now().toString(36) + '-' + safe;
+  const { data, error } = await Sync.client.storage.from('jl-uploads')
+    .upload(path, file, { upsert: false, contentType: file.type || 'application/octet-stream' });
+  if (error) throw new Error(error.message);
+  return { path: data.path, url: Sync.client.storage.from('jl-uploads').getPublicUrl(data.path).data.publicUrl };
+}
+
+function whoami() {
+  return (Sync.user && (Sync.user.user_metadata?.name || Sync.user.email?.split('@')[0])) || '管理员';
+}
+
+function fmtSize(n) {
+  if (!n && n !== 0) return '—';
+  return n > 1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(n/1024))+' KB';
+}
+
 // ========== SEED DATA ==========
+// 只补本机还没有的集合。接上后端后，DEMO_KEYS 里的业务数据一律初始化为空，
+// 避免把 L'Oréal / Shopee 这类演示线索灌进全公司共享的数据库。
+let SEED_FORCE = false;
+function seedOne(key, demo) {
+  if (SEED_FORCE && DEMO_KEYS.has(key)) { DM.set(key, demo); return }
+  if (DM.has(key)) return;
+  DM.set(key, Sync.ready && DEMO_KEYS.has(key) ? [] : demo);
+}
+
 function seedData() {
-  if (!DM.get('seeded', false)) {
   const leads = [
     {id:'LD-001',name:'John Smith',company:'L\'Oréal Malaysia',phone:'+60123456789',email:'john@loreal.com',source:'表单',boxType:'飞机盒',size:'24×22×4',quantity:1000,printing:'4C1C',finishing:'哑光覆膜',status:'new',assignee:'销售A',notes:'需要食品级材料',created:'2026-10-04 10:30',followUps:[]},
     {id:'LD-002',name:'Sarah Ahmad',company:'Shopee Foods',phone:'+60198765432',email:'sarah@shopee.com',source:'电话',boxType:'食品盒',size:'15×14×4.3',quantity:2000,printing:'4C4C',finishing:'光面覆膜',status:'quoted',assignee:'销售B',notes:'急单，需10天内交货',created:'2026-10-04 09:15',followUps:[]},
@@ -276,32 +535,32 @@ function seedData() {
     {id:'LD-004',name:'Emily Wong',company:'AirAsia Group',phone:'+60175551234',email:'emily@airasia.com',source:'表单',boxType:'套筒盒',size:'33×21.6×5',quantity:3000,printing:'4C0C',finishing:'Spot UV',status:'negotiating',assignee:'销售B',notes:'长期合作客户，VIP',created:'2026-10-03 14:20',followUps:[]},
     {id:'LD-005',name:'David Lee',company:'Petronas',phone:'+60129876543',email:'david@petronas.com',source:'Google',boxType:'精装盒',size:'22×11.5×5.5',quantity:100,printing:'4C4C',finishing:'Emboss + Hot-stamp',status:'sample',assignee:'销售A',notes:'需要打样确认',created:'2026-10-02 11:00',followUps:[]}
   ];
-  DM.set('leads', leads);
+  seedOne('leads', leads);
 
   const customers = [
     {id:'C-001',company:"L'Oréal Malaysia",contact:'John Smith',email:'john@loreal.com',phone:'+60123456789',orders:8,totalAmount:24500,level:'VIP',source:'表单',notes:'法国化妆品品牌马来西亚分部'},
     {id:'C-002',company:'Shopee Foods',contact:'Sarah Ahmad',email:'sarah@shopee.com',phone:'+60198765432',orders:3,totalAmount:8200,level:'普通',source:'电话',notes:''},
     {id:'C-003',company:'Grab Holdings',contact:'Michael Tan',email:'michael@grab.com',phone:'+60167891234',orders:1,totalAmount:1500,level:'普通',source:'邮件',notes:'首次合作'}
   ];
-  DM.set('customers', customers);
+  seedOne('customers', customers);
 
   const quotes = [
     {id:'QT-2026-001',leadId:'LD-001',customer:"L'Oréal Malaysia",product:'飞机盒',size:'24×22×4',quantity:1000,unitPrice:1.67,subtotal:1670,sst:167,total:1837,status:'draft',validUntil:'2026-10-18',creator:'管理员',created:'2026-10-04 11:00'},
     {id:'QT-2026-002',leadId:'LD-004',customer:'AirAsia Group',product:'套筒盒',size:'33×21.6×5',quantity:3000,unitPrice:2.65,subtotal:7950,sst:795,total:8745,status:'sent',validUntil:'2026-10-17',creator:'管理员',created:'2026-10-03 15:00'}
   ];
-  DM.set('quotes', quotes);
+  seedOne('quotes', quotes);
 
   const orders = [
     {id:'OD-2026-001',quoteId:'QT-2026-001',customer:"L'Oréal Malaysia",amount:1837,depositPaid:true,depositAmount:918.5,productionStatus:'artwork',deliveryDate:'2026-10-20',assignee:'生产A',created:'2026-10-04 14:00'},
   ];
-  DM.set('orders', orders);
+  seedOne('orders', orders);
 
   if (!DM.get('payments') || DM.get('payments').length === 0) {
     const payments = [
       {id:'PAY-001',orderId:'OD-2026-001',orderNo:'OD-2026-001',customer:"L'Oréal Malaysia",type:'deposit',typeLabel:'定金 50%',amount:918.50,method:'银行转账',bankName:'Maybank',accountNo:'5123 4567 8901',accountName:'United YL Printers Sdn Bhd',date:'2026-10-04',receiptNo:'RCT-2026-001',status:'confirmed',note:'银行转账凭证已确认'},
       {id:'PAY-002',orderId:'OD-2026-001',orderNo:'OD-2026-001',customer:"L'Oréal Malaysia",type:'final',typeLabel:'尾款 50%',amount:918.50,method:'银行转账',bankName:'Maybank',accountNo:'5123 4567 8901',accountName:'United YL Printers Sdn Bhd',date:'',receiptNo:'',status:'pending',note:'待生产完成后收取'}
     ];
-    DM.set('payments', payments);
+    seedOne('payments', payments);
   }
 
   if (!DM.get('dielines') || DM.get('dielines').length === 0) {
@@ -310,7 +569,7 @@ function seedData() {
       {id:'DIE-002',boxType:'飞机盒',size:'15×14×4.3',fee:'已收',status:'available',fileName:'mailer-box-15x14x4.3.ai',uploaded:'2026-09-15',uploader:'管理员'},
       {id:'DIE-003',boxType:'套筒盒',size:'33×21.6×5',fee:'已收',status:'available',fileName:'sleeve-box-33x21.6x5.ai',uploaded:'2026-09-20',uploader:'管理员'}
     ];
-    DM.set('dielines', dielines);
+    seedOne('dielines', dielines);
   }
 
   const categories = [
@@ -328,7 +587,7 @@ function seedData() {
     {id:'CAT-12',name:'精装盒',slug:'rigid-box',icon:'💎',sort:12,active:true},
     {id:'CAT-13',name:'POS展示架',slug:'pos-display',icon:'🏪',sort:13,active:true}
   ];
-  DM.set('categories', categories);
+  seedOne('categories', categories);
 
   const faqs = [
     {id:'FAQ-01',category:'MOQ',question:'What is the minimum order quantity?',answer:'Our MOQ starts from 100 pieces for standard products and 500 pieces for custom printed items.',sort:1},
@@ -338,14 +597,14 @@ function seedData() {
     {id:'FAQ-05',category:'认证',question:'Are your materials food-safe?',answer:'Yes, we offer FSC-certified and food-grade materials. All our materials comply with EU and FDA standards.',sort:5},
     {id:'FAQ-06',category:'价格',question:'How is pricing calculated?',answer:'Pricing depends on box type, size, material, printing colors, finishing, and quantity. Use our 60-second quote form for instant estimates.',sort:6}
   ];
-  DM.set('faqs', faqs);
+  seedOne('faqs', faqs);
 
   const testimonials = [
     {id:'T-01',name:'Ahmad Razak',position:'Procurement Manager',company:'Nestlé Malaysia',rating:5,content:'Excellent quality and on-time delivery. Jiulian has been our trusted packaging partner for 3 years.',avatar:'A',active:true},
     {id:'T-02',name:'Lisa Chen',position:'Brand Director',company:'Guardian Malaysia',rating:5,content:'The print quality is outstanding. They helped us redesign our gift boxes and the result exceeded expectations.',avatar:'L',active:true},
     {id:'T-03',name:'Raj Kumar',position:'Operations Lead',company:'GrabMart',rating:5,content:'Fast turnaround and competitive pricing. The team is very responsive on WhatsApp.',avatar:'R',active:true}
   ];
-  DM.set('testimonials', testimonials);
+  seedOne('testimonials', testimonials);
 
   const policies = [
     {id:'P-01',slug:'privacy',title:'隐私政策 Privacy Policy',content:'We are committed to protecting your personal data in accordance with PDPA...',updated:'2026-10-01'},
@@ -354,24 +613,23 @@ function seedData() {
     {id:'P-04',slug:'shipping',title:'配送政策 Shipping Policy',content:'Free delivery within KL & Selangor. Other areas charged by volume and distance...',updated:'2026-10-01'},
     {id:'P-05',slug:'sst',title:'SST 说明',content:'All prices are subject to 10% Sales and Service Tax (SST) unless otherwise stated...',updated:'2026-10-01'}
   ];
-  DM.set('policies', policies);
+  seedOne('policies', policies);
 
   const users = [
     {id:'U-01',username:'admin',name:'管理员',role:'超级管理员',email:'admin@jiulian.com',active:true,created:'2026-10-01'},
     {id:'U-02',username:'sales1',name:'销售A',role:'销售',email:'sales1@jiulian.com',active:true,created:'2026-10-01'},
     {id:'U-03',username:'sales2',name:'销售B',role:'销售',email:'sales2@jiulian.com',active:true,created:'2026-10-02'}
   ];
-  DM.set('users', users);
+  // 接后端后账号由 Supabase Auth 托管，这里不再造演示账号；本地模式保留示例便于看格式
+  if (!DM.has('users')) DM.set('users', Sync.ready ? [] : users);
 
   const logs = [
     {id:'L-001',user:'管理员',action:'登录',detail:'管理员登录系统',time:'2026-10-05 09:00'},
     {id:'L-002',user:'销售A',action:'新建线索',detail:'新建线索 LD-001 L\'Oréal Malaysia',time:'2026-10-04 10:30'},
     {id:'L-003',user:'管理员',action:'发送报价',detail:'发送报价 QT-2026-001',time:'2026-10-04 11:05'}
   ];
-  DM.set('logs', logs);
+  seedOne('logs', logs);
 
-  DM.set('seeded', true);
-  }
 
   if (!DM.get('products') || DM.get('products').length === 0) {
     const products = [
@@ -380,7 +638,7 @@ function seedData() {
       {id:'PRD-03',name:'精装盒 Rigid Box',nameZh:'精装盒',categoryId:'CAT-12',category:'精装盒',price:0.25,moq:200,moqUnit:'pcs',status:'active',image:'',desc:'Premium rigid box with luxury finishing'},
       {id:'PRD-04',name:'纸袋 Paper Bag',nameZh:'纸袋',categoryId:'CAT-08',category:'纸袋',price:0.10,moq:500,moqUnit:'pcs',status:'active',image:'',desc:'Custom printed paper bag with handles'}
     ];
-    DM.set('products', products);
+    seedOne('products', products);
   }
   if (!DM.has('printingOptions')) {
     DM.set('printingOptions', ['0C (无印刷)','1C 单色','4C 四色','4C+0C','4C+1C','4C+4C','1C+0C','1C+1C','Flexo 1C','Flexo 2C','Brown Base','White Base','Laserfoil']);
@@ -565,6 +823,7 @@ function renderPage(id) {
     'settings-finance': renderSettingsFinance,
     'settings-users': renderUsers,
     'settings-roles': renderRoles,
+    'settings-cloud': renderSettingsCloud,
     'settings-logs': renderLogs
   };
   (pages[id] || renderPlaceholder)(c, id);
@@ -1105,35 +1364,41 @@ function openUploadDieModal() {
       <div class="form-group"><label class="form-label">刀模费</label><select class="form-select" id="f_die_fee"><option>已收</option><option>未收</option><option>免费</option></select></div>
       <div class="form-group full"><label class="form-label">上传文件 *</label><input class="form-input" type="file" id="f_die_file" accept=".ai,.pdf,.dxf,.dwg,.svg"></div>
     </div>
-  `, () => {
+  `, async () => {
     const boxType = val('f_die_boxtype');
     const size = val('f_die_size');
     const fee = val('f_die_fee');
+    const file = document.getElementById('f_die_file')?.files?.[0];
     if (!boxType || !size) { toast('请填写必填字段'); return; }
-    const dielines = DM.get('dielines');
-    const newId = 'DIE-' + String(dielines.length + 1).padStart(3, '0');
-    dielines.push({id:newId,boxType,size,fee,status:'available',fileName:'',uploaded:DM.now().split(' ')[0],uploader:'管理员'});
-    DM.set('dielines', dielines);
-    toast('刀模已上传'); renderPage(currentPageId);
+    if (!file) { toast('请选择刀模文件'); return false; }
+    closeModal();
+    toast('正在上传 ' + file.name + ' …');
+    try {
+      const up = await cloudUpload(file, 'dielines');
+      const dielines = DM.get('dielines');
+      dielines.unshift({id:DM.genId('DIE'),boxType,size,fee,status:'available',fileName:file.name,url:up.url,path:up.path,fileSize:fmtSize(file.size),uploaded:DM.now().split(' ')[0],uploader:whoami()});
+      DM.set('dielines', dielines);
+      toast('刀模已上传到云端'); renderPage(currentPageId);
+    } catch (e) { toast('上传失败：' + e.message) }
   });
 }
 
 function downloadDie(id) {
   const d = DM.get('dielines').find(x => x.id === id);
   if (!d) return;
-  showModal('下载刀模', `
+  showModal('刀模详情', `
     <div class="form-grid">
       <div class="form-group"><label class="form-label">编号</label><div style="padding:8px 0;font-weight:600">${d.id}</div></div>
       <div class="form-group"><label class="form-label">适用盒型</label><div style="padding:8px 0">${d.boxType}</div></div>
       <div class="form-group"><label class="form-label">尺寸</label><div style="padding:8px 0">${d.size}</div></div>
       <div class="form-group"><label class="form-label">文件名</label><div style="padding:8px 0">${d.fileName || '未上传文件'}</div></div>
       <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${d.uploaded}</div></div>
+      <div class="form-group"><label class="form-label">上传人</label><div style="padding:8px 0">${d.uploader || '—'}</div></div>
     </div>
     <div style="margin-top:16px;padding:12px;background:var(--gray-50);border-radius:6px;font-size:13px;color:var(--gray-600)">
-      提示：静态演示环境暂不支持真实文件下载。生产环境将连接文件存储服务。
+      ${d.url ? `<a href="${d.url}" target="_blank" download style="color:var(--primary);font-weight:600">点此下载原始文件</a>　<span style="word-break:break-all">${d.url}</span>` : '这条记录没有云端文件，需重新上传后才能下载。'}
     </div>
-  `, null, [{label:'关闭',cls:'btn-secondary'}]);
-  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
+  `, null, [{label:d.url?'下载文件':'关闭',cls:d.url?'btn-primary':'btn-secondary',fn:()=>{ if (d.url) window.open(d.url, '_blank'); closeModal() }}]);
   document.getElementById('modalSaveBtn')?.remove();
 }
 
@@ -1143,6 +1408,20 @@ function renderProof(c) {
     <div class="page-header"><div><h1 class="page-title">打样管理</h1><p class="page-desc">数字打样与空白盒 mock-up</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>打样类型</th><th>状态</th><th>上传时间</th><th>操作</th></tr></thead>
     <tbody>${proofs.map(p=>`<tr><td class="td-id">${p.orderId}</td><td class="td-name">${p.customer}</td><td>${p.type}</td><td>${p.status==='confirmed'?'<span class="badge badge-green">已确认</span>':'<span class="badge badge-yellow">待客户确认</span>'}</td><td>${p.uploaded}</td><td><button class="btn btn-sm btn-secondary" onclick="viewProof('${p.id}')">查看</button> ${p.status!=='confirmed'?'<button class="btn btn-sm btn-primary" onclick="sendProofConfirm(\''+p.id+'\')">发送确认</button>':''}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function proofPreviewHtml(p) {
+  if (!p.fileUrl) return '<div style="padding:8px 0;color:var(--gray-400)">暂无文件，点击下方「上传打样文件」按钮添加</div>';
+  const name = esc(p.fileName || '打样文件');
+  const url = esc(p.fileUrl);
+  const ext = String(p.fileName || p.fileUrl || '').split('?')[0];
+  const isImg = /\.(png|jpe?g|gif|webp|svg)$/i.test(ext);
+  const isPdf = /\.pdf$/i.test(ext);
+  return `<div style="display:flex;flex-direction:column;gap:10px;padding:4px 0">
+    <div><a href="${url}" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600">${name}</a>${p.fileSize?` <span class="text-sm text-gray">(${esc(p.fileSize)})</span>`:''}</div>
+    ${isImg ? `<img src="${url}" alt="${name}" style="max-width:100%;max-height:340px;border:1px solid var(--gray-200);border-radius:6px">`
+      : isPdf ? `<iframe src="${url}" title="${name}" style="width:100%;height:420px;border:1px solid var(--gray-200);border-radius:6px"></iframe>` : ''}
+  </div>`;
 }
 
 function viewProof(id) {
@@ -1155,14 +1434,42 @@ function viewProof(id) {
       <div class="form-group"><label class="form-label">打样类型</label><div style="padding:8px 0">${p.type}</div></div>
       <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0">${p.status==='confirmed'?'<span class="badge badge-green">已确认</span>':'<span class="badge badge-yellow">待客户确认</span>'}</div></div>
       <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${p.uploaded}</div></div>
-      <div class="form-group"><label class="form-label">打样文件</label><div style="padding:8px 0">${p.fileUrl || '暂无文件'}</div></div>
+      <div class="form-group full"><label class="form-label">打样文件</label>${proofPreviewHtml(p)}</div>
     </div>
-    <div style="margin-top:16px;padding:12px;background:var(--gray-50);border-radius:6px;font-size:13px;color:var(--gray-600)">
-      提示：打样文件将在此处预览。静态演示环境中暂不支持在线预览，生产环境将对接文件存储。
+  `, null, [
+    {label:'上传打样文件', cls:'btn-secondary', fn: () => uploadProofFile(id)},
+    {label:'关闭', cls:'btn-primary', fn: closeModal}
+  ]);
+}
+
+function uploadProofFile(id) {
+  const p = DM.get('proofs').find(x => x.id === id);
+  if (!p) return;
+  showModal('上传打样文件 - ' + p.orderId, `
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">选择文件（图片 / PDF / AI）*</label><input class="form-input" type="file" id="f_proof_file" accept="image/*,.pdf,.ai,.dxf,.dwg,.zip"></div>
+      <div class="form-group full"><label class="form-label">说明</label><input class="form-input" id="f_proof_note2" placeholder="e.g. 第二版 修改后"></div>
     </div>
-  `, null, [{label:'关闭',cls:'btn-secondary'}]);
-  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
-  document.getElementById('modalSaveBtn')?.remove();
+    ${p.fileUrl?`<div style="margin-top:12px;font-size:12px;color:var(--gray-500)">当前已有文件：${esc(p.fileName||'')}，上传后将被替换。</div>`:''}
+  `, async () => {
+    const file = document.getElementById('f_proof_file')?.files?.[0];
+    if (!file) { toast('请选择文件'); return false }
+    const note = val('f_proof_note2');
+    closeModal();
+    toast('正在上传 ' + file.name + ' …');
+    try {
+      const up = await cloudUpload(file, 'proofs');
+      const proofs = DM.get('proofs');
+      const t = proofs.find(x => x.id === id);
+      t.fileUrl = up.url; t.filePath = up.path; t.fileName = file.name;
+      t.fileSize = fmtSize(file.size); t.uploaded = DM.now().split(' ')[0];
+      if (note) t.note = note;
+      DM.set('proofs', proofs);
+      toast('打样文件已上传');
+      if (currentPageId === 'proofs-list') renderPage(currentPageId);
+      viewProof(id);
+    } catch (e) { toast('上传失败：' + e.message) }
+  });
 }
 
 function sendProofConfirm(id) {
@@ -1589,7 +1896,7 @@ function renderClients(c) {
     <div class="page-header"><div><h1 class="page-title">合作品牌墙</h1><p class="page-desc">管理展示的客户 Logo</p></div><button class="btn btn-primary" onclick="openClientModal()">+ 上传 Logo</button></div>
     <div class="card"><div class="card-body">
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
-        ${clients.map(cl=>`<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;cursor:pointer;position:relative" onclick="openClientModal('${cl.id}')"><div style="font-weight:700;color:var(--gray-400);font-size:14px;letter-spacing:2px">${cl.name}</div>${!cl.active?'<span class="badge badge-gray" style="position:absolute;top:4px;right:4px;font-size:9px">隐藏</span>':''}</div>`).join('')}
+        ${clients.map(cl=>`<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;cursor:pointer;position:relative" onclick="openClientModal('${cl.id}')">${cl.logoUrl?`<img src="${esc(cl.logoUrl)}" alt="${esc(cl.name)}" style="max-height:56px;max-width:100%;object-fit:contain;margin-bottom:8px">`:''}<div style="font-weight:700;color:var(--gray-400);font-size:14px;letter-spacing:2px">${cl.name}</div>${!cl.active?'<span class="badge badge-gray" style="position:absolute;top:4px;right:4px;font-size:9px">隐藏</span>':''}</div>`).join('')}
       </div>
     </div></div>`;
 }
@@ -1600,16 +1907,26 @@ function openClientModal(id) {
   showModal(cl ? '编辑品牌' : '上传品牌 Logo', `
     <div class="form-grid">
       <div class="form-group full"><label class="form-label">品牌名称 *</label><input class="form-input" id="f_cl_name" value="${cl?.name||''}" placeholder="e.g. Nike"></div>
-      <div class="form-group full"><label class="form-label">Logo 图片</label><input class="form-input" type="file" accept="image/*" id="f_cl_logo"></div>
+      <div class="form-group full"><label class="form-label">Logo 图片${cl?.logoUrl?'（留空则保持不变）':''}</label><input class="form-input" type="file" accept="image/*" id="f_cl_logo"></div>
       <div class="form-group"><label class="form-label">前台展示</label><select class="form-select" id="f_cl_active"><option value="true" ${cl?.active!==false?'selected':''}>展示</option><option value="false" ${cl?.active===false?'selected':''}>隐藏</option></select></div>
     </div>
-    ${!cl?'<div style="margin-top:12px;padding:10px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-500)">提示：静态演示中 Logo 使用文字表示，生产环境将上传至文件存储。</div>':''}
-  `, () => {
+    ${cl?.logoUrl?`<div style="margin-top:12px;display:flex;align-items:center;gap:12px"><img src="${esc(cl.logoUrl)}" style="height:48px;max-width:160px;object-fit:contain;background:#fff;border:1px solid var(--gray-200);border-radius:6px;padding:4px"><label style="font-size:13px;color:var(--gray-600)"><input type="checkbox" id="f_cl_clear"> 删除当前 Logo</label></div>`:''}
+  `, async () => {
     const name = val('f_cl_name');
-    if (!name) { toast('请填写品牌名称'); return; }
+    if (!name) { toast('请填写品牌名称'); return false }
     const active = val('f_cl_active') === 'true';
-    if (cl) { cl.name = name; cl.active = active; }
-    else { clients.push({id:DM.genId('CL'),name,active}); }
+    const file = document.getElementById('f_cl_logo')?.files?.[0];
+    let logoUrl = cl ? (cl.logoUrl || '') : '';
+    let logoPath = cl ? (cl.logoPath || '') : '';
+    if (document.getElementById('f_cl_clear')?.checked) { logoUrl = ''; logoPath = '' }
+    if (file) {
+      if (!Sync.ready) { toast('未连接后端数据库，无法上传图片'); return false }
+      toast('正在上传 Logo …');
+      const up = await cloudUpload(file, 'brand');
+      logoUrl = up.url; logoPath = up.path;
+    }
+    if (cl) { cl.name = name; cl.active = active; cl.logoUrl = logoUrl; cl.logoPath = logoPath }
+    else clients.push({id:DM.genId('CL'), name, active, logoUrl, logoPath});
     DM.set('clients', clients);
     toast(cl ? '品牌已更新' : '品牌已添加'); renderPage(currentPageId);
   });
@@ -1717,7 +2034,7 @@ let mediaSearch = '', mediaTypeFilter = '';
 
 function mediaGridHtml(files) {
   if (!files.length) return `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#999">暂无文件</div>`;
-  return files.map(f=>`<div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;cursor:pointer" onclick="viewMediaFile('${f.id}')"><div style="height:100px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:24px">${f.type==='image'?'🖼️':f.type==='pdf'?'📄':'📁'}</div><div style="padding:8px;font-size:11px;color:var(--gray-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div></div>`).join('');
+  return files.map(f=>`<div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;cursor:pointer" onclick="viewMediaFile('${f.id}')">${f.url && f.type==='image' ? `<img src="${f.url}" loading="lazy" style="width:100%;height:100px;object-fit:cover;display:block">` : `<div style="height:100px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:24px">${f.type==='image'?'🖼️':f.type==='pdf'?'📄':'📁'}</div>`}<div style="padding:8px;font-size:11px;color:var(--gray-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div></div>`).join('');
 }
 
 function applyMediaFilter() {
@@ -1739,15 +2056,21 @@ function openMediaUpload() {
       <div class="form-group"><label class="form-label">文件分类</label><select class="form-select" id="f_media_type"><option value="image">图片</option><option value="pdf">PDF</option><option value="other">其他</option></select></div>
       <div class="form-group"><label class="form-label">备注名称</label><input class="form-input" id="f_media_name" placeholder="可选，留空使用文件名"></div>
     </div>
-    <div style="margin-top:12px;padding:10px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-500)">提示：静态演示环境中文件仅记录名称，不实际上传。生产环境将对接对象存储。</div>
-  `, () => {
+    <div style="margin-top:12px;padding:10px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-500)">文件上传后存放在云端，所有同事和官网都能直接访问。单个文件上限 20MB。</div>
+  `, async () => {
     const fileInput = document.getElementById('f_media_file');
-    const fileName = fileInput?.files?.[0]?.name || val('f_media_name') || '未命名文件';
+    const file = fileInput?.files?.[0];
+    if (!file) { toast('请先选择文件'); return false }
     const type = val('f_media_type');
-    const files = DM.get('mediaFiles');
-    files.push({id:DM.genId('MED'),name:fileName,type,size:'—',uploaded:new Date().toISOString().slice(0,10)});
-    DM.set('mediaFiles', files);
-    toast('文件已上传'); renderPage(currentPageId);
+    closeModal();
+    toast('正在上传 ' + file.name + ' …');
+    try {
+      const up = await cloudUpload(file, 'media');
+      const files = DM.get('mediaFiles');
+      files.unshift({id:DM.genId('MED'),name:val('f_media_name') || file.name,type,size:fmtSize(file.size),uploaded:new Date().toISOString().slice(0,10),url:up.url,path:up.path,uploader:whoami()});
+      DM.set('mediaFiles', files);
+      toast('已上传到云端'); renderPage(currentPageId);
+    } catch (e) { toast('上传失败：' + e.message) }
   });
 }
 
@@ -1760,8 +2083,13 @@ function viewMediaFile(id) {
       <div class="form-group"><label class="form-label">类型</label><div style="padding:8px 0">${f.type}</div></div>
       <div class="form-group"><label class="form-label">大小</label><div style="padding:8px 0">${f.size}</div></div>
       <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${f.uploaded}</div></div>
+      <div class="form-group full"><label class="form-label">云端地址</label><div style="padding:8px 0">${f.url ? `<a href="${f.url}" target="_blank" style="color:var(--primary);word-break:break-all">${f.url}</a>` : '<span style="color:var(--gray-400)">旧记录，文件未上传到云端</span>'}</div></div>
     </div>
-  `, null, [{label:'删除',cls:'btn-danger',fn:()=>{if(confirm('确定删除？')){DM.set('mediaFiles',DM.get('mediaFiles').filter(x=>x.id!==id));toast('已删除');closeModal();renderPage(currentPageId);}}},{label:'关闭',cls:'btn-secondary',fn:closeModal}]);
+  `, null, [{label:'删除',cls:'btn-danger',fn:async ()=>{
+    if(!confirm('确定删除？云端文件也会一并删除。'))return;
+    if (f.path && Sync.ready) { try { await Sync.client.storage.from('jl-uploads').remove([f.path]) } catch (e) {} }
+    DM.set('mediaFiles',DM.get('mediaFiles').filter(x=>x.id!==id));toast('已删除');closeModal();renderPage(currentPageId);
+  }},{label:'关闭',cls:'btn-secondary',fn:closeModal}]);
 }
 
 // ========== CASES ==========
@@ -1952,10 +2280,24 @@ function saveSettingsNotifications() {
 }
 
 function renderSettingsCerts(c) {
+  const stored = DM.get('settings_certs', {});
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">认证/资质</h1><p class="page-desc">上传管理证书</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">认证/资质</h1><p class="page-desc">证书文件存放在云端，全员与官网均可访问</p></div></div>
     <div class="card"><div class="card-body">
-      ${['ISO 9001:2015','FSC Certified','Fogra 51'].map(cert=>`<div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><div style="flex:1"><span class="font-bold">${cert}</span></div><div style="width:60px;height:40px;background:var(--gray-100);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px">📄</div><label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" checked> 前台展示</label><button class="btn btn-sm btn-secondary" onclick="uploadCert('${cert}')">上传</button></div>`).join('')}
+      ${['ISO 9001:2015','FSC Certified','Fogra 51'].map(cert=>{
+        const rec = stored[cert];
+        const thumb = rec && rec.url
+          ? (rec.type === 'pdf'
+              ? `<div style="width:60px;height:40px;background:var(--gray-100);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px">\ud83d\udcc4</div>`
+              : `<img src="${rec.url}" style="width:60px;height:40px;object-fit:cover;border-radius:4px">`)
+          : `<div style="width:60px;height:40px;background:var(--gray-100);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--gray-400)">\u672a\u4e0a\u4f20</div>`;
+        return `<div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--gray-100)">
+          <div style="flex:1"><span class="font-bold">${cert}</span><div style="font-size:11px;color:var(--gray-500)">${rec ? rec.fileName + ' \u00b7 ' + rec.uploaded + ' \u00b7 ' + rec.by : '\u5c1a\u672a\u4e0a\u4f20'}</div></div>
+          ${thumb}
+          ${rec && rec.url ? `<a class="btn btn-sm btn-secondary" href="${rec.url}" target="_blank">\u67e5\u770b</a>` : ''}
+          <button class="btn btn-sm ${rec ? 'btn-secondary' : 'btn-primary'}" onclick="uploadCert('${cert}')">${rec ? '\u66ff\u6362' : '\u4e0a\u4f20'}</button>
+        </div>`;
+      }).join('')}
     </div></div>`;
 }
 
@@ -2036,44 +2378,79 @@ function saveSettingsFinance() {
 
 function renderUsers(c) {
   const users = DM.get('users');
+  const rows = users.map(u=>`<tr><td class="td-name">${u.name}</td><td>${u.email||'—'}</td><td><span class="badge badge-blue">${u.role}</span></td><td>${u.needsConfirm?'<span class="badge badge-red">待验证邮箱</span>':(u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">已禁用</span>')}</td><td>${u.created}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button>${u.email ? ` <button class="btn btn-sm btn-secondary" onclick="sendPasswordReset('${u.email}')">重发密码</button>` : ''}</td></tr>`).join('');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">管理员列表</h1><p class="page-desc">系统用户管理</p></div><button class="btn btn-primary" onclick="openUserModal()">+ 新建管理员</button></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>用户名</th><th>姓名</th><th>角色</th><th>邮箱</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
-    <tbody>${users.map(u=>`<tr><td class="td-name">${u.username}</td><td>${u.name}</td><td><span class="badge badge-blue">${u.role}</span></td><td>${u.email}</td><td>${u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">禁用</span>'}</td><td>${u.created}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button> <button class="btn btn-sm btn-secondary" onclick="resetUserPassword('${u.id}')">重置密码</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">管理员列表</h1><p class="page-desc">${Sync.ready ? '登录账号由 Supabase 托管，密码不写在这份代码里' : '未连接后端，当前只是本机演示名单'}</p></div><button class="btn btn-primary" onclick="openUserModal()">+ 新建账号</button></div>
+    ${users.length
+      ? `<div class="card"><div class="table-wrap"><table><thead><tr><th>姓名</th><th>登录邮箱</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div>`
+      : `<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-500);padding:32px">还没有任何账号。点右上角「新建账号」给同事开一个。</div></div>`}
+    ${Sync.ready ? `<div style="margin-top:16px;font-size:12px;color:var(--gray-500);line-height:1.8">「重发密码」会给对方邮箱发一封重置邮件。要彻底删除账号，需到 Supabase 控制台 Authentication → Users 操作。</div>` : ''}`;
 }
 
 function openUserModal(id) {
   const users = DM.get('users');
   const user = id ? users.find(x => x.id === id) : null;
-  const title = user ? '编辑管理员' : '新建管理员';
-  showModal(title, `
+  const roles = DM.get('roles').map(r => r.name);
+  const roleList = roles.length ? roles : ['超级管理员','销售','设计','财务','运营'];
+  showModal(user ? '编辑账号' : '新建账号', `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">用户名 *</label><input class="form-input" id="f_username" value="${user ? user.username : ''}"></div>
       <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${user ? user.name : ''}"></div>
-      <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="f_email" value="${user ? user.email : ''}"></div>
-      <div class="form-group"><label class="form-label">角色</label><select class="form-select" id="f_role"><option ${user?.role==='超级管理员'?'selected':''}>超级管理员</option><option ${user?.role==='销售'?'selected':''}>销售</option><option ${user?.role==='设计'?'selected':''}>设计</option><option ${user?.role==='财务'?'selected':''}>财务</option><option ${user?.role==='运营'?'selected':''}>运营</option></select></div>
-      ${user ? '<div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_active"><option value="true" '+(user.active?'selected':'')+'>启用</option><option value="false" '+(!user.active?'selected':'')+'>禁用</option></select></div>' : ''}
-      ${!user ? '<div class="form-group full"><label class="form-label">密码 *</label><input class="form-input" type="password" id="f_password"></div>' : ''}
+      <div class="form-group"><label class="form-label">角色</label><select class="form-select" id="f_role">${roleList.map(r=>`<option ${user && user.role===r?'selected':''}>${r}</option>`).join('')}</select></div>
+      ${user
+        ? `<div class="form-group"><label class="form-label">登录邮箱</label><div style="padding:8px 0;color:var(--gray-600)">${user.email||'—'}</div></div>
+           <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_active"><option value="true" ${user.active?'selected':''}>启用</option><option value="false" ${!user.active?'selected':''}>禁用</option></select></div>`
+        : `<div class="form-group"><label class="form-label">登录邮箱 *</label><input class="form-input" id="f_email" placeholder="同事的邮箱，登录时用它"></div>
+           <div class="form-group"><label class="form-label">初始密码 *</label><input class="form-input" type="password" id="f_password" placeholder="至少 6 位"></div>`}
     </div>
-  `, () => {
-    const username = val('f_username');
+    ${user ? '' : `<div style="margin-top:12px;padding:10px;border-radius:6px;font-size:12px;${Sync.ready ? 'background:var(--gray-50);color:var(--gray-500)">创建成功后，把邮箱和密码一起发给同事，登录页填这两项。' : 'background:#fff1f0;color:#820014">当前未连接后端，新建的账号只存在于本机，同事用不了。'}</div>`}
+  `, async () => {
     const name = val('f_name');
-    if (!username || !name) { toast('请填写必填字段'); return; }
+    if (!name) { toast('请填写姓名'); return false }
     if (user) {
-      user.username = username;
       user.name = name;
-      user.email = val('f_email');
       user.role = val('f_role');
       const activeEl = document.getElementById('f_active');
       if (activeEl) user.active = activeEl.value === 'true';
-    } else {
-      const password = val('f_password');
-      if (!password) { toast('请设置密码'); return; }
-      users.push({id:DM.genId('U'),username,name,email:val('f_email'),role:val('f_role'),active:true,created:DM.now()});
+      DM.set('users', users);
+      toast('账号已更新'); renderPage(currentPageId);
+      return;
     }
-    DM.set('users', users);
-    toast(user ? '管理员已更新' : '管理员已创建'); renderPage(currentPageId);
+    const email = (val('f_email') || '').trim().toLowerCase();
+    const password = val('f_password');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('请填写正确的邮箱，它是登录账号'); return false }
+    const dup = users.find(u => (u.email || '').toLowerCase() === email);
+    if (dup) { toast(dup.needsConfirm ? email + ' 上次建了一半（卡在邮箱验证）。请到 Supabase 控制台 认证 → 用户 里把它删掉，再改用「添加用户」重建。' : '这个邮箱已经建过了'); return false }
+    if (!password || password.length < 6) { toast('密码至少 6 位'); return false }
+    if (!Sync.ready) {
+      users.push({id:DM.genId('U'), name, email, role:val('f_role'), active:true, created:DM.now()});
+      DM.set('users', users);
+      toast('已记录到本机（未连接后端，同事无法登录）'); renderPage(currentPageId);
+      return;
+    }
+    toast('正在创建账号…');
+    try {
+      const r = await Sync.signUp(email, password, name);
+      if (!r.user) throw new Error('Supabase 没有返回账号');
+      users.push({id:r.user.id, name, email, role:val('f_role'), active:true, needsConfirm:!r.loginable, created:DM.now()});
+      DM.set('users', users);
+      renderPage(currentPageId);
+      if (r.loginable) { toast(email + ' 已可登录'); }
+      else {
+        toast('账号已建，但 Supabase 要求先验证邮箱，对方现在还登不进去。去控制台 认证 → 用户 → 添加用户 重建一个最省事（那边建出来直接可用）。');
+        showBanner('warn', `<strong>${esc(email)}</strong> 还差一步：Supabase 要求验证邮箱，目前无法登录。最快的解法是在 Supabase 控制台 <strong>认证 → 用户 → 添加用户</strong> 直接建号（建完即可登录，不需要验证邮件），然后把这台机器上的这条记录删掉重来。`);
+      }
+    } catch (e) { toast('创建失败：' + e.message); return false }
   });
+}
+
+async function sendPasswordReset(email) {
+  if (!Sync.ready) { toast('未连接后端'); return }
+  if (!confirm('给 ' + email + ' 发送密码重置邮件？')) return;
+  try {
+    const { error } = await Sync.client.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+    if (error) throw new Error(error.message);
+    toast('重置邮件已发出，请让对方查收（含垃圾箱）');
+  } catch (e) { toast('发送失败：' + e.message) }
 }
 
 function resetUserPassword(id) {
@@ -2134,6 +2511,7 @@ function renderLogs(c) {
 
 // ========== UTILITIES ==========
 function val(id) { return document.getElementById(id)?.value?.trim() || '' }
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 
 function showModal(title, bodyHtml, onSave, buttons) {
   const modal = document.getElementById('modal');
@@ -2150,7 +2528,19 @@ function showModal(title, bodyHtml, onSave, buttons) {
       document.getElementById('modal-btn-' + b.label)?.addEventListener('click', b.fn);
     });
   } else if (onSave) {
-    document.getElementById('modalSaveBtn')?.addEventListener('click', () => { onSave(); closeModal(); });
+    document.getElementById('modalSaveBtn')?.addEventListener('click', async e => {
+      const btn = e.currentTarget;
+      let r;
+      try {
+        r = onSave();
+        if (r && typeof r.then === 'function') { btn.disabled = true; btn.textContent = '处理中…'; r = await r; btn.disabled = false; btn.textContent = '保存' }
+      } catch (err) {
+        btn.disabled = false; btn.textContent = '保存';
+        toast('操作失败：' + err.message);
+        return;
+      }
+      if (r !== false) closeModal();
+    });
   }
 }
 
@@ -2165,12 +2555,13 @@ function toast(msg) {
   setTimeout(() => t.remove(), 3000);
 }
 
-function logout() {
-  if (confirm('确定退出登录？')) {
-    localStorage.removeItem('jiulian_admin_token');
-    localStorage.removeItem('jiulian_admin_user');
-    window.location.href = 'login.html';
-  }
+async function logout() {
+  if (!confirm('确定退出登录？')) return;
+  await Sync.drain(8000);
+  if (Sync.ready) await Sync.signOut();
+  localStorage.removeItem('jiulian_admin_token');
+  localStorage.removeItem('jiulian_admin_user');
+  window.location.href = 'login.html';
 }
 
 function exportCSV(type) {
@@ -2188,14 +2579,120 @@ function exportCSV(type) {
   a.click(); URL.revokeObjectURL(url);
   toast('已导出 ' + data.length + ' 条记录');
 }
+function readCsvText(file) {
+  return file.arrayBuffer().then(buf => {
+    let text = new TextDecoder('utf-8', {fatal: false}).decode(buf);
+    if (text.includes('\uFFFD')) text = new TextDecoder('gbk').decode(buf);
+    return text;
+  });
+}
+
+function parseDelimited(text) {
+  const norm = String(text).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  const first = norm.split('\n').find(l => l.trim()) || '';
+  const delim = [',', ';', '\t'].map(d => [d, first.split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const rows = [];
+  let row = [], cell = '', inQ = false;
+  for (let i = 0; i < norm.length; i++) {
+    const ch = norm[i];
+    if (inQ) {
+      if (ch === '"') { if (norm[i + 1] === '"') { cell += '"'; i++ } else inQ = false }
+      else cell += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === delim) { row.push(cell); cell = '' }
+    else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = '' }
+    else cell += ch;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row) }
+  return rows.map(r => r.map(c => c.trim())).filter(r => r.some(c => c !== ''));
+}
+
+function applyPricebookCsv(text, defaultBox, pb) {
+  const rows = parseDelimited(text);
+  if (rows.length < 2) return {ok: false, msg: '文件至少要有表头和一行数据'};
+  let hi = rows.findIndex(r => r.some(c => /sku|编号|型号|款号/i.test(c)));
+  if (hi < 0) hi = 0;
+  const head = rows[hi].map(h => h.toLowerCase());
+  const digits = h => (h.match(/\d+/g) || []).join('');
+  const find = re => head.findIndex(h => re.test(h));
+  const cSku = find(/sku|编号|型号|款号/);
+  const cSize = find(/尺寸|规格|size/);
+  const cBox = find(/盒型|箱型|类型|box/);
+  const tierCols = PB_TIERS.map(t => head.findIndex(h => digits(h) === t));
+  if (tierCols.every(c => c < 0)) return {ok: false, msg: '没找到 100/300/500/1000/2000/3000/5000pcs 数量列'};
+  const skuCol = cSku < 0 ? 0 : cSku;
+  let added = 0, updated = 0, skipped = 0;
+  const boxes = new Set();
+  for (let i = hi + 1; i < rows.length; i++) {
+    const r = rows[i];
+    const sku = (r[skuCol] || '').trim();
+    const box = ((cBox >= 0 && r[cBox]) ? r[cBox] : (defaultBox || '')).trim();
+    if (!sku || !box) { skipped++; continue }
+    pb[box] = pb[box] || [];
+    const prices = tierCols.map(c => {
+      if (c < 0) return '';
+      const n = parseFloat(String(r[c] ?? '').replace(/[^0-9.\-]/g, ''));
+      return isNaN(n) ? '' : n;
+    });
+    if (prices.every(p => p === '')) { skipped++; continue }
+    let row = pb[box].find(x => String(x.sku).toLowerCase() === sku.toLowerCase());
+    if (row) {
+      row.p = row.p || PB_TIERS.map(() => '');
+      if (cSize >= 0 && r[cSize]) row.size = r[cSize];
+      prices.forEach((v, pi) => { if (v !== '') row.p[pi] = v });
+      updated++;
+    } else {
+      pb[box].push({sku, size: cSize >= 0 ? (r[cSize] || '') : '', p: prices});
+      added++;
+    }
+    boxes.add(box);
+  }
+  if (!added && !updated) return {ok: false, msg: '没有匹配到任何有效 SKU 行'};
+  return {ok: true, pb, added, updated, skipped, total: rows.length - hi - 1, boxes: [...boxes]};
+}
+
 function openPricebookImport() {
+  const boxes = Object.keys(DM.get('pricebook'));
   showModal('导入价格簿', `
-    <div class="form-group"><label class="form-label">选择 CSV/Excel 文件</label><input class="form-input" type="file" accept=".csv,.xlsx,.xls" id="f_pb_file"></div>
-    <div style="margin-top:12px;padding:12px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-600)">
-      <b>格式要求：</b><br>SKU, 尺寸, 100pcs, 300pcs, 500pcs, 1000pcs, 2000pcs, 3000pcs, 5000pcs<br><br>
-      提示：静态演示环境中暂不支持文件解析。生产环境将自动解析并匹配 SKU 更新价格。
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">导入到盒型</label><select class="form-select" id="f_pb_box">${boxes.length ? boxes.map(b=>`<option>${esc(b)}</option>`).join('') : '<option value="">（按 CSV 的「盒型」列自动分组）</option>'}</select></div>
+      <div class="form-group"><label class="form-label">选择 CSV 文件 *</label><input class="form-input" type="file" accept=".csv,.txt" id="f_pb_file"></div>
     </div>
-  `, () => { toast('导入任务已提交'); closeModal(); });
+    <div style="margin-top:12px;padding:12px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-600)">
+      <b>表头格式（列顺序任意，按名称自动识别）</b><br>
+      SKU, 盒型, 尺寸, 100pcs, 300pcs, 500pcs, 1000pcs, 2000pcs, 3000pcs, 5000pcs<br>
+      没有「盒型」列时全部导入到上面选中的盒型；已有 SKU 覆盖更新，新 SKU 自动追加。<br>
+      Excel 请先「另存为 → CSV UTF-8 (逗号分隔)」。
+    </div>
+    <div id="pbPreview" style="margin-top:12px"></div>
+  `, () => {
+    const file = document.getElementById('f_pb_file')?.files?.[0];
+    if (!file) { toast('请选择 CSV 文件'); return false }
+    return readCsvText(file).then(text => {
+      const r = applyPricebookCsv(text, val('f_pb_box'), DM.get('pricebook'));
+      if (!r.ok) { toast('导入失败：' + r.msg); return false }
+      DM.set('pricebook', r.pb);
+      toast('导入完成：新增 ' + r.added + ' 个 SKU，更新 ' + r.updated + ' 个' + (r.skipped ? '，跳过 ' + r.skipped + ' 行' : ''));
+      pricebookTab = r.boxes[0] || pricebookTab;
+      renderPage(currentPageId);
+    });
+  });
+  document.getElementById('f_pb_file')?.addEventListener('change', previewPricebookImport);
+}
+
+function previewPricebookImport() {
+  const el = document.getElementById('pbPreview');
+  const file = document.getElementById('f_pb_file')?.files?.[0];
+  if (!el || !file) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--gray-500)">正在解析…</div>';
+  readCsvText(file).then(text => {
+    const r = applyPricebookCsv(text, val('f_pb_box'), JSON.parse(JSON.stringify(DM.get('pricebook'))));
+    el.innerHTML = r.ok
+      ? `<div style="padding:10px;background:#f6ffed;color:#135200;border-radius:6px;font-size:12px">解析成功：${r.total} 行数据 · 新增 ${r.added} · 更新 ${r.updated} · 跳过 ${r.skipped}<br>涉及盒型：${r.boxes.map(esc).join('、')}</div>`
+      : `<div style="padding:10px;background:#fff1f0;color:#820014;border-radius:6px;font-size:12px">解析失败：${esc(r.msg)}</div>`;
+  }).catch(e => {
+    el.innerHTML = `<div style="padding:10px;background:#fff1f0;color:#820014;border-radius:6px;font-size:12px">无法读取文件：${esc(e.message)}</div>`;
+  });
 }
 
 function openContactFormConfig() {
@@ -2222,23 +2719,135 @@ function removeContactField(idx) {
 
 function uploadCert(name) {
   showModal('上传证书 - ' + name, `
-    <div class="form-group"><label class="form-label">选择证书文件</label><input class="form-input" type="file" accept="image/*,.pdf"></div>
-    <div style="margin-top:12px;padding:10px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-500)">提示：静态演示环境中文件仅记录，不实际上传。</div>
-  `, () => { toast(name + ' 已上传'); closeModal(); });
+    <div class="form-group"><label class="form-label">选择证书文件</label><input class="form-input" type="file" id="f_cert_file" accept="image/*,.pdf"></div>
+    <div style="margin-top:12px;padding:10px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-500)">上传成功后证书缩略图会出现在列表里，再点「替换」即覆盖为新文件。</div>
+  `, async () => {
+    const file = document.getElementById('f_cert_file')?.files?.[0];
+    if (!file) { toast('请选择文件'); return false }
+    closeModal();
+    toast('正在上传 ' + file.name + ' …');
+    try {
+      const up = await cloudUpload(file, 'certs');
+      const stored = DM.get('settings_certs', {});
+      stored[name] = { url: up.url, path: up.path, fileName: file.name, type: file.type.startsWith('image/') ? 'image' : 'pdf', uploaded: DM.now().split(' ')[0], by: whoami() };
+      DM.set('settings_certs', stored);
+      toast(name + ' 已上传到云端'); renderPage(currentPageId);
+    } catch (e) { toast('上传失败：' + e.message) }
+  });
+}
+
+// ========== 后端状态页 ==========
+function renderSettingsCloud(c) {
+  const cfg = window.JL_SB || {};
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">后端状态</h1><p class="page-desc">数据库连接、数据同步与账号</p></div></div>
+    ${Sync.ready
+      ? `<div class="banner" style="background:#e8f5ee;border:1px solid #b7dfc6;color:var(--primary)">已连接 Supabase，数据全员共享。上次拉取：${Sync.lastPull ? new Date(Sync.lastPull).toLocaleString('zh-CN') : '—'}</div>`
+      : `<div class="banner banner-err">未连接后端数据库。当前录入的内容只保存在这台设备的浏览器里，同事看不到，换电脑也会丢。<br>状态：${Sync.msg || '未配置'}${Sync.errMsg ? ' · ' + Sync.errMsg : ''}</div>`}
+    <div class="card mb-20"><div class="card-header"><span class="card-title">连接信息</span></div><div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+        <div><strong>Project URL</strong><br><span style="color:var(--gray-500);word-break:break-all">${cfg.url || '未填写'}</span></div>
+        <div><strong>anon key</strong><br><span style="color:var(--gray-500)">${cfg.key ? cfg.key.slice(0,10) + '…（已配置）' : '未填写'}</span></div>
+      </div>
+      <div style="margin-top:16px;font-size:12px;color:var(--gray-500);line-height:1.9">
+        配置方法：编辑项目根目录下的 <code>js/sb-config.js</code>，把 Supabase 的 Project URL 与 anon public key 填进去，重新部署后刷新本页。<br>
+        建表脚本在 <code>supabase/schema.sql</code>，粘贴到 Supabase 控制台 SQL Editor 执行一次即可，可重复执行。
+      </div>
+    </div></div>
+    <div class="card mb-20"><div class="card-header"><span class="card-title">数据同步</span></div><div class="card-body">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-secondary" onclick="syncOnChipClick()">从服务器拉取最新</button>
+        <button class="btn btn-secondary" onclick="Sync.retry()">重试未完成的上传</button>
+        <button class="btn btn-secondary" onclick="importDemoData()">导入演示数据（测试用）</button>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--gray-500)">待上传 ${Sync.q.length} 条 · 失败 ${Sync.fails} 条 · 托管集合 ${CLOUD.row.length + CLOUD.doc.length} 个</div>
+    </div></div>
+    ${localStorage.getItem('jl_presync_backup') ? `
+    <div class="card"><div class="card-header"><span class="card-title">本机旧数据</span></div><div class="card-body">
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:12px">检测到后端开通前本机已录入的内容，尚未共享给同事。</div>
+      <button class="btn btn-primary" onclick="doMigrateUp()">上传到服务器</button>
+      <button class="btn btn-secondary" onclick="discardLocalBackup()">丢弃本机旧数据</button>
+    </div></div>` : ''}`;
+}
+
+async function doMigrateUp() {
+  toast('正在上传本机数据…');
+  try {
+    const n = await Sync.migrateLocalUp();
+    if (Sync.q.length) { toast('部分上传失败，可稍后点右上角重试'); return }
+    toast('已上传 ' + n + ' 项数据到服务器');
+    renderPage(currentPageId);
+  } catch (e) { toast('上传失败：' + e.message) }
+}
+
+function discardLocalBackup() {
+  if (!confirm('确定丢弃本机旧数据？这些内容不会共享给同事，且无法恢复。')) return;
+  localStorage.removeItem('jl_presync_backup');
+  localStorage.setItem('jl_migrated_up', '1');
+  toast('已忽略本机旧数据'); renderPage(currentPageId);
+}
+
+function importDemoData() {
+  if (!confirm('导入演示数据？会用 L\'Oréal、Shopee 等假线索覆盖当前业务数据，仅供测试，事后可逐条删除。')) return;
+  SEED_FORCE = true;
+  seedData();
+  SEED_FORCE = false;
+  toast('演示数据已导入');
+  renderPage(currentPageId);
 }
 
 // ========== INIT ==========
-window.addEventListener('DOMContentLoaded', () => {
-  if (localStorage.getItem('jiulian_admin_token') !== 'authenticated') {
+function paintUser() {
+  const name = whoami();
+  const n = document.getElementById('userName');
+  const a = document.getElementById('userAvatar');
+  if (n) n.textContent = name;
+  if (a) a.textContent = (name[0] || '管').toUpperCase();
+}
+
+function startSessionGuard() {
+  if (!Sync.ready) return;
+  Sync.client.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') window.location.href = 'login.html';
+    if (event === 'SIGNED_IN' && session) Sync.user = session.user;
+  });
+}
+
+async function bootAdmin() {
+  const ok = await Sync.init();
+  Sync.muted = true;
+  if (ok) {
+    let user = null;
+    try { user = await Sync.currentUser() } catch (e) {}
+    if (!user) { window.location.href = 'login.html?reason=expired'; return }
+    Sync.user = user;
+    try {
+      Sync.pendingLocal = Sync.snapshotLocal();
+      await Sync.pullAll();
+    } catch (e) { Sync.msg = '拉取失败'; Sync.errMsg = e.message }
+  } else if (localStorage.getItem('jiulian_admin_token') !== 'authenticated') {
     window.location.href = 'login.html';
     return;
   }
   seedData();
+  Sync.muted = false;
   renderSidebar();
   navigateTo('dashboard-overview', '数据看板', '概览');
-  // Auto-expand first group
   toggleGroup('dashboard');
-});
+  Sync.badge();
+  paintUser();
+  startSessionGuard();
+  if (ok && Sync.pendingLocal) {
+    showBanner('warn', `本机存有 <strong>${Sync.pendingLocal}</strong> 项后端开通前录入的数据，尚未共享给同事。<button onclick="doMigrateUp()">上传到服务器</button>`);
+  } else if (!ok) {
+    showBanner('warn', `未连接后端数据库，你现在录入的内容只保存在这台设备上，同事看不到。<button onclick="navigateTo('settings-cloud','系统设置','后端状态')">查看配置方法</button>`);
+  } else if (Sync.errMsg) {
+    showBanner('err', `后端异常：${Sync.errMsg}<button onclick="location.reload()">重试</button>`);
+  }
+  if (Sync.fails) setTimeout(() => Sync.retry(), 3000);
+}
+
+bootAdmin();
 </script>
 </body>
 </html>

@@ -8,6 +8,12 @@
   const productModal = document.getElementById('productModal');
   const modalClose = document.querySelector('.modal-close');
 
+  // 后端：把官网询价写进共享线索池（配置见 js/sb-config.js）
+  const CFG = window.JL_SB || {};
+  const sb = (CFG.url && CFG.key && window.supabase && window.supabase.createClient)
+    ? window.supabase.createClient(CFG.url, CFG.key)
+    : null;
+
   const pricingData = {
     M1: [
       { sku: 'M1-1', size: '24×22×4', prices: ['1.67', '2.38', '2.49', '1.25', '1.93', '1.36', '1.80'] },
@@ -183,7 +189,61 @@
 
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/60175836916?text=${encodedMessage}`, '_blank');
+
+    saveLead({ boxType, size, quantity, printing, finishing, name, company, notes });
   });
+
+  function showInquiryStatus(text, tone) {
+    let el = document.getElementById('inquiryStatus');
+    if (!el) {
+      el = document.createElement('p');
+      el.id = 'inquiryStatus';
+      el.style.cssText = 'margin:10px 0 0;font-size:13px;line-height:1.5';
+      inquiryForm.appendChild(el);
+    }
+    el.textContent = text;
+    el.style.color = tone === 'err' ? '#c0392b' : tone === 'ok' ? '#1a5632' : '#6b7280';
+  }
+
+  async function saveLead(f) {
+    if (!sb) return;                       // 未配置后端时保持原有 WhatsApp 行为
+    if (!f.name || !f.name.trim()) {
+      showInquiryStatus('请填写姓名，方便我们称呼你 / Please add your name', 'err');
+      return;
+    }
+    const lang = document.documentElement.lang || 'en';
+    const id = 'LD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
+    const payload = {
+      id,
+      name: f.name.trim(),
+      company: (f.company || '').trim(),
+      phone: '',
+      email: '',
+      source: '官网表单',
+      boxType: f.boxType || '',
+      size: (f.size || '').trim(),
+      quantity: parseInt(f.quantity, 10) || 0,
+      printing: f.printing || '',
+      finishing: f.finishing || '',
+      status: 'new',
+      assignee: '',
+      notes: (f.notes || '').trim(),
+      lang,
+      created: new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 16).replace('T', ' '),
+      followUps: []
+    };
+    showInquiryStatus('正在提交…', 'muted');
+    try {
+      const { error } = await sb.from('jl_records').insert({
+        id: 'leads:' + id, collection: 'leads', payload, updated_at: new Date().toISOString()
+      });
+      if (error) throw new Error(error.message);
+      showInquiryStatus('已收到，我们会尽快给你报价 / Received, we will quote you shortly', 'ok');
+      inquiryForm.reset();
+    } catch (e) {
+      showInquiryStatus('提交失败：' + e.message, 'err');
+    }
+  }
 
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function(e) {
