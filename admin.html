@@ -284,6 +284,13 @@ const DM = {
   now() { return new Date().toISOString().slice(0,16).replace('T',' ') }
 };
 
+// DM.get 的缺省值是数组，往数组上挂具名属性会被 JSON.stringify 静默丢掉，
+// 所以文档型（对象）集合一律走这里；已被写坏的 "[]" 也会在这里归一成 {}。
+function docVal(key, def) {
+  const v = DM.get(key, null);
+  return (v && typeof v === 'object' && !Array.isArray(v)) ? v : (def || {});
+}
+
 // ========== CLOUD SYNC ==========
 // row: 数组里每个对象带 id，一行一条，改动只上传受影响的那几条
 // doc: 整体是一个对象/无 id 数组，整份覆盖到一行
@@ -1340,7 +1347,7 @@ function editQuote(id) {
 }
 
 function lookupTierPrice(boxType, qty) {
-  const rows = DM.get('pricebook')[boxName(boxType)] || [];
+  const rows = docVal('pricebook')[boxName(boxType)] || [];
   const n = parseInt(qty) || 0;
   let best = -1, bestTier = -1;
   rows.forEach(r => {
@@ -1355,7 +1362,7 @@ function lookupTierPrice(boxType, qty) {
 }
 
 function quoteFinance() {
-  const f = DM.get('settings_finance', {});
+  const f = docVal('settings_finance');
   return { sstRate: Number(f.sstRate) > 0 ? Number(f.sstRate) : 10, validDays: parseInt(f.validDays) > 0 ? parseInt(f.validDays) : 14 };
 }
 
@@ -1496,8 +1503,8 @@ function generateQuote(status) {
 }
 
 function quotePrintHtml(q) {
-  const tpl = DM.get('settings_quote_template', {});
-  const site = DM.get('settings_site', {});
+  const tpl = docVal('settings_quote_template');
+  const site = docVal('settings_site');
   const f = quoteFinance();
   const header = (tpl.header || site.enName || '').trim() || 'QUOTATION';
   const contactLine = [site.phone, site.email, site.address].filter(Boolean).join('  ·  ');
@@ -1608,7 +1615,7 @@ let pricebookTab = '飞机盒';
 const PB_TIERS = ['100','300','500','1000','2000','3000','5000'];
 
 function renderPricebook(c) {
-  const pb = DM.get('pricebook');
+  const pb = docVal('pricebook');
   const tabs = Object.keys(pb);
   if (!tabs.includes(pricebookTab)) pricebookTab = tabs[0] || '';
   const rows = pb[pricebookTab] || [];
@@ -1636,7 +1643,7 @@ function renderPricebook(c) {
 }
 
 function savePricebook(c) {
-  const pb = DM.get('pricebook');
+  const pb = docVal('pricebook');
   const rows = (pb[pricebookTab] = pb[pricebookTab] || []);
   c.querySelectorAll('.pb-sku').forEach(el => { if(rows[el.dataset.i]) rows[el.dataset.i].sku = el.value.trim(); });
   c.querySelectorAll('.pb-size').forEach(el => { if(rows[el.dataset.i]) rows[el.dataset.i].size = el.value.trim(); });
@@ -1646,14 +1653,14 @@ function savePricebook(c) {
 }
 
 function switchPriceTab(i) {
-  const tabs = Object.keys(DM.get('pricebook'));
+  const tabs = Object.keys(docVal('pricebook'));
   if (tabs[i] === undefined) return;
   pricebookTab = tabs[i];
   renderPage(currentPageId);
 }
 
 function addPricebookRow() {
-  const pb = DM.get('pricebook');
+  const pb = docVal('pricebook');
   if (!pricebookTab) { toast('请先选择盒型'); return; }
   showModal('新增 SKU - ' + pricebookTab, `
     <div class="form-grid">
@@ -1673,14 +1680,14 @@ function addPricebookRow() {
 
 function deletePricebookRow(i) {
   if (!confirm('确定删除此 SKU？')) return;
-  const pb = DM.get('pricebook');
+  const pb = docVal('pricebook');
   pb[pricebookTab].splice(i, 1);
   DM.set('pricebook', pb);
   toast('SKU 已删除'); renderPage(currentPageId);
 }
 
 function renderQuoteTemplate(c) {
-  const tpl = DM.get('settings_quote_template', {header:'JIU LIAN INDUSTRIAL SDN. BHD.',terms:'50% 定金，50% 发货前付清。银行转账/TT。',delivery:'确认打样后 10-14 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
+  const tpl = docVal('settings_quote_template', {header:'JIU LIAN INDUSTRIAL SDN. BHD.',terms:'50% 定金，50% 发货前付清。银行转账/TT。',delivery:'确认打样后 10-14 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">报价单模板</h1><p class="page-desc">这里的内容会出现在每一张打印 / PDF 报价单上</p></div></div>
     <div class="card"><div class="card-body">
@@ -1700,7 +1707,7 @@ function renderQuoteTemplate(c) {
 }
 
 function saveQuoteTemplate() {
-  const tpl = DM.get('settings_quote_template', {});
+  const tpl = docVal('settings_quote_template');
   tpl.header = val('fs_header');
   tpl.terms = val('fs_terms');
   tpl.delivery = val('fs_delivery');
@@ -1716,7 +1723,7 @@ async function saveQuoteLogo(input) {
   if (!file) return;
   try {
     const up = await cloudUpload(file, 'branding');
-    const tpl = DM.get('settings_quote_template', {});
+    const tpl = docVal('settings_quote_template');
     tpl.logo = up.url;
     tpl.logoPath = up.path;
     DM.set('settings_quote_template', tpl);
@@ -1730,7 +1737,7 @@ async function saveQuoteLogo(input) {
 }
 
 function removeQuoteLogo() {
-  const tpl = DM.get('settings_quote_template', {});
+  const tpl = docVal('settings_quote_template');
   delete tpl.logo;
   delete tpl.logoPath;
   DM.set('settings_quote_template', tpl);
@@ -1765,7 +1772,7 @@ const COURIERS = ['自送','J&T Express','Pos Laju','Ninja Van','DHL eCommerce',
 const PAY_METHODS = ['银行转账','现金','TT 电汇','支票','线上支付'];
 const DELIVERY_ZONES = ['Kuala Lumpur','Selangor','Pulau Pinang','Johor','Melaka','Perak','Sabah','Sarawak'];
 
-function depositPercent() { const p = parseInt(DM.get('settings_finance', {}).depositPercent); return p > 0 && p <= 100 ? p : 50 }
+function depositPercent() { const p = parseInt(docVal('settings_finance').depositPercent); return p > 0 && p <= 100 ? p : 50 }
 function inDays(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10) }
 function today() { return new Date().toISOString().slice(0, 10) }
 function orderPay(od, type) { return DM.get('payments').find(p => p.orderId === od.id && p.type === type) }
@@ -1868,7 +1875,7 @@ function linkQuoteToOrder(quoteId, od) {
 
 function addPendingPayments(od) {
   const payments = DM.get('payments');
-  const site = DM.get('settings_site', {});
+  const site = docVal('settings_site');
   const mk = (type, typeLabel, amount) => ({
     id: DM.genId('PAY'), orderId: od.id, orderNo: od.id, customer: od.customer,
     type, typeLabel, amount: +amount.toFixed(2), method: '银行转账',
@@ -2005,9 +2012,9 @@ function openPaymentModal(orderId, type, payId) {
       <div class="form-group"><label class="form-label">款项类型</label><select class="form-select" id="p_type" onchange="paymentSuggest()">${selOpts(['定金', '尾款', '全额', '刀模费', '打样费', '运费'], p ? p.typeLabel : (type === 'final' ? '尾款' : '定金'))}</select></div>
       <div class="form-group"><label class="form-label">金额 (RM) *</label><input class="form-input" type="number" min="0" step="0.01" id="p_amount" value="${money2(p ? p.amount : suggest)}"></div>
       <div class="form-group"><label class="form-label">付款方式</label><select class="form-select" id="p_method">${selOpts(PAY_METHODS, p ? p.method : '银行转账')}</select></div>
-      <div class="form-group"><label class="form-label">银行</label><input class="form-input" id="p_bank" value="${esc(p ? p.bankName : (DM.get('settings_site', {}).bank || ''))}" placeholder="e.g. Maybank"></div>
-      <div class="form-group"><label class="form-label">收款账号</label><input class="form-input" id="p_account" value="${esc(p ? p.accountNo : (DM.get('settings_site', {}).bankAccount || ''))}"></div>
-      <div class="form-group"><label class="form-label">收款户名</label><input class="form-input" id="p_holder" value="${esc(p ? p.accountName : (DM.get('settings_site', {}).enName || ''))}"></div>
+      <div class="form-group"><label class="form-label">银行</label><input class="form-input" id="p_bank" value="${esc(p ? p.bankName : (docVal('settings_site').bank || ''))}" placeholder="e.g. Maybank"></div>
+      <div class="form-group"><label class="form-label">收款账号</label><input class="form-input" id="p_account" value="${esc(p ? p.accountNo : (docVal('settings_site').bankAccount || ''))}"></div>
+      <div class="form-group"><label class="form-label">收款户名</label><input class="form-input" id="p_holder" value="${esc(p ? p.accountName : (docVal('settings_site').enName || ''))}"></div>
       <div class="form-group"><label class="form-label">凭证号</label><input class="form-input" id="p_receipt" value="${esc(p ? p.receiptNo : '')}" placeholder="e.g. RCT-2026-001"></div>
       <div class="form-group"><label class="form-label">到账日期</label><input class="form-input" type="date" id="p_date" value="${esc((p && p.date) || today())}"></div>
       <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="p_status">${selOpts(['已到账', '待确认', '已退回'], p ? { confirmed: '已到账', pending: '待确认', rejected: '已退回' }[p.status] : '已到账')}</select></div>
@@ -2649,7 +2656,7 @@ function deleteFAQ(id) {
 }
 
 function renderBanner(c) {
-  const b = DM.get('settings_banner') || {};
+  const b = docVal('settings_banner');
   const bgBox = b.bg
     ? `<img src="${safeHref(b.bg)}" alt="背景图" style="max-height:120px;max-width:100%;border:1px solid var(--gray-200);border-radius:6px;object-fit:cover"> <button class="btn btn-sm btn-secondary" onclick="removeBannerBg()">移除</button>`
     : '<span style="font-size:12px;color:var(--gray-500)">未设置，前台沿用默认背景</span>';
@@ -2658,10 +2665,10 @@ function renderBanner(c) {
     <div class="card"><div class="card-body">
       <div class="form-grid">
         <div class="form-group full"><label class="form-label">小标题（主标题上方那行）</label><input class="form-input" id="fs_banner_badge" value="${esc(b.badge||'')}" placeholder="留空则前台保持原有文案"></div>
-        <div class="form-group full"><label class="form-label">主标题</label><input class="form-input" id="fs_banner_title" value="${esc((DM.get('settings_banner')||{}).title||'Custom Packaging That Elevates Your Brand')}"></div>
-        <div class="form-group full"><label class="form-label">副标题</label><textarea class="form-textarea" id="fs_banner_sub" rows="2">${esc((DM.get('settings_banner')||{}).subtitle||'From design to delivery — we manufacture premium printed boxes, bags, and labels for businesses worldwide.')}</textarea></div>
-        <div class="form-group"><label class="form-label">CTA 1 文案</label><input class="form-input" id="fs_banner_cta1" value="${esc((DM.get('settings_banner')||{}).cta1||'Request Free Quote')}"></div>
-        <div class="form-group"><label class="form-label">CTA 2 文案</label><input class="form-input" id="fs_banner_cta2" value="${esc((DM.get('settings_banner')||{}).cta2||'Explore Products')}"></div>
+        <div class="form-group full"><label class="form-label">主标题</label><input class="form-input" id="fs_banner_title" value="${esc(b.title||'Custom Packaging That Elevates Your Brand')}"></div>
+        <div class="form-group full"><label class="form-label">副标题</label><textarea class="form-textarea" id="fs_banner_sub" rows="2">${esc(b.subtitle||'From design to delivery — we manufacture premium printed boxes, bags, and labels for businesses worldwide.')}</textarea></div>
+        <div class="form-group"><label class="form-label">CTA 1 文案</label><input class="form-input" id="fs_banner_cta1" value="${esc(b.cta1||'Request Free Quote')}"></div>
+        <div class="form-group"><label class="form-label">CTA 2 文案</label><input class="form-input" id="fs_banner_cta2" value="${esc(b.cta2||'Explore Products')}"></div>
         <div class="form-group full"><label class="form-label">背景图</label><input class="form-input" type="file" accept="image/*" onchange="saveBannerBg(this)"><div id="fs_banner_bg_box" style="margin-top:8px">${bgBox}</div></div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveBanner()">保存</button></div>
@@ -2669,7 +2676,7 @@ function renderBanner(c) {
 }
 
 function saveBanner() {
-  const b = DM.get('settings_banner') || {};
+  const b = docVal('settings_banner');
   b.badge = val('fs_banner_badge');
   b.title = val('fs_banner_title');
   b.subtitle = val('fs_banner_sub');
@@ -2685,7 +2692,7 @@ async function saveBannerBg(input) {
   if (!file) return;
   try {
     const up = await cloudUpload(file, 'branding');
-    const b = DM.get('settings_banner') || {};
+    const b = docVal('settings_banner');
     b.bg = up.url;
     b.bgPath = up.path;
     DM.set('settings_banner', b);
@@ -2699,7 +2706,7 @@ async function saveBannerBg(input) {
 }
 
 function removeBannerBg() {
-  const b = DM.get('settings_banner') || {};
+  const b = docVal('settings_banner');
   delete b.bg;
   delete b.bgPath;
   DM.set('settings_banner', b);
@@ -2835,7 +2842,7 @@ function openClientModal(id) {
 }
 
 function renderAbout(c) {
-  const s = DM.get('settings_about');
+  const s = docVal('settings_about');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">About 关于我们</h1><p class="page-desc">公司介绍 / 认证勾选 / 工厂地址，保存后首页 About 区跟着变</p></div></div>
     <div class="card"><div class="card-body">
@@ -3125,7 +3132,7 @@ function deletePolicy(id) {
 
 // ========== SETTINGS ==========
 function renderSettingsSite(c) {
-  const s = DM.get('settings_site');
+  const s = docVal('settings_site');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">基本信息</h1><p class="page-desc">站点和公司信息</p></div></div>
     <div class="card"><div class="card-body">
@@ -3155,7 +3162,7 @@ function saveSettingsSite() {
 }
 
 function renderSettingsSEO(c) {
-  const s = DM.get('settings_seo');
+  const s = docVal('settings_seo');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">SEO 设置</h1><p class="page-desc">搜索引擎优化</p></div></div>
     <div class="card"><div class="card-body">
@@ -3178,7 +3185,7 @@ function saveSettingsSEO() {
 }
 
 function renderSettingsNotifications(c) {
-  const s = DM.get('settings_notifications');
+  const s = docVal('settings_notifications');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">通知模板</h1><p class="page-desc">自动邮件通知配置</p></div></div>
     <div class="card"><div class="card-body">
@@ -3195,7 +3202,7 @@ function saveSettingsNotifications() {
 }
 
 function renderSettingsCerts(c) {
-  const stored = DM.get('settings_certs', {});
+  const stored = docVal('settings_certs');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">认证/资质</h1><p class="page-desc">证书文件存放在云端，全员与官网均可访问</p></div></div>
     <div class="card"><div class="card-body">
@@ -3272,7 +3279,7 @@ function deleteShippingZone(id) {
 }
 
 function renderSettingsFinance(c) {
-  const s = DM.get('settings_finance');
+  const s = docVal('settings_finance');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">税率/货币</h1><p class="page-desc">财务参数配置</p></div></div>
     <div class="card"><div class="card-body">
@@ -3589,7 +3596,7 @@ function applyPricebookCsv(text, defaultBox, pb) {
 }
 
 function openPricebookImport() {
-  const boxes = Object.keys(DM.get('pricebook'));
+  const boxes = Object.keys(docVal('pricebook'));
   showModal('导入价格簿', `
     <div class="form-grid">
       <div class="form-group"><label class="form-label">导入到盒型</label><select class="form-select" id="f_pb_box">${boxes.length ? boxes.map(b=>`<option>${esc(b)}</option>`).join('') : '<option value="">（按 CSV 的「盒型」列自动分组）</option>'}</select></div>
@@ -3606,7 +3613,7 @@ function openPricebookImport() {
     const file = document.getElementById('f_pb_file')?.files?.[0];
     if (!file) { toast('请选择 CSV 文件'); return false }
     return readCsvText(file).then(text => {
-      const r = applyPricebookCsv(text, val('f_pb_box'), DM.get('pricebook'));
+      const r = applyPricebookCsv(text, val('f_pb_box'), docVal('pricebook'));
       if (!r.ok) { toast('导入失败：' + r.msg); return false }
       DM.set('pricebook', r.pb);
       toast('导入完成：新增 ' + r.added + ' 个 SKU，更新 ' + r.updated + ' 个' + (r.skipped ? '，跳过 ' + r.skipped + ' 行' : ''));
@@ -3623,7 +3630,7 @@ function previewPricebookImport() {
   if (!el || !file) return;
   el.innerHTML = '<div style="font-size:12px;color:var(--gray-500)">正在解析…</div>';
   readCsvText(file).then(text => {
-    const r = applyPricebookCsv(text, val('f_pb_box'), JSON.parse(JSON.stringify(DM.get('pricebook'))));
+    const r = applyPricebookCsv(text, val('f_pb_box'), JSON.parse(JSON.stringify(docVal('pricebook'))));
     el.innerHTML = r.ok
       ? `<div style="padding:10px;background:#f6ffed;color:#135200;border-radius:6px;font-size:12px">解析成功：${r.total} 行数据 · 新增 ${r.added} · 更新 ${r.updated} · 跳过 ${r.skipped}<br>涉及盒型：${r.boxes.map(esc).join('、')}</div>`
       : `<div style="padding:10px;background:#fff1f0;color:#820014;border-radius:6px;font-size:12px">解析失败：${esc(r.msg)}</div>`;
@@ -3665,7 +3672,7 @@ function uploadCert(name) {
     toast('正在上传 ' + file.name + ' …');
     try {
       const up = await cloudUpload(file, 'certs');
-      const stored = DM.get('settings_certs', {});
+      const stored = docVal('settings_certs');
       stored[name] = { url: up.url, path: up.path, fileName: file.name, type: file.type.startsWith('image/') ? 'image' : 'pdf', uploaded: DM.now().split(' ')[0], by: whoami() };
       DM.set('settings_certs', stored);
       toast(name + ' 已上传到云端'); renderPage(currentPageId);
