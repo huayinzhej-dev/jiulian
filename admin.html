@@ -48,7 +48,7 @@
     .nav-children .nav-item.active{background:rgba(26,86,50,.08)}
 
     /* Main */
-    .main{flex:1;margin-left:260px;display:flex;flex-direction:column}
+    .main{flex:1;margin-left:260px;display:flex;flex-direction:column;min-width:0}
     .topbar{background:var(--white);border-bottom:1px solid var(--gray-200);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
     .breadcrumb{font-size:13px;color:var(--gray-500)}
     .breadcrumb span{color:var(--gray-900);font-weight:500}
@@ -68,7 +68,7 @@
     .btn-logout:hover{background:var(--gray-200)}
 
     /* Content */
-    .content{padding:24px 28px;flex:1}
+    .content{padding:24px 28px;flex:1;min-width:0}
     .page-header{margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
     .page-title{font-size:22px;font-weight:700;color:var(--gray-900)}
     .page-desc{font-size:13px;color:var(--gray-500);margin-top:4px}
@@ -236,13 +236,13 @@ const MENU = [
   { id:'dashboard', icon:'📊', label:'数据看板', children:[
     {id:'dashboard-overview',label:'概览'},{id:'dashboard-trend',label:'图表'},{id:'dashboard-todo',label:'提醒'}
   ]},
-  { id:'leads', icon:'📥', label:'线索管理', badge:'12', children:[
+  { id:'leads', icon:'📥', label:'线索管理', children:[
     {id:'leads-pool',label:'线索池'},{id:'leads-detail',label:'线索详情'},{id:'leads-customers',label:'客户库'},{id:'leads-followup',label:'跟进记录'}
   ]},
   { id:'quotes', icon:'💰', label:'报价管理', children:[
     {id:'quotes-list',label:'报价单'},{id:'quotes-new',label:'新建报价'},{id:'quotes-pricebook',label:'价格簿'},{id:'quotes-template',label:'模板'}
   ]},
-  { id:'orders', icon:'📦', label:'订单管理', badge:'5', children:[
+  { id:'orders', icon:'📦', label:'订单管理', children:[
     {id:'orders-list',label:'全部订单'},{id:'orders-production',label:'生产工单'},{id:'orders-payments',label:'付款'},{id:'orders-delivery',label:'发货'},{id:'orders-dieline',label:'刀模/Artwork'},{id:'orders-proof',label:'打样'}
   ]},
   { id:'products', icon:'🏷️', label:'商品管理', children:[
@@ -531,6 +531,31 @@ function whoami() {
   return (Sync.user && (Sync.user.user_metadata?.name || Sync.user.email?.split('@')[0])) || '管理员';
 }
 
+// 负责人候选 = 后台真实账号名单；没建账号时至少能选到自己
+function staffNames() {
+  const names = DM.get('users').filter(u => u.active !== false).map(u => (u.name || '').trim()).filter(Boolean);
+  const me = whoami();
+  if (!names.includes(me)) names.unshift(me);
+  return [...new Set(names)];
+}
+
+// 生成下拉框选项，并把当前值标成 selected。
+// 当前值不在候选里（同事改名、历史数据）时追加一条，否则保存会把它覆盖成第一项。
+function selOpts(list, current, ph) {
+  const arr = [...new Set(list.map(x => typeof x === 'string' ? x : ((x && (x.name || x.region)) || '')).filter(Boolean))];
+  const cur = current == null ? '' : String(current);
+  if (cur && !arr.includes(cur)) arr.unshift(cur);
+  const head = ph ? `<option value="">-- ${esc(ph)} --</option>` : '';
+  return head + arr.map(v => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join('');
+}
+
+// 官网询价表单存的是盒型 slug（food-box），价格簿按盒型名索引 → 展示和查价前先换算成分类名
+function boxName(v) {
+  if (!v) return '';
+  const c = DM.get('categories').find(x => x.name === v || x.slug === v);
+  return c ? c.name : String(v);
+}
+
 function fmtSize(n) {
   if (!n && n !== 0) return '—';
   return n > 1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(n/1024))+' KB';
@@ -753,6 +778,22 @@ function seedData() {
 }
 
 // ========== RENDER SIDEBAR ==========
+function navBadge(id) {
+  if (id === 'leads') return DM.get('leads').filter(l => (l.status || 'new') === 'new').length;
+  if (id === 'orders') return DM.get('orders').filter(o => o.productionStatus !== 'done').length;
+  return 0;
+}
+
+function updateNavBadges() {
+  MENU.forEach(g => {
+    const el = document.getElementById('nav-badge-' + g.id);
+    if (!el) return;
+    const n = navBadge(g.id);
+    el.textContent = n;
+    el.style.display = n ? '' : 'none';
+  });
+}
+
 function renderSidebar() {
   const nav = document.getElementById('sidebarNav');
   nav.innerHTML = MENU.map(group => `
@@ -760,7 +801,7 @@ function renderSidebar() {
       <div class="nav-item nav-parent" data-group="${group.id}" onclick="toggleGroup('${group.id}')">
         <span class="icon">${esc(group.icon)}</span>
         <span>${esc(group.label)}</span>
-        ${group.badge ? `<span class="badge">${esc(group.badge)}</span>` : ''}
+        ${group.id === 'leads' || group.id === 'orders' ? `<span class="badge" id="nav-badge-${group.id}"></span>` : ''}
         <span class="arrow">▶</span>
       </div>
       <div class="nav-children" id="children-${group.id}">
@@ -850,6 +891,7 @@ function renderPage(id) {
     'settings-logs': renderLogs
   };
   (pages[id] || renderPlaceholder)(c, id);
+  updateNavBadges();
 }
 
 function renderPlaceholder(c, id) {
@@ -857,66 +899,128 @@ function renderPlaceholder(c, id) {
 }
 
 // ========== DASHBOARD ==========
+function localDate(d) {
+  const x = d || new Date();
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+}
+
+function dayCounts(items, days, getDate) {
+  const out = [];
+  const base = new Date(); base.setHours(0, 0, 0, 0);
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(base.getTime() - i * 864e5);
+    const key = localDate(d);
+    out.push({ key, label: key.slice(5), n: items.filter(x => String(getDate(x) || '').slice(0, 10) === key).length });
+  }
+  return out;
+}
+
+function groupCount(items, keyFn) {
+  const m = new Map();
+  items.forEach(x => { const k = keyFn(x) || '未填'; m.set(k, (m.get(k) || 0) + 1); });
+  return [...m.entries()].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n);
+}
+
+function distBars(rows, color) {
+  const total = rows.reduce((s, r) => s + r.n, 0);
+  if (!total) return '<div class="empty"><p>暂无数据</p></div>';
+  return rows.map(r => `<div class="flex items-center justify-between"><span style="width:120px">${esc(r.label)}</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:${Math.max(3, Math.round(r.n / total * 100))}%;height:100%;background:${color};border-radius:4px"></div></div><span class="font-bold">${r.n} 条 · ${Math.round(r.n / total * 100)}%</span></div>`).join('');
+}
+
 function renderDashboard(c) {
   const leads = DM.get('leads');
   const orders = DM.get('orders');
   const quotes = DM.get('quotes');
-  const newLeads = leads.filter(l => l.status === 'new').length;
+  const payments = DM.get('payments');
+  const day = localDate();
+  const month = day.slice(0, 7);
+  const todayLeads = leads.filter(l => String(l.created || '').slice(0, 10) === day).length;
+  const newLeads = leads.filter(l => (l.status || 'new') === 'new').length;
   const pendingQuotes = quotes.filter(q => q.status === 'draft' || q.status === 'sent').length;
+  const monthOrders = orders.filter(o => String(o.created || '').slice(0, 7) === month);
+  const monthSales = monthOrders.reduce((s, o) => s + (Number(o.amount) || 0), 0);
+  const receivedMonth = payments.filter(p => p.status === 'confirmed' && String(p.date || '').slice(0, 7) === month).reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const uncollected = payments.filter(p => p.status !== 'confirmed').reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const toShip = orders.filter(o => !o.shipDate && o.productionStatus !== 'done').length;
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">数据看板</h1><p class="page-desc">核心业务指标概览</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">数据看板</h1><p class="page-desc">以下数字全部来自当前共享库，无估算</p></div><div style="display:flex;gap:8px"><button class="btn btn-secondary btn-sm" onclick="syncOnChipClick()">↻ 拉取服务器数据</button></div></div>
     <div class="stats-row">
-      <div class="stat-card"><div class="icon-box icon-blue">📥</div><div class="label">今日新询盘</div><div class="value">${esc(newLeads)}</div><div class="change up">需及时跟进</div></div>
-      <div class="stat-card"><div class="icon-box icon-yellow">💰</div><div class="label">待报价数</div><div class="value">${esc(pendingQuotes)}</div><div class="change">待处理</div></div>
-      <div class="stat-card"><div class="icon-box icon-green">📦</div><div class="label">本周订单</div><div class="value">${esc(orders.length)}</div><div class="change up">↑ 12% 较上周</div></div>
-      <div class="stat-card"><div class="icon-box icon-purple">💵</div><div class="label">本月销售额</div><div class="value">RM ${orders.reduce((s,o)=>s+o.amount,0).toLocaleString()}</div><div class="change up">↑ 8.5%</div></div>
-      <div class="stat-card"><div class="icon-box icon-red">✅</div><div class="label">本月成单</div><div class="value">${esc(orders.length)}</div><div class="change">目标: 20</div></div>
+      <div class="stat-card"><div class="icon-box icon-blue">📥</div><div class="label">今日新询盘</div><div class="value">${todayLeads}</div><div class="change">累计未跟进 ${newLeads} 条</div></div>
+      <div class="stat-card"><div class="icon-box icon-yellow">💰</div><div class="label">待处理报价</div><div class="value">${pendingQuotes}</div><div class="change">草稿 / 已发出</div></div>
+      <div class="stat-card"><div class="icon-box icon-green">📦</div><div class="label">本月订单</div><div class="value">${monthOrders.length}</div><div class="change">共 ${orders.length} 张订单</div></div>
+      <div class="stat-card"><div class="icon-box icon-purple">💵</div><div class="label">本月订单金额</div><div class="value">RM ${money2(monthSales)}</div><div class="change">本月已到账 RM ${money2(receivedMonth)}</div></div>
+      <div class="stat-card"><div class="icon-box icon-red">🧾</div><div class="label">待收款</div><div class="value">RM ${money2(uncollected)}</div><div class="change">含定金与尾款</div></div>
+      <div class="stat-card"><div class="icon-box icon-blue">🚚</div><div class="label">待发货</div><div class="value">${toShip}</div><div class="change">发货页处理</div></div>
     </div>
-    <div class="card"><div class="card-header"><span class="card-title">最近 10 条新线索</span></div>
+    <div class="card"><div class="card-header"><span class="card-title">最近 10 条线索</span></div>
       <div class="table-wrap"><table><thead><tr><th>编号</th><th>客户</th><th>公司</th><th>盒型</th><th>数量</th><th>状态</th><th>时间</th></tr></thead>
-      <tbody>${leads.slice(0,10).map(l=>`<tr><td class="td-id">${esc(l.id)}</td><td class="td-name">${esc(l.name)}</td><td>${esc(l.company)}</td><td>${esc(l.boxType)}</td><td>${esc(l.quantity)}</td><td>${statusBadge(l.status)}</td><td>${esc(l.created)}</td></tr>`).join('')}</tbody>
+      <tbody>${leads.length ? leads.slice(0, 10).map(l => `<tr><td class="td-id">${esc(l.id)}</td><td class="td-name">${esc(l.name)}</td><td>${esc(l.company)}</td><td>${esc(boxName(l.boxType))}</td><td>${esc(l.quantity)}</td><td>${statusBadge(l.status)}</td><td>${esc(l.created)}</td></tr>`).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">还没有线索</td></tr>'}</tbody>
       </table></div>
     </div>`;
 }
 
 function renderDashboardTrend(c) {
+  const leads = DM.get('leads');
+  const orders = DM.get('orders');
+  const quotes = DM.get('quotes');
+  const days = dayCounts(leads, 30, l => l.created);
+  const max = Math.max(1, ...days.map(d => d.n));
+  const totalIn = days.reduce((s, d) => s + d.n, 0);
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">趋势分析</h1><p class="page-desc">近 30 天数据趋势</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">趋势分析</h1><p class="page-desc">近 30 天真实数据（共 ${totalIn} 条询盘）</p></div></div>
     <div class="stats-row">
-      <div class="card" style="grid-column:1/-1"><div class="card-header"><span class="card-title">询盘趋势 (近30天)</span></div><div class="card-body">
+      <div class="card" style="grid-column:1/-1"><div class="card-header"><span class="card-title">询盘趋势 (近30天)</span><span style="font-size:11px;color:var(--gray-500)">纵轴按 ${max} 条封顶，鼠标悬停看日期</span></div><div class="card-body">
         <div style="height:200px;display:flex;align-items:flex-end;gap:4px;padding:20px 0">
-          ${Array.from({length:30},(_,i)=>{const h=30+Math.random()*150;return `<div style="flex:1;background:var(--primary);border-radius:3px 3px 0 0;height:${h}px;opacity:${0.4+Math.random()*0.6}" title="Day ${i+1}"></div>`}).join('')}
+          ${days.map(d => `<div style="flex:1;background:var(--primary);border-radius:3px 3px 0 0;height:${d.n ? Math.max(6, Math.round(d.n / max * 150) + 6) : 2}px;opacity:${d.n ? 0.45 + 0.55 * d.n / max : 0.15}" title="${esc(d.key)}：${d.n} 条"></div>`).join('')}
         </div>
+        <div class="flex justify-between" style="font-size:11px;color:var(--gray-500)"><span>${esc(days[0].label)}</span><span>${esc(days[15].label)}</span><span>今天</span></div>
       </div></div>
     </div>
     <div class="stats-row" style="grid-template-columns:1fr 1fr">
       <div class="card"><div class="card-header"><span class="card-title">询盘来源</span></div><div class="card-body">
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div class="flex items-center justify-between"><span>直接表单</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:45%;height:100%;background:var(--primary);border-radius:4px"></div></div><span class="font-bold">45%</span></div>
-          <div class="flex items-center justify-between"><span>电话</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:25%;height:100%;background:var(--blue);border-radius:4px"></div></div><span class="font-bold">25%</span></div>
-          <div class="flex items-center justify-between"><span>邮件</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:18%;height:100%;background:var(--yellow);border-radius:4px"></div></div><span class="font-bold">18%</span></div>
-          <div class="flex items-center justify-between"><span>Google</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:12%;height:100%;background:var(--purple);border-radius:4px"></div></div><span class="font-bold">12%</span></div>
-        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">${distBars(groupCount(leads, l => l.source), 'var(--primary)')}</div>
       </div></div>
-      <div class="card"><div class="card-header"><span class="card-title">产品类别 TOP 5</span></div><div class="card-body">
-        <div style="display:flex;flex-direction:column;gap:10px">
-          ${[['飞机盒',85],['食品盒',62],['手提盒',48],['精装盒',35],['纸袋',28]].map(([n,v])=>`<div class="flex items-center justify-between"><span style="width:60px">${esc(n)}</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:${v}%;height:100%;background:var(--green);border-radius:4px"></div></div><span class="font-bold">${esc(v)}</span></div>`).join('')}
-        </div>
+      <div class="card"><div class="card-header"><span class="card-title">盒型需求 TOP 5</span></div><div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px">${distBars(groupCount(leads, l => boxName(l.boxType)).slice(0, 5), 'var(--green)')}</div>
+      </div></div>
+    </div>
+    <div class="stats-row" style="grid-template-columns:1fr 1fr">
+      <div class="card"><div class="card-header"><span class="card-title">线索状态分布</span></div><div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:12px">${distBars(groupCount(leads, l => statusLabel(l.status)), 'var(--blue)')}</div>
+      </div></div>
+      <div class="card"><div class="card-header"><span class="card-title">订单金额按盒型</span></div><div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px">${distBars(groupCount(orders, o => (o.product || '未填').split(' / ')[0]).slice(0, 5), 'var(--purple)')}</div>
+        <div style="margin-top:12px;font-size:12px;color:var(--gray-500)">报价 ${quotes.length} 张 / 订单 ${orders.length} 张</div>
       </div></div>
     </div>`;
 }
 
 function renderDashboardTodo(c) {
   const leads = DM.get('leads');
-  const overdue = leads.filter(l => l.status === 'new');
+  const orders = DM.get('orders');
+  const payments = DM.get('payments');
+  const proofs = DM.get('proofs');
+  const cutoff = new Date(Date.now() - 864e5);
+  const overdue = leads.filter(l => (l.status || 'new') === 'new' && new Date(String(l.created || '').replace(' ', 'T')) < cutoff);
+  const fresh = leads.filter(l => (l.status || 'new') === 'new' && !(String(l.created || '').replace(' ', 'T') && new Date(String(l.created || '').replace(' ', 'T')) < cutoff));
+  const proofWait = proofs.filter(p => p.status !== 'confirmed');
+  const finalDue = payments.filter(p => p.type === 'final' && p.status === 'pending');
+  const toShip = orders.filter(o => !o.shipDate && o.productionStatus !== 'done');
+  const line = (left, right, tone) => `<div class="flex items-center justify-between" style="padding:10px 0;border-bottom:1px solid var(--gray-100)"><div>${left}</div><div>${right}</div></div>`;
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">待办事项</h1><p class="page-desc">需要及时处理的事项</p></div></div>
-    <div class="card mb-20"><div class="card-header"><span class="card-title" style="color:var(--red)">⚠️ 超过 24h 未回复的询盘</span></div>
-      <div class="card-body">${overdue.length ? overdue.map(l=>`<div class="flex items-center justify-between" style="padding:10px 0;border-bottom:1px solid var(--gray-100)"><div><span class="td-id">${esc(l.id)}</span> <span class="td-name">${esc(l.name)}</span> - ${l.company}</div><span class="badge badge-red">紧急</span></div>`).join('') : '<div class="empty"><p>暂无逾期询盘 ✅</p></div>'}</div>
+    <div class="page-header"><div><h1 class="page-title">待办事项</h1><p class="page-desc">按当前共享数据实时统计</p></div></div>
+    <div class="card mb-20"><div class="card-header"><span class="card-title" style="color:var(--red)">⚠️ 超过 24 小时未跟进的询盘（${overdue.length}）</span><button class="btn btn-sm btn-secondary" onclick="navigateTo('leads-pool','线索管理','线索池')">去线索池</button></div>
+      <div class="card-body">${overdue.length ? overdue.map(l => line(`<span class="td-id">${esc(l.id)}</span> <span class="td-name">${esc(l.name)}</span> - ${esc(l.company || '无公司')}`, `<span class="badge badge-red">${esc(l.assignee ? l.assignee + ' 名下' : '未分配')}</span>`)).join('') : `<div class="empty"><p>暂无逾期询盘 ✅${fresh.length ? `（今天新增 ${fresh.length} 条还在 24 小时内）` : ''}</p></div>`}</div>
     </div>
-    <div class="card mb-20"><div class="card-header"><span class="card-title">📋 待客户确认打样</span></div><div class="card-body"><div class="empty"><p>暂无待确认打样</p></div></div></div>
-    <div class="card mb-20"><div class="card-header"><span class="card-title">💰 待收尾款</span></div><div class="card-body"><div class="empty"><p>暂无待收尾款订单</p></div></div></div>
-    <div class="card"><div class="card-header"><span class="card-title">📦 库存/物料预警</span></div><div class="card-body"><div class="empty"><p>库存充足 ✅</p></div></div></div>`;
+    <div class="card mb-20"><div class="card-header"><span class="card-title">🚚 待发货订单（${toShip.length}）</span><button class="btn btn-sm btn-secondary" onclick="navigateTo('orders-delivery','订单管理','发货')">去发货</button></div>
+      <div class="card-body">${toShip.length ? toShip.map(o => line(`<span class="td-id">${esc(o.id)}</span> <span class="td-name">${esc(o.customer)}</span> <span style="color:var(--gray-500)">交期 ${esc(o.deliveryDate || '未填')}</span>`, productionBadge(o.productionStatus))).join('') : '<div class="empty"><p>没有待发货订单 ✅</p></div>'}</div>
+    </div>
+    <div class="card mb-20"><div class="card-header"><span class="card-title">💰 待收尾款（${finalDue.length}）</span><button class="btn btn-sm btn-secondary" onclick="navigateTo('orders-payments','订单管理','付款')">去登记收款</button></div>
+      <div class="card-body">${finalDue.length ? finalDue.map(p => line(`<span class="td-id">${esc(p.orderNo || p.orderId)}</span> <span class="td-name">${esc(p.customer)}</span>`, `<strong>RM ${money2(p.amount)}</strong>`)).join('') : '<div class="empty"><p>暂无待收尾款</p></div>'}</div>
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">📋 待客户确认打样（${proofWait.length}）</span><button class="btn btn-sm btn-secondary" onclick="navigateTo('orders-proof','订单管理','打样')">去打样管理</button></div>
+      <div class="card-body">${proofWait.length ? proofWait.map(p => line(`<span class="td-id">${esc(p.orderId)}</span> <span class="td-name">${esc(p.customer)}</span> ${esc(p.type || '')}`, `<span class="badge badge-yellow">${esc(p.uploaded || '未上传')}</span>`)).join('') : '<div class="empty"><p>暂无待确认打样</p></div>'}</div>
+    </div>`;
 }
 
 // ========== LEADS ==========
@@ -934,7 +1038,7 @@ function renderLeadsPool(c) {
       <select onchange="filterLeadStatus(this.value)"><option value="">全部状态</option><option value="new">新线索</option><option value="quoted">已报价</option><option value="negotiating">洽谈中</option><option value="sample">打样中</option><option value="won">已成交</option><option value="lost">已流失</option></select>
       <button class="btn btn-secondary btn-sm" onclick="exportCSV('leads')">📥 导出CSV</button>
     </div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>编号</th><th>来源</th><th>姓名</th><th>公司</th><th>电话</th><th>盒型</th><th>数量</th><th>状态</th><th>负责人</th><th>创建时间</th><th>操作</th></tr></thead>
+    <div class="card"><div class="table-wrap"><table style="min-width:1180px"><thead><tr><th>编号</th><th>来源</th><th>姓名</th><th>公司</th><th>电话</th><th>盒型</th><th>数量</th><th>状态</th><th>负责人</th><th>创建时间</th><th>操作</th></tr></thead>
     <tbody id="leadsTableBody"></tbody></table></div>
     <div class="pagination"><span id="leadsCount"></span><div class="page-btns" id="leadsPages"></div></div></div>`;
   applyLeadFilter();
@@ -966,13 +1070,23 @@ function applyLeadFilter() {
 function gotoLeadPage(n) { leadPage = n; applyLeadFilter(); }
 
 function leadRow(l) {
-  return `<tr><td class="td-id">${esc(l.id)}</td><td><span class="badge badge-gray">${esc(l.source)}</span></td><td class="td-name">${esc(l.name)}</td><td>${esc(l.company)}</td><td>${esc(l.phone)}</td><td>${esc(l.boxType)}</td><td>${esc(l.quantity)}</td><td>${statusBadge(l.status)}</td><td>${esc(l.assignee)}</td><td>${esc(l.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="viewLead('${l.id}')">查看</button> <button class="btn btn-sm btn-danger" onclick="deleteLead('${l.id}')">删除</button></td></tr>`;
+  return `<tr><td class="td-id">${esc(l.id)}</td><td><span class="badge badge-gray">${esc(l.source)}</span></td><td class="td-name">${esc(l.name)}</td><td>${esc(l.company)}</td><td>${esc(l.phone)}</td><td>${esc(boxName(l.boxType))}</td><td>${esc(l.quantity)}</td><td style="white-space:nowrap">${statusBadge(l.status)}</td><td style="white-space:nowrap">${esc(l.assignee) || '<span style="color:var(--gray-400)">未分配</span>'}</td><td style="white-space:nowrap">${esc(l.created)}</td><td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="viewLead('${l.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="editLead('${l.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteLead('${l.id}')">删除</button></td></tr>`;
 }
 
 function statusBadge(s) {
-  const m = {new:'badge-blue',quoted:'badge-yellow',negotiating:'badge-purple',sample:'badge-yellow',won:'badge-green',lost:'badge-red',draft:'badge-gray',sent:'badge-blue',accepted:'badge-green',rejected:'badge-red',expired:'badge-gray'};
-  const labels = {new:'新线索',quoted:'已报价',negotiating:'洽谈中',sample:'打样中',won:'已成交',lost:'已流失',draft:'草稿',sent:'已发出',accepted:'已接受',rejected:'已拒绝',expired:'已过期'};
+  const m = {new:'badge-blue',quoted:'badge-yellow',negotiating:'badge-purple',sample:'badge-yellow',won:'badge-green',lost:'badge-red',draft:'badge-gray',sent:'badge-blue',accepted:'badge-green',approved:'badge-green',rejected:'badge-red',expired:'badge-gray'};
+  const labels = {new:'新线索',quoted:'已报价',negotiating:'洽谈中',sample:'打样中',won:'已成交',lost:'已流失',draft:'草稿',sent:'已发出',accepted:'已接受',approved:'已确认',rejected:'已拒绝',expired:'已过期'};
   return `<span class="badge ${m[s]||'badge-gray'}">${esc(labels[s]||s)}</span>`;
+}
+
+function statusLabel(s) {
+  return {new:'新线索',quoted:'已报价',negotiating:'洽谈中',sample:'打样中',won:'已成交',lost:'已流失',draft:'草稿',sent:'已发出',accepted:'已接受',approved:'已确认',rejected:'已拒绝',expired:'已过期'}[s] || s;
+}
+
+function editLead(id) {
+  const l = DM.get('leads').find(x => x.id === id);
+  if (!l) { toast('找不到这条线索'); return; }
+  openLeadModal(l);
 }
 
 function openLeadModal(lead) {
@@ -983,14 +1097,14 @@ function openLeadModal(lead) {
       <div class="form-group"><label class="form-label">公司</label><input class="form-input" id="f_company" value="${esc(lead?.company||'')}"></div>
       <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="f_phone" value="${esc(lead?.phone||'')}"></div>
       <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="f_email" value="${esc(lead?.email||'')}"></div>
-      <div class="form-group"><label class="form-label">来源</label><select class="form-select" id="f_source"><option>表单</option><option>电话</option><option>邮件</option><option>Google</option></select></div>
-      <div class="form-group"><label class="form-label">负责人</label><select class="form-select" id="f_assignee"><option>销售A</option><option>销售B</option></select></div>
-      <div class="form-group"><label class="form-label">盒型</label><select class="form-select" id="f_boxType">${DM.get('categories').map(c=>`<option>${esc(c.name)}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">来源</label><select class="form-select" id="f_source">${selOpts(['表单','官网表单','电话','邮件','WhatsApp','Google'], lead?.source)}</select></div>
+      <div class="form-group"><label class="form-label">负责人</label><select class="form-select" id="f_assignee">${selOpts(staffNames(), lead?.assignee || (isEdit ? '' : whoami()), '未分配')}</select></div>
+      <div class="form-group"><label class="form-label">盒型</label><select class="form-select" id="f_boxType">${selOpts(DM.get('categories'), boxName(lead?.boxType), '未确定')}</select></div>
       <div class="form-group"><label class="form-label">尺寸 (cm)</label><input class="form-input" id="f_size" placeholder="长×宽×高" value="${esc(lead?.size||'')}"></div>
       <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" id="f_quantity" value="${esc(lead?.quantity||'')}"></div>
-      <div class="form-group"><label class="form-label">印刷方式</label><select class="form-select" id="f_printing"><option>1C0C</option><option>1C1C</option><option>4C0C</option><option>4C1C</option><option>4C4C</option></select></div>
-      <div class="form-group"><label class="form-label">表面处理</label><select class="form-select" id="f_finishing"><option>无覆膜</option><option>哑光覆膜</option><option>光面覆膜</option><option>Soft Touch</option><option>Spot UV</option><option>Emboss</option><option>Hot-stamp Foil</option></select></div>
-      <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_status"><option value="new">新线索</option><option value="quoted">已报价</option><option value="negotiating">洽谈中</option><option value="sample">打样中</option><option value="won">已成交</option><option value="lost">已流失</option></select></div>
+      <div class="form-group"><label class="form-label">印刷方式</label><select class="form-select" id="f_printing">${selOpts(DM.get('printingOptions'), lead?.printing, '未确定')}</select></div>
+      <div class="form-group"><label class="form-label">表面处理</label><select class="form-select" id="f_finishing">${selOpts(DM.get('finishingOptions'), lead?.finishing, '未确定')}</select></div>
+      <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_status">${['new','quoted','negotiating','sample','won','lost'].map(s=>`<option value="${s}"${(lead?.status||'new')===s?' selected':''}>${statusLabel(s)}</option>`).join('')}</select></div>
       <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="f_notes">${esc(lead?.notes||'')}</textarea></div>
     </div>
   `, () => {
@@ -1017,7 +1131,7 @@ function viewLead(id) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
       <div><strong>姓名:</strong> ${esc(l.name)}</div><div><strong>公司:</strong> ${esc(l.company)}</div>
       <div><strong>电话:</strong> ${esc(l.phone)}</div><div><strong>邮箱:</strong> ${esc(l.email)}</div>
-      <div><strong>盒型:</strong> ${esc(l.boxType)}</div><div><strong>尺寸:</strong> ${esc(l.size)}</div>
+      <div><strong>盒型:</strong> ${esc(boxName(l.boxType))}</div><div><strong>尺寸:</strong> ${esc(l.size)}</div>
       <div><strong>数量:</strong> ${esc(l.quantity)}</div><div><strong>印刷:</strong> ${esc(l.printing)}</div>
       <div><strong>表面处理:</strong> ${esc(l.finishing)}</div><div><strong>状态:</strong> ${statusBadge(l.status)}</div>
       <div><strong>来源:</strong> ${esc(l.source)}</div><div><strong>负责人:</strong> ${esc(l.assignee)}</div>
@@ -1026,6 +1140,7 @@ function viewLead(id) {
     </div>
   `, null, [
     {label:'转报价',cls:'btn-primary',fn:()=>{convertLeadToQuote(l);closeModal();}},
+    {label:'编辑',cls:'btn-secondary',fn:()=>{closeModal();openLeadModal(l);}},
     {label:'关闭',cls:'btn-secondary',fn:closeModal}
   ]);
 }
@@ -1033,17 +1148,18 @@ function viewLead(id) {
 let quotePrefillLead = null;
 
 function convertLeadToQuote(l) {
-  const unitPrice = lookupTierPrice(l.boxType, l.quantity);
+  const bt = boxName(l.boxType);
+  const unitPrice = lookupTierPrice(bt, l.quantity);
   if (!(unitPrice > 0)) {
     quotePrefillLead = l.id;
-    toast('价格簿里没有「' + (l.boxType || '该盒型') + '」' + (l.quantity || '') + 'pcs 这一档，请到新建报价里手填单价');
+    toast('价格簿里没有「' + (bt || '该盒型') + '」' + (l.quantity || '') + 'pcs 这一档，请到新建报价里手填单价');
     navigateTo('quotes-new','报价管理','新建报价');
     return;
   }
   const t = quoteTotals(l.quantity, unitPrice);
   const quotes = DM.get('quotes');
   const q = {id:DM.genId('QT'), leadId:l.id, customer:l.company||l.name, contact:[l.name,l.email||l.phone].filter(Boolean).join(' / '),
-             product:l.boxType, size:l.size, printing:l.printing, finish:l.finishing,
+             product:bt, size:l.size, printing:l.printing, finish:l.finishing,
              note:l.notes||'', quantity:l.quantity, unitPrice, subtotal:t.subtotal, sst:t.sst, total:t.total,
              status:'draft', date:new Date().toISOString().slice(0,10),
              validUntil:new Date(Date.now()+quoteFinance().validDays*864e5).toISOString().slice(0,10),
@@ -1121,28 +1237,76 @@ function renderFollowUp(c) {
 // ========== QUOTES ==========
 function renderQuotesList(c) {
   const quotes = DM.get('quotes');
+  const orders = DM.get('orders');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">报价单</h1><p class="page-desc">管理所有报价</p></div><button class="btn btn-primary" onclick="navigateTo('quotes-new','报价管理','新建报价')">+ 新建报价</button></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>报价单号</th><th>客户</th><th>产品</th><th>数量</th><th>合计(RM)</th><th>SST ${quoteFinance().sstRate}%</th><th>状态</th><th>有效期</th><th>操作</th></tr></thead>
-    <tbody>${quotes.map(q=>`<tr><td class="td-id">${esc(q.id)}</td><td class="td-name">${esc(q.customer)}</td><td>${esc(q.product)}</td><td>${esc(q.quantity)}</td><td>${money2(q.total)}</td><td>${money2(q.sst)}</td><td>${statusBadge(q.status)}</td><td>${esc(q.validUntil)}</td><td><button class="btn btn-sm btn-secondary" onclick="viewQuote('${q.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="editQuote('${q.id}')">编辑</button> <button class="btn btn-sm btn-secondary" onclick="printQuote('${q.id}')">打印</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">报价单</h1><p class="page-desc">管理所有报价。客户确认后点「转订单」，工作移交到订单管理</p></div><button class="btn btn-primary" onclick="navigateTo('quotes-new','报价管理','新建报价')">+ 新建报价</button></div>
+    <div class="card"><div class="table-wrap"><table style="min-width:1080px"><thead><tr><th>报价单号</th><th>客户</th><th>产品</th><th>数量</th><th>合计(RM)</th><th>SST ${quoteFinance().sstRate}%</th><th>状态</th><th>有效期</th><th>操作</th></tr></thead>
+    <tbody>${quotes.map(q=>{
+      const od = orders.find(o => o.quoteId === q.id);
+      const handoff = od
+        ? `<button class="btn btn-sm btn-secondary" onclick="viewOrder('${od.id}')">查看订单</button>`
+        : (q.status === 'draft' || q.status === 'rejected' ? '' : `<button class="btn btn-sm btn-primary" onclick="convertQuoteToOrder('${q.id}')">转订单</button>`);
+      return `<tr><td class="td-id">${esc(q.id)}</td><td class="td-name">${esc(q.customer)}</td><td>${esc(q.product)}</td><td>${esc(q.quantity)}</td><td>${money2(q.total)}</td><td>${money2(q.sst)}</td><td style="white-space:nowrap">${statusBadge(q.status)}</td><td style="white-space:nowrap">${esc(q.validUntil)}</td><td style="white-space:nowrap">${q.status==='draft'?`<button class="btn btn-sm btn-primary" onclick="markQuoteSent('${q.id}')">发出</button> `:''}<button class="btn btn-sm btn-secondary" onclick="viewQuote('${q.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="editQuote('${q.id}')">编辑</button> <button class="btn btn-sm btn-secondary" onclick="printQuote('${q.id}')">打印</button> ${handoff}</td></tr>`;
+    }).join('')}</tbody></table></div></div>`;
+}
+
+function convertQuoteToOrder(id) {
+  const q = DM.get('quotes').find(x => x.id === id);
+  if (!q) { toast('找不到这张报价单'); return; }
+  const existed = DM.get('orders').find(o => o.quoteId === q.id);
+  if (existed) { toast('这张报价已经转过订单 ' + existed.id); viewOrder(existed.id); return; }
+  openOrderModal(null, {
+    quoteId: q.id,
+    customer: q.customer,
+    product: [q.product, q.size, q.material, q.quantity ? q.quantity + ' pcs' : ''].filter(Boolean).join(' / '),
+    amount: Number(q.total) || 0,
+    assignee: staffNames().includes(q.creator) ? q.creator : whoami(),
+    zone: '', note: q.note || '',
+    deliveryDate: ''
+  });
+}
+
+function markQuoteSent(id) {  const quotes = DM.get('quotes');
+  const q = quotes.find(x => x.id === id);
+  if (!q) return;
+  q.status = 'sent';
+  if (!q.date) q.date = new Date().toISOString().slice(0, 10);
+  DM.set('quotes', quotes);
+  const leads = DM.get('leads');
+  const l = leads.find(x => x.id === q.leadId);
+  if (l && l.status === 'new') { l.status = 'quoted'; DM.set('leads', leads); }
+  toast('已标记为「已发出」，打印或导出 PDF 后发给客户');
+  renderPage(currentPageId);
 }
 
 function viewQuote(id) {
   const q = DM.get('quotes').find(x => x.id === id);
   if (!q) return;
+  const od = DM.get('orders').find(o => o.quoteId === q.id);
+  const btns = [{label:'打印 / 存为 PDF',cls:'btn-primary',fn:()=>printQuote(q.id)}];
+  if (od) btns.push({label:'查看订单',cls:'btn-secondary',fn:()=>{closeModal();viewOrder(od.id);}});
+  else if (q.status !== 'draft' && q.status !== 'rejected') btns.push({label:'转订单',cls:'btn-secondary',fn:()=>{closeModal();convertQuoteToOrder(q.id);}});
+  btns.push({label:'关闭',cls:'btn-secondary',fn:closeModal});
   showModal('报价单详情 ' + q.id, `
     <div class="form-grid">
       <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${esc(q.customer)}</div></div>
+      <div class="form-group"><label class="form-label">联系人</label><div style="padding:8px 0">${esc(q.contact||'—')}</div></div>
       <div class="form-group"><label class="form-label">产品</label><div style="padding:8px 0">${esc(q.product)}</div></div>
+      <div class="form-group"><label class="form-label">尺寸 (cm)</label><div style="padding:8px 0">${esc(q.size||'—')}</div></div>
+      <div class="form-group"><label class="form-label">材质</label><div style="padding:8px 0">${esc(q.material||'—')}</div></div>
+      <div class="form-group"><label class="form-label">印刷 / 表面</label><div style="padding:8px 0">${esc([q.printing, q.finish].filter(Boolean).join(' / ')||'—')}</div></div>
       <div class="form-group"><label class="form-label">数量</label><div style="padding:8px 0">${esc(q.quantity)}</div></div>
       <div class="form-group"><label class="form-label">单价</label><div style="padding:8px 0">RM ${money2(q.unitPrice)}</div></div>
       <div class="form-group"><label class="form-label">小计</label><div style="padding:8px 0">RM ${money2(q.subtotal)}</div></div>
       <div class="form-group"><label class="form-label">SST (${quoteFinance().sstRate}%)</label><div style="padding:8px 0">RM ${money2(q.sst)}</div></div>
       <div class="form-group"><label class="form-label">合计</label><div style="padding:8px 0;font-weight:700;font-size:16px;color:var(--primary)">RM ${money2(q.total)}</div></div>
       <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0">${statusBadge(q.status)}</div></div>
+      <div class="form-group"><label class="form-label">报价日期</label><div style="padding:8px 0">${esc(q.date || (q.created||'').slice(0,10))}</div></div>
       <div class="form-group"><label class="form-label">有效期至</label><div style="padding:8px 0">${esc(q.validUntil)}</div></div>
+      <div class="form-group full"><label class="form-label">备注</label><div style="padding:8px 0;white-space:pre-wrap">${esc(q.note||'无')}</div></div>
+      ${od ? `<div class="form-group full"><label class="form-label">已转订单</label><div style="padding:8px 0">${esc(od.id)} — 当前状态 ${productionBadge(od.productionStatus)}</div></div>` : ''}
     </div>
-  `, null, [{label:'打印 / 存为 PDF',cls:'btn-primary',fn:()=>printQuote(q.id)},{label:'关闭',cls:'btn-secondary',fn:closeModal}]);
+  `, null, btns);
   document.getElementById('modalSaveBtn')?.remove();
 }
 
@@ -1155,7 +1319,7 @@ function editQuote(id) {
       <div class="form-group"><label class="form-label">产品</label><input class="form-input" id="fq_product" value="${esc(q.product)}"></div>
       <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" id="fq_quantity" value="${esc(q.quantity)}"></div>
       <div class="form-group"><label class="form-label">单价 (RM)</label><input class="form-input" type="number" min="0" step="0.01" id="fq_unitPrice" value="${esc(q.unitPrice)}"></div>
-      <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="fq_status"><option ${q.status==='draft'?'selected':''}>draft</option><option ${q.status==='sent'?'selected':''}>sent</option><option ${q.status==='approved'?'selected':''}>approved</option><option ${q.status==='rejected'?'selected':''}>rejected</option></select></div>
+      <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="fq_status">${['draft','sent','approved','rejected'].map(s=>`<option value="${s}"${q.status===s?' selected':''}>${statusLabel(s)}</option>`).join('')}</select></div>
       <div class="form-group"><label class="form-label">有效期至</label><input class="form-input" type="date" id="fq_validUntil" value="${esc(q.validUntil)}"></div>
     </div>
   `, () => {
@@ -1176,7 +1340,7 @@ function editQuote(id) {
 }
 
 function lookupTierPrice(boxType, qty) {
-  const rows = DM.get('pricebook')[boxType] || [];
+  const rows = DM.get('pricebook')[boxName(boxType)] || [];
   const n = parseInt(qty) || 0;
   let best = -1, bestTier = -1;
   rows.forEach(r => {
@@ -1289,7 +1453,8 @@ function fillQuoteFromLead() {
   put('q_contact', [l.name, l.email || l.phone].filter(Boolean).join(' / '));
   put('q_size', l.size);
   const box = document.getElementById('q_boxType');
-  if (box && l.boxType && [...box.options].some(o => o.value === l.boxType)) box.value = l.boxType;
+  const bn = boxName(l.boxType);
+  if (box && bn && [...box.options].some(o => o.value === bn)) box.value = bn;
   const qel = document.getElementById('q_quantity');
   if (qel && !qel.value) qel.value = parseInt(l.quantity) || '';
   autoQuotePrice();
@@ -1356,6 +1521,7 @@ function quotePrintHtml(q) {
   body { font: 13px/1.55 "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif; color: #1f2430; margin: 0; }
   .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1f4e79; padding-bottom: 14px; }
   .co { font-size: 21px; font-weight: 700; letter-spacing: .3px; color: #1f4e79; }
+  .logo { display: block; max-height: 54px; max-width: 220px; margin-bottom: 8px; object-fit: contain; }
   .co-sub { font-size: 11px; color: #5b6472; margin-top: 6px; word-break: break-all; }
   .doc-type { text-align: right; }
   .doc-type b { font-size: 24px; letter-spacing: 3px; color: #1f4e79; }
@@ -1389,7 +1555,7 @@ function quotePrintHtml(q) {
   </style></head><body>
   <div class="toolbar noprint">在弹出的打印窗口里选择「<b>另存为 PDF</b>」即可导出。 <button onclick="window.print()">打印 / 存 PDF</button><button class="ghost" onclick="parent.closeQuotePrint()">关闭</button></div>
   <div class="head">
-    <div><div class="co">${esc(header)}</div>${contactLine ? `<div class="co-sub">${esc(contactLine)}</div>` : ''}</div>
+    <div>${tpl.logo ? `<img class="logo" src="${safeHref(tpl.logo)}" alt="">` : ''}<div class="co">${esc(header)}</div>${contactLine ? `<div class="co-sub">${esc(contactLine)}</div>` : ''}</div>
     <div class="doc-type"><b>QUOTATION</b><div class="meta"><div>No. ${esc(q.id)}</div><div>Date: ${esc(q.date || (q.created || '').slice(0, 10))}</div></div></div>
   </div>
   <div class="parties">
@@ -1414,6 +1580,10 @@ let quotePrintFrame = null;
 function printQuote(id) {
   const q = DM.get('quotes').find(x => x.id === id);
   if (!q) { toast('找不到这张报价单'); return; }
+  openQuotePrint(quotePrintHtml(q));
+}
+
+function openQuotePrint(html) {
   closeQuotePrint();
   quotePrintFrame = document.createElement('iframe');
   quotePrintFrame.setAttribute('aria-hidden', 'true');
@@ -1421,7 +1591,7 @@ function printQuote(id) {
   document.body.appendChild(quotePrintFrame);
   const doc = quotePrintFrame.contentDocument;
   doc.open();
-  doc.write(quotePrintHtml(q));
+  doc.write(html);
   doc.close();
   const win = quotePrintFrame.contentWindow;
   win.addEventListener('afterprint', closeQuotePrint);
@@ -1512,102 +1682,496 @@ function deletePricebookRow(i) {
 function renderQuoteTemplate(c) {
   const tpl = DM.get('settings_quote_template', {header:'JIU LIAN INDUSTRIAL SDN. BHD.',terms:'50% 定金，50% 发货前付清。银行转账/TT。',delivery:'确认打样后 10-14 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">PDF 模板</h1><p class="page-desc">报价单 PDF 模板配置</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">报价单模板</h1><p class="page-desc">这里的内容会出现在每一张打印 / PDF 报价单上</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
         <div class="form-group"><label class="form-label">公司抬头</label><input class="form-input" id="fs_header" value="${esc(tpl.header||'')}"></div>
-        <div class="form-group"><label class="form-label">Logo</label><input class="form-input" type="file" accept="image/*"></div>
+        <div class="form-group"><label class="form-label">默认有效期</label><input class="form-input" type="number" id="fs_validity" value="${esc(tpl.validity||14)}"> 天</div>
+        <div class="form-group full"><label class="form-label">Logo（选完即上传，印在报价单左上角）</label>
+          <input class="form-input" type="file" accept="image/*" onchange="saveQuoteLogo(this)">
+          <div id="fs_logo_box" style="margin-top:8px">${tpl.logo ? `<img src="${safeHref(tpl.logo)}" alt="Logo" style="max-height:60px;max-width:240px;border:1px solid var(--gray-200);border-radius:6px;padding:4px;background:#fff"> <button class="btn btn-sm btn-secondary" onclick="removeQuoteLogo()">移除</button>` : '<span style="color:var(--gray-400);font-size:12px">未上传，报价单只显示公司抬头文字</span>'}</div>
+        </div>
         <div class="form-group full"><label class="form-label">付款条款</label><textarea class="form-textarea" id="fs_terms" rows="2">${esc(tpl.terms||'')}</textarea></div>
         <div class="form-group full"><label class="form-label">交期说明</label><textarea class="form-textarea" id="fs_delivery" rows="2">${esc(tpl.delivery||'')}</textarea></div>
         <div class="form-group full"><label class="form-label">SST 说明</label><textarea class="form-textarea" id="fs_sst_desc" rows="2">${esc(tpl.sst||'')}</textarea></div>
-        <div class="form-group"><label class="form-label">默认有效期</label><input class="form-input" type="number" id="fs_validity" value="${esc(tpl.validity||14)}"> 天</div>
       </div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="DM.set('settings_quote_template',{header:val('fs_header'),terms:val('fs_terms'),delivery:val('fs_delivery'),sst:val('fs_sst_desc'),validity:val('fs_validity')});toast('模板已保存')">保存模板</button></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-secondary" onclick="printQuoteSample()">预览样例</button> <button class="btn btn-primary" onclick="saveQuoteTemplate()">保存模板</button></div>
     </div></div>`;
 }
 
+function saveQuoteTemplate() {
+  const tpl = DM.get('settings_quote_template', {});
+  tpl.header = val('fs_header');
+  tpl.terms = val('fs_terms');
+  tpl.delivery = val('fs_delivery');
+  tpl.sst = val('fs_sst_desc');
+  tpl.validity = val('fs_validity');
+  DM.set('settings_quote_template', tpl);
+  writeLog('保存报价模板', tpl.header || '');
+  toast('模板已保存，打印报价单时生效');
+}
+
+async function saveQuoteLogo(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  try {
+    const up = await cloudUpload(file, 'branding');
+    const tpl = DM.get('settings_quote_template', {});
+    tpl.logo = up.url;
+    tpl.logoPath = up.path;
+    DM.set('settings_quote_template', tpl);
+    const box = document.getElementById('fs_logo_box');
+    if (box) box.innerHTML = `<img src="${safeHref(up.url)}" alt="Logo" style="max-height:60px;max-width:240px;border:1px solid var(--gray-200);border-radius:6px;padding:4px;background:#fff"> <button class="btn btn-sm btn-secondary" onclick="removeQuoteLogo()">移除</button>`;
+    toast('Logo 已上传');
+  } catch (e) {
+    toast('Logo 上传失败：' + e.message);
+    input.value = '';
+  }
+}
+
+function removeQuoteLogo() {
+  const tpl = DM.get('settings_quote_template', {});
+  delete tpl.logo;
+  delete tpl.logoPath;
+  DM.set('settings_quote_template', tpl);
+  const box = document.getElementById('fs_logo_box');
+  if (box) box.innerHTML = '<span style="color:var(--gray-400);font-size:12px">未上传，报价单只显示公司抬头文字</span>';
+  toast('已移除 Logo');
+}
+
+// 没有真实报价单时，用样例数据看模板效果（不落库）
+function printQuoteSample() {
+  const quotes = DM.get('quotes');
+  if (quotes.length) { printQuote(quotes[quotes.length - 1].id); return; }
+  openQuotePrint(quotePrintHtml({
+    id: 'QT-样例', date: today(), customer: '样例客户 Sdn Bhd', contact: '张三 / sample@example.com',
+    product: '飞机盒', size: '24×22×4', material: (DM.get('materials')[0] || {}).name || '', printing: '4C+1C', finish: '哑光覆膜',
+    quantity: 1000, unitPrice: 1.67, subtotal: 1670, sst: 167, total: 1837, validUntil: inDays(14),
+    note: '这是一张样例，用于检查模板，不会保存', creator: whoami()
+  }));
+}
+
+function writeLog(action, detail) {
+  const logs = DM.get('logs');
+  logs.unshift({ id: DM.genId('L'), user: whoami(), action, detail: detail || '', time: DM.now() });
+  DM.set('logs', logs.slice(0, 500));
+}
+
 // ========== ORDERS ==========
+const PROD_STEPS = ['pending_deposit','deposit_paid','artwork','proofing','confirming','producing','shipping','shipped','done'];
+const PROD_LABEL = {pending_deposit:'待付定金',deposit_paid:'已付定金',artwork:'刀模/Artwork',proofing:'打样中',confirming:'待客户确认',producing:'生产中',shipping:'待发货',shipped:'已发货',done:'完成'};
+const PROD_BY_LABEL = Object.keys(PROD_LABEL).reduce((m, k) => { m[PROD_LABEL[k]] = k; return m }, {});
+const COURIERS = ['自送','J&T Express','Pos Laju','Ninja Van','DHL eCommerce','GDEX','Lalamove','货代 / 海运'];
+const PAY_METHODS = ['银行转账','现金','TT 电汇','支票','线上支付'];
+const DELIVERY_ZONES = ['Kuala Lumpur','Selangor','Pulau Pinang','Johor','Melaka','Perak','Sabah','Sarawak'];
+
+function depositPercent() { const p = parseInt(DM.get('settings_finance', {}).depositPercent); return p > 0 && p <= 100 ? p : 50 }
+function inDays(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10) }
+function today() { return new Date().toISOString().slice(0, 10) }
+function orderPay(od, type) { return DM.get('payments').find(p => p.orderId === od.id && p.type === type) }
+function orderReceived(od) {
+  return +DM.get('payments').filter(p => p.orderId === od.id && p.status === 'confirmed').reduce((s, p) => s + (Number(p.amount) || 0), 0).toFixed(2);
+}
+
 function renderOrdersList(c) {
   const orders = DM.get('orders');
+  const total = orders.reduce((s, o) => s + (Number(o.amount) || 0), 0);
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">全部订单</h1><p class="page-desc">订单管理</p></div></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>金额(RM)</th><th>定金状态</th><th>生产状态</th><th>预计交货</th><th>负责人</th><th>操作</th></tr></thead>
-    <tbody>${orders.map(o=>`<tr><td class="td-id">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${o.amount.toFixed(2)}</td><td>${o.depositPaid?'<span class="badge badge-green">已付</span>':'<span class="badge badge-yellow">待付</span>'}</td><td>${productionBadge(o.productionStatus)}</td><td>${esc(o.deliveryDate)}</td><td>${esc(o.assignee)}</td><td><button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">全部订单</h1><p class="page-desc">${orders.length ? `共 ${orders.length} 张，金额合计 RM ${money2(total)}。报价客户确认后到「报价管理 → 报价单」点「转订单」` : '还没有订单。到「报价管理 → 报价单」把已发出的报价点「转订单」，或直接点右上角新建'}</p></div><button class="btn btn-primary" onclick="openOrderModal()">+ 新建订单</button></div>
+    <div class="card"><div class="table-wrap"><table style="min-width:1060px"><thead><tr><th>订单号</th><th>客户</th><th>产品</th><th>金额(RM)</th><th>已收(RM)</th><th>生产状态</th><th>预计交货</th><th>负责人</th><th>操作</th></tr></thead>
+    <tbody>${orders.length ? orders.map(o => `<tr><td class="td-id" style="white-space:nowrap">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${esc(o.product||'')}</td><td style="white-space:nowrap">${money2(o.amount)}</td><td style="white-space:nowrap">${money2(orderReceived(o))}</td><td style="white-space:nowrap">${productionBadge(o.productionStatus)}</td><td style="white-space:nowrap">${esc(o.deliveryDate||'')}</td><td style="white-space:nowrap">${esc(o.assignee)||'<span style="color:var(--gray-400)">未分配</span>'}</td><td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button> <button class="btn btn-sm btn-secondary" onclick="editOrder('${o.id}')">编辑</button> ${o.shipDate ? `<button class="btn btn-sm btn-secondary" onclick="shipOrder('${o.id}')">物流</button>` : `<button class="btn btn-sm btn-primary" onclick="shipOrder('${o.id}')">发货</button>`}</td></tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--gray-400)">暂无订单</td></tr>'}</tbody></table></div></div>`;
+}
+
+function editOrder(id) {
+  const o = DM.get('orders').find(x => x.id === id);
+  if (!o) { toast('找不到这张订单'); return; }
+  openOrderModal(o);
+}
+
+function openOrderModal(o, prefill) {
+  const isEdit = !!o;
+  const d = o || prefill || {};
+  const amount = Number(d.amount) || 0;
+  const pct = Number(d.depositPct) > 0 ? Number(d.depositPct) : depositPercent();
+  showModal(isEdit ? '编辑订单 ' + o.id : '新建订单', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">客户 *</label><input class="form-input" id="o_customer" value="${esc(d.customer||'')}"></div>
+      <div class="form-group"><label class="form-label">产品 / 内容</label><input class="form-input" id="o_product" value="${esc(d.product||'')}"></div>
+      <div class="form-group"><label class="form-label">金额 (RM) *</label><input class="form-input" type="number" min="0" step="0.01" id="o_amount" value="${amount ? money2(amount) : ''}" oninput="orderModalDeposit()"></div>
+      <div class="form-group"><label class="form-label">定金比例 (%)</label><input class="form-input" type="number" min="0" max="100" id="o_pct" value="${esc(pct)}" oninput="orderModalDeposit()"></div>
+      <div class="form-group"><label class="form-label">定金金额 (RM)</label><input class="form-input" type="number" min="0" step="0.01" id="o_deposit" value="${money2(amount * pct / 100)}"></div>
+      <div class="form-group"><label class="form-label">预计交货日期</label><input class="form-input" type="date" id="o_date" value="${esc(d.deliveryDate || inDays(14))}"></div>
+      <div class="form-group"><label class="form-label">负责人</label><select class="form-select" id="o_assignee">${selOpts(staffNames(), d.assignee || whoami(), '未分配')}</select></div>
+      <div class="form-group"><label class="form-label">生产状态</label><select class="form-select" id="o_status">${selOpts(PROD_STEPS.map(s => PROD_LABEL[s]), PROD_LABEL[d.productionStatus] || PROD_LABEL.pending_deposit)}</select></div>
+      <div class="form-group"><label class="form-label">配送区域</label><select class="form-select" id="o_zone">${selOpts(DELIVERY_ZONES.concat(DM.get('shippingZones').map(z => z.region)), d.zone, '未定')}</select></div>
+      <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="o_note" rows="2">${esc(d.note||'')}</textarea></div>
+    </div>
+    ${isEdit ? '' : '<div style="margin-top:12px;font-size:12px;color:var(--gray-500)">保存后自动生成「定金 / 尾款」两笔待收款，同事在「订单管理 → 付款」里登记到账。</div>'}
+  `, () => {
+    const customer = val('o_customer');
+    if (!customer) { toast('请填写客户'); return false }
+    const amt = parseFloat(val('o_amount')) || 0;
+    if (amt <= 0) { toast('请填写订单金额'); return false }
+    const p = Math.min(100, Math.max(0, parseFloat(val('o_pct')) || 0));
+    const dep = parseFloat(val('o_deposit')) > 0 ? +parseFloat(val('o_deposit')).toFixed(2) : +(amt * p / 100).toFixed(2);
+    const st = PROD_BY_LABEL[val('o_status')] || 'pending_deposit';
+    const orders = DM.get('orders');
+    const fields = {
+      customer, product: val('o_product'), amount: +amt.toFixed(2), depositPct: p, depositAmount: dep,
+      deliveryDate: val('o_date'), assignee: val('o_assignee'), productionStatus: st,
+      zone: val('o_zone'), note: (document.getElementById('o_note') || {}).value?.trim() || ''
+    };
+    let od;
+    if (isEdit) {
+      Object.assign(o, fields);
+      od = o;
+      DM.set('orders', orders);
+      toast('订单 ' + o.id + ' 已更新');
+      writeLog('编辑订单', o.id + ' ' + o.customer);
+    } else {
+      od = Object.assign({
+        id: DM.genId('OD'), quoteId: d.quoteId || '', depositPaid: false, productionStatus: st,
+        creator: whoami(), created: DM.now()
+      }, fields);
+      orders.push(od);
+      DM.set('orders', orders);
+      addPendingPayments(od);
+      if (d.quoteId) linkQuoteToOrder(d.quoteId, od);
+      toast('订单 ' + od.id + ' 已创建');
+      writeLog('新建订单', od.id + ' ' + od.customer + ' RM ' + money2(od.amount));
+    }
+    const all = DM.get('orders');
+    const cur = all.find(x => x.id === od.id);
+    if (cur) { syncOrderMoney(cur); DM.set('orders', all); }
+    navigateTo('orders-list', '订单管理', '全部订单');
+  });
+}
+
+function orderModalDeposit() {
+  const amt = parseFloat((document.getElementById('o_amount') || {}).value) || 0;
+  const p = Math.min(100, Math.max(0, parseFloat((document.getElementById('o_pct') || {}).value) || 0));
+  const el = document.getElementById('o_deposit');
+  if (el) el.value = money2(amt * p / 100);
+}
+
+function linkQuoteToOrder(quoteId, od) {
+  const quotes = DM.get('quotes');
+  const q = quotes.find(x => x.id === quoteId);
+  if (!q) return;
+  q.status = 'approved';
+  q.orderId = od.id;
+  DM.set('quotes', quotes);
+  const leads = DM.get('leads');
+  const l = leads.find(x => x.id === q.leadId);
+  if (l) { l.status = 'won'; DM.set('leads', leads); }
+}
+
+function addPendingPayments(od) {
+  const payments = DM.get('payments');
+  const site = DM.get('settings_site', {});
+  const mk = (type, typeLabel, amount) => ({
+    id: DM.genId('PAY'), orderId: od.id, orderNo: od.id, customer: od.customer,
+    type, typeLabel, amount: +amount.toFixed(2), method: '银行转账',
+    bankName: '', accountNo: '', accountName: site.enName || '', date: '', receiptNo: '',
+    status: 'pending', note: '待客户付款', creator: whoami(), created: DM.now()
+  });
+  const dep = Number(od.depositAmount) || 0;
+  const fin = +((Number(od.amount) || 0) - dep).toFixed(2);
+  if (dep > 0) payments.push(mk('deposit', '定金 ' + (od.depositPct || depositPercent()) + '%', dep));
+  if (fin > 0) payments.push(mk('final', '尾款 ' + (100 - (od.depositPct || depositPercent())) + '%', fin));
+  DM.set('payments', payments);
+}
+
+function syncOrderMoney(od) {
+  const received = orderReceived(od);
+  const pays = DM.get('payments');
+  const dep = pays.find(p => p.orderId === od.id && p.type === 'deposit');
+  const fin = pays.find(p => p.orderId === od.id && p.type === 'final');
+  const next = {
+    received,
+    depositPaid: !!(dep && dep.status === 'confirmed'),
+    finalPaid: !!(fin && fin.status === 'confirmed')
+  };
+  next.productionStatus = od.productionStatus || 'pending_deposit';
+  if (next.depositPaid && next.productionStatus === 'pending_deposit') next.productionStatus = 'deposit_paid';
+  if (next.finalPaid && next.productionStatus === 'shipped') next.productionStatus = 'done';
+  Object.assign(od, next);
+  const orders = DM.get('orders');
+  const cur = orders.find(x => x.id === od.id);
+  if (cur) { Object.assign(cur, next); DM.set('orders', orders); }
 }
 
 function viewOrder(id) {
   const o = DM.get('orders').find(x => x.id === id);
-  if (!o) return;
-  const statusLabels = {pending_deposit:'待付定金',deposit_paid:'已付定金',artwork:'刀模/Artwork',proofing:'打样中',confirming:'待客户确认',producing:'生产中',shipping:'待发货',shipped:'已发货',done:'完成'};
+  if (!o) { toast('找不到这张订单'); return; }
+  const pays = DM.get('payments').filter(p => p.orderId === o.id);
+  const q = DM.get('quotes').find(x => x.id === o.quoteId);
+  const cell = (k, v) => `<div class="form-group"><label class="form-label">${esc(k)}</label><div style="padding:8px 0">${v}</div></div>`;
+  const got = orderReceived(o);
   showModal('订单详情 ' + o.id, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${esc(o.customer)}</div></div>
-      <div class="form-group"><label class="form-label">金额</label><div style="padding:8px 0">RM ${o.amount.toFixed(2)}</div></div>
-      <div class="form-group"><label class="form-label">定金状态</label><div style="padding:8px 0">${o.depositPaid?'<span class="badge badge-green">已付</span>':'<span class="badge badge-yellow">待付</span>'}</div></div>
-      <div class="form-group"><label class="form-label">生产状态</label><div style="padding:8px 0">${productionBadge(o.productionStatus)}</div></div>
-      <div class="form-group"><label class="form-label">预计交货</label><div style="padding:8px 0">${esc(o.deliveryDate)}</div></div>
-      <div class="form-group"><label class="form-label">负责人</label><div style="padding:8px 0">${esc(o.assignee)}</div></div>
+      ${cell('客户', `<strong>${esc(o.customer)}</strong>`)}
+      ${cell('产品 / 内容', esc(o.product || '—'))}
+      ${cell('来源报价单', q ? `<a href="javascript:void(0)" onclick="closeModal();viewQuote('${q.id}')">${esc(q.id)}</a>` : (o.quoteId ? esc(o.quoteId) : '手工建单'))}
+      ${cell('金额', 'RM ' + money2(o.amount))}
+      ${cell('定金 / 已收', 'RM ' + money2(o.depositAmount) + ' / RM ' + money2(got))}
+      ${cell('待收', '<span style="color:' + (got >= (Number(o.amount) || 0) ? 'var(--green)' : 'var(--red)') + '">RM ' + money2((Number(o.amount) || 0) - got) + '</span>')}
+      ${cell('生产状态', productionBadge(o.productionStatus))}
+      ${cell('预计交货', esc(o.deliveryDate || '—'))}
+      ${cell('负责人', esc(o.assignee || '未分配'))}
+      ${cell('配送区域', esc(o.zone || '未定'))}
+      ${cell('快递 / 单号', o.trackingNo ? esc((o.courier || '') + ' ' + o.trackingNo) : '<span style="color:var(--gray-400)">未发货</span>')}
+      ${cell('发货日期', esc(o.shipDate || '—'))}
+      ${o.note ? cell('备注', `<span style="white-space:pre-wrap">${esc(o.note)}</span>`) : ''}
     </div>
-  `, null, [{label:'关闭',cls:'btn-secondary'}]);
-  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
+    <div style="margin-top:14px"><div class="card-header" style="padding:0 0 8px"><span class="card-title">收款记录</span></div>
+    ${pays.length ? `<div class="table-wrap"><table><thead><tr><th>类型</th><th>金额(RM)</th><th>状态</th><th>到账日期</th><th>凭证</th><th></th></tr></thead><tbody>${pays.map(p => `<tr><td>${esc(p.typeLabel)}</td><td>${money2(p.amount)}</td><td><span class="badge ${p.status === 'confirmed' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${p.status === 'confirmed' ? '已到账' : p.status === 'rejected' ? '已退回' : '待确认'}</span></td><td>${esc(p.date || '—')}</td><td>${esc(p.receiptNo || '—')}</td><td><button class="btn btn-sm btn-secondary" onclick="closeModal();openPaymentModal('${o.id}','${p.type}')">登记</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>尚未生成收款项</p></div>'}
+    </div>
+    ${o.shipDate ? `<div style="margin-top:14px;text-align:right"><button class="btn btn-sm btn-danger" onclick="unshipOrder('${o.id}')">撤销发货</button></div>` : ''}
+  `, null, [
+    { label: '登记收款', cls: 'btn-primary', fn: () => { closeModal(); openPaymentModal(o.id, got >= (Number(o.depositAmount) || 0) && (Number(o.depositAmount) || 0) > 0 ? 'final' : 'deposit'); } },
+    { label: o.shipDate ? '修改发货' : '发货', cls: 'btn-secondary', fn: () => { closeModal(); shipOrder(o.id); } },
+    { label: '编辑', cls: 'btn-secondary', fn: () => { closeModal(); editOrder(o.id); } },
+    { label: '关闭', cls: 'btn-secondary', fn: closeModal }
+  ]);
   document.getElementById('modalSaveBtn')?.remove();
 }
 
 function productionBadge(s) {
   const m = {pending_deposit:'badge-gray',deposit_paid:'badge-blue',artwork:'badge-purple',proofing:'badge-yellow',confirming:'badge-yellow',producing:'badge-blue',shipping:'badge-purple',shipped:'badge-green',done:'badge-green'};
-  const labels = {pending_deposit:'待付定金',deposit_paid:'已付定金',artwork:'刀模/Artwork',proofing:'打样中',confirming:'待客户确认',producing:'生产中',shipping:'待发货',shipped:'已发货',done:'完成'};
-  return `<span class="badge ${m[s]||'badge-gray'}">${esc(labels[s]||s)}</span>`;
+  return `<span class="badge ${m[s]||'badge-gray'}">${esc(PROD_LABEL[s]||s||'待付定金')}</span>`;
 }
 
 function renderProduction(c) {
-  const statuses = ['pending_deposit','deposit_paid','artwork','proofing','confirming','producing','shipping','shipped','done'];
-  const labels = {pending_deposit:'待付定金',deposit_paid:'已付定金',artwork:'刀模/Artwork',proofing:'打样中',confirming:'待确认',producing:'生产中',shipping:'待发货',shipped:'已发货',done:'完成'};
   const orders = DM.get('orders');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">生产工单看板</h1><p class="page-desc">拖拽更改状态</p></div></div>
-    <div class="kanban">${statuses.map(s => {
-      const items = orders.filter(o => o.productionStatus === s);
-      return `<div class="kanban-col"><h4>${labels[s]} <span class="count">${esc(items.length)}</span></h4>${items.map(o=>`<div class="kanban-card"><div class="title">${esc(o.id)}</div><div class="meta">${esc(o.customer)}</div><div class="meta">RM ${o.amount.toFixed(2)}</div></div>`).join('') || '<div style="text-align:center;color:var(--gray-400);font-size:11px;padding:12px">空</div>'}</div>`;
+    <div class="page-header"><div><h1 class="page-title">生产工单看板</h1><p class="page-desc">把卡片拖到目标列即可改状态；点卡片看详情</p></div></div>
+    <div class="kanban">${PROD_STEPS.map(s => {
+      const items = orders.filter(o => (o.productionStatus || 'pending_deposit') === s);
+      return `<div class="kanban-col" ondragover="kanbanOver(event)" ondragleave="kanbanLeave(event)" ondrop="kanbanDrop(event,'${s}')"><h4>${PROD_LABEL[s]} <span class="count">${items.length}</span></h4>${items.map(o => `<div class="kanban-card" draggable="true" ondragstart="kanbanStart(event,'${o.id}')" ondragend="kanbanEnd(event)" onclick="viewOrder('${o.id}')" style="cursor:grab"><div class="title">${esc(o.id)}</div><div class="meta">${esc(o.customer)}</div><div class="meta">RM ${money2(o.amount)}</div><div class="meta">${esc(o.assignee || '未分配')}</div></div>`).join('') || '<div style="text-align:center;color:var(--gray-400);font-size:11px;padding:12px">空</div>'}</div>`;
     }).join('')}</div>`;
+}
+
+let kanbanDrag = null;
+function kanbanStart(e, id) {
+  kanbanDrag = id;
+  try { e.dataTransfer.setData('text/plain', id); e.dataTransfer.effectAllowed = 'move'; } catch (_) {}
+  e.currentTarget.style.opacity = '.45';
+}
+function kanbanEnd(e) { e.currentTarget.style.opacity = ''; kanbanDrag = null; }
+function kanbanOver(e) { e.preventDefault(); e.currentTarget.style.outline = '2px dashed var(--primary)'; }
+function kanbanLeave(e) { e.currentTarget.style.outline = ''; }
+function kanbanDrop(e, status) {
+  e.preventDefault();
+  e.currentTarget.style.outline = '';
+  const id = kanbanDrag || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
+  if (!id) return;
+  const orders = DM.get('orders');
+  const o = orders.find(x => x.id === id);
+  if (!o || o.productionStatus === status) return;
+  const from = o.productionStatus;
+  o.productionStatus = status;
+  syncOrderMoney(o);
+  DM.set('orders', orders);
+  writeLog('生产状态变更', `${o.id} ${PROD_LABEL[from] || from} → ${PROD_LABEL[status]}`);
+  toast(`${o.id} 已移到「${PROD_LABEL[status]}」`);
+  renderPage(currentPageId);
 }
 
 function renderPayments(c) {
   const payments = DM.get('payments');
+  const orders = DM.get('orders');
+  const pending = payments.filter(p => p.status === 'pending');
+  const confirmed = payments.filter(p => p.status === 'confirmed');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">收款记录</h1><p class="page-desc">管理定金和尾款</p></div></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>类型</th><th>金额(RM)</th><th>付款方式</th><th>到账日期</th><th>凭证</th></tr></thead>
-    <tbody>${payments.map(p=>`<tr><td class="td-id">${esc(p.orderNo)}</td><td class="td-name">${esc(p.customer)}</td><td><span class="badge badge-blue">${esc(p.typeLabel)}</span></td><td>${p.amount.toFixed(2)}</td><td>${esc(p.method)}</td><td>${esc(p.date || '-')}</td><td><button class="btn btn-sm btn-secondary" onclick="viewPayment('${p.id}')">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">收款记录</h1><p class="page-desc">已确认到账 RM ${money2(confirmed.reduce((s, p) => s + (Number(p.amount) || 0), 0))}，待确认 ${pending.length} 笔</p></div><button class="btn btn-primary" onclick="openPaymentModal()">+ 登记收款</button></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>类型</th><th>金额(RM)</th><th>付款方式</th><th>到账日期</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>${payments.length ? payments.map(p => `<tr><td class="td-id">${esc(p.orderNo || p.orderId)}</td><td class="td-name">${esc(p.customer)}</td><td><span class="badge badge-blue">${esc(p.typeLabel)}</span></td><td>${money2(p.amount)}</td><td>${esc(p.method || '—')}</td><td>${esc(p.date || '—')}</td><td><span class="badge ${p.status === 'confirmed' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${p.status === 'confirmed' ? '已到账' : p.status === 'rejected' ? '已退回' : '待确认'}</span></td><td><button class="btn btn-sm btn-secondary" onclick="viewPayment('${p.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="openPaymentModal('${p.orderId}','${p.type}','${p.id}')">编辑</button></td></tr>`).join('') : `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--gray-400)">还没有收款记录。转订单后会自动生成定金/尾款两笔待收，收到钱点「登记」${orders.length ? '' : '（当前也还没有订单）'}</td></tr>`}</tbody></table></div></div>`;
+}
+
+function openPaymentModal(orderId, type, payId) {
+  const payments = DM.get('payments');
+  const p = payId ? payments.find(x => x.id === payId) : null;
+  const orders = DM.get('orders');
+  if (!orderId && !p) {
+    if (!orders.length) { toast('先创建订单，再登记收款'); return; }
+    orderId = orders[0].id;
+  }
+  const od = p ? (orders.find(x => x.id === p.orderId) || {}) : (orders.find(x => x.id === orderId) || {});
+  const suggest = p ? p.amount : (type === 'final' ? +((Number(od.amount) || 0) - (Number(od.depositAmount) || 0)).toFixed(2) : (Number(od.depositAmount) || 0));
+  showModal(p ? '编辑收款 ' + (p.receiptNo || p.id) : '登记收款', `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">订单 *</label><select class="form-select" id="p_order" onchange="paymentPickOrder()">${orders.map(o => `<option value="${esc(o.id)}"${(p ? p.orderId : orderId) === o.id ? ' selected' : ''}>${esc(o.id)} — ${esc(o.customer)}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">款项类型</label><select class="form-select" id="p_type" onchange="paymentSuggest()">${selOpts(['定金', '尾款', '全额', '刀模费', '打样费', '运费'], p ? p.typeLabel : (type === 'final' ? '尾款' : '定金'))}</select></div>
+      <div class="form-group"><label class="form-label">金额 (RM) *</label><input class="form-input" type="number" min="0" step="0.01" id="p_amount" value="${money2(p ? p.amount : suggest)}"></div>
+      <div class="form-group"><label class="form-label">付款方式</label><select class="form-select" id="p_method">${selOpts(PAY_METHODS, p ? p.method : '银行转账')}</select></div>
+      <div class="form-group"><label class="form-label">银行</label><input class="form-input" id="p_bank" value="${esc(p ? p.bankName : (DM.get('settings_site', {}).bank || ''))}" placeholder="e.g. Maybank"></div>
+      <div class="form-group"><label class="form-label">收款账号</label><input class="form-input" id="p_account" value="${esc(p ? p.accountNo : (DM.get('settings_site', {}).bankAccount || ''))}"></div>
+      <div class="form-group"><label class="form-label">收款户名</label><input class="form-input" id="p_holder" value="${esc(p ? p.accountName : (DM.get('settings_site', {}).enName || ''))}"></div>
+      <div class="form-group"><label class="form-label">凭证号</label><input class="form-input" id="p_receipt" value="${esc(p ? p.receiptNo : '')}" placeholder="e.g. RCT-2026-001"></div>
+      <div class="form-group"><label class="form-label">到账日期</label><input class="form-input" type="date" id="p_date" value="${esc((p && p.date) || today())}"></div>
+      <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="p_status">${selOpts(['已到账', '待确认', '已退回'], p ? { confirmed: '已到账', pending: '待确认', rejected: '已退回' }[p.status] : '已到账')}</select></div>
+      <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="p_note" rows="2">${esc((p && p.note) || '')}</textarea></div>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--gray-500)">标成「已到账」会同步更新订单的已收金额；定金到账后订单自动进入「已付定金」。</div>
+  `, () => {
+    const oid = val('p_order');
+    const order = orders.find(x => x.id === oid);
+    if (!order) { toast('请选择订单'); return false }
+    const amount = parseFloat(val('p_amount')) || 0;
+    if (amount <= 0) { toast('请填写金额'); return false }
+    const typeLabel = val('p_type');
+    const st = { '已到账': 'confirmed', '待确认': 'pending', '已退回': 'rejected' }[val('p_status')] || 'pending';
+    const data = {
+      orderId: oid, orderNo: order.id, customer: order.customer,
+      type: /尾/.test(typeLabel) ? 'final' : (/定/.test(typeLabel) ? 'deposit' : (typeLabel === '全额' ? 'final' : 'other')),
+      typeLabel, amount: +amount.toFixed(2), method: val('p_method'),
+      bankName: val('p_bank'), accountNo: val('p_account'), accountName: val('p_holder'),
+      date: val('p_date'), receiptNo: val('p_receipt'), status: st,
+      note: (document.getElementById('p_note') || {}).value?.trim() || ''
+    };
+    if (p) Object.assign(p, data);
+    else payments.push(Object.assign({ id: DM.genId('PAY'), creator: whoami(), created: DM.now() }, data));
+    DM.set('payments', payments);
+    syncOrderMoney(order);
+    writeLog('登记收款', `${order.id} ${typeLabel} RM ${money2(amount)}（${val('p_status')}）`);
+    toast('已保存');
+    renderPage(currentPageId);
+  });
+}
+
+function paymentSuggest() {
+  const od = DM.get('orders').find(x => x.id === val('p_order'));
+  const a = document.getElementById('p_amount');
+  if (!od || !a) return;
+  const got = orderReceived(od);
+  const rest = +((Number(od.amount) || 0) - got).toFixed(2);
+  const label = val('p_type') || '';
+  if (/定/.test(label)) a.value = money2(Number(od.depositAmount) || 0);
+  else if (/尾|全/.test(label)) a.value = money2(rest);
+}
+
+function paymentPickOrder() {
+  const od = DM.get('orders').find(x => x.id === val('p_order'));
+  const t = document.getElementById('p_type');
+  if (!od || !t) return;
+  const got = orderReceived(od);
+  if (got <= 0 && (Number(od.depositAmount) || 0) > 0) t.value = '定金';
+  else if (got < (Number(od.amount) || 0)) t.value = '尾款';
+  paymentSuggest();
 }
 
 function viewPayment(id) {
   const p = DM.get('payments').find(x => x.id === id);
   if (!p) return;
   const statusMap = {confirmed:'badge-green',pending:'badge-yellow',rejected:'badge-red'};
-  const statusLabels = {confirmed:'已确认',pending:'待确认',rejected:'已拒绝'};
-  showModal('收款凭证 ' + p.receiptNo, `
+  const statusLabels = {confirmed:'已到账',pending:'待确认',rejected:'已退回'};
+  const cell = (k, v) => `<div class="form-group"><label class="form-label">${esc(k)}</label><div style="padding:8px 0">${v}</div></div>`;
+  showModal('收款凭证 ' + (p.receiptNo || p.id), `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">订单号</label><div style="padding:8px 0;font-weight:600">${esc(p.orderNo)}</div></div>
-      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0">${esc(p.customer)}</div></div>
-      <div class="form-group"><label class="form-label">类型</label><div style="padding:8px 0"><span class="badge badge-blue">${esc(p.typeLabel)}</span></div></div>
-      <div class="form-group"><label class="form-label">金额</label><div style="padding:8px 0;font-weight:700;font-size:16px;color:var(--primary)">RM ${p.amount.toFixed(2)}</div></div>
-      <div class="form-group"><label class="form-label">付款方式</label><div style="padding:8px 0">${esc(p.method)}</div></div>
-      <div class="form-group"><label class="form-label">银行</label><div style="padding:8px 0">${esc(p.bankName)}</div></div>
-      <div class="form-group"><label class="form-label">收款账号</label><div style="padding:8px 0">${esc(p.accountNo)}</div></div>
-      <div class="form-group"><label class="form-label">收款户名</label><div style="padding:8px 0">${esc(p.accountName)}</div></div>
-      <div class="form-group"><label class="form-label">到账日期</label><div style="padding:8px 0">${esc(p.date || '-')}</div></div>
-      <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0"><span class="badge ${statusMap[p.status]||'badge-gray'}">${esc(statusLabels[p.status]||p.status)}</span></div></div>
-      <div class="form-group full"><label class="form-label">备注</label><div style="padding:8px 0">${esc(p.note || '-')}</div></div>
+      ${cell('订单号', `<strong>${esc(p.orderNo || p.orderId)}</strong>`)}
+      ${cell('客户', esc(p.customer))}
+      ${cell('类型', `<span class="badge badge-blue">${esc(p.typeLabel)}</span>`)}
+      ${cell('金额', '<strong style="font-size:16px;color:var(--primary)">RM ' + money2(p.amount) + '</strong>')}
+      ${cell('付款方式', esc(p.method || '—'))}
+      ${cell('银行', esc(p.bankName || '—'))}
+      ${cell('收款账号', esc(p.accountNo || '—'))}
+      ${cell('收款户名', esc(p.accountName || '—'))}
+      ${cell('到账日期', esc(p.date || '—'))}
+      ${cell('状态', `<span class="badge ${statusMap[p.status]||'badge-gray'}">${esc(statusLabels[p.status]||p.status)}</span>`)}
+      ${cell('备注', esc(p.note || '—'))}
     </div>
-  `, null, [{label:'关闭',cls:'btn-secondary'}]);
-  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
+  `, null, [
+    { label: '标记已到账', cls: 'btn-primary', fn: () => { confirmPayment(p.id); } },
+    { label: '编辑', cls: 'btn-secondary', fn: () => { closeModal(); openPaymentModal(p.orderId, p.type, p.id); } },
+    { label: '关闭', cls: 'btn-secondary', fn: closeModal }
+  ]);
   document.getElementById('modalSaveBtn')?.remove();
 }
 
+function confirmPayment(id) {
+  const payments = DM.get('payments');
+  const p = payments.find(x => x.id === id);
+  if (!p) return;
+  p.status = 'confirmed';
+  if (!p.date) p.date = today();
+  DM.set('payments', payments);
+  const orders = DM.get('orders');
+  const od = orders.find(x => x.id === p.orderId);
+  if (od) { syncOrderMoney(od); DM.set('orders', orders); }
+  writeLog('确认收款', `${p.orderNo} ${p.typeLabel} RM ${money2(p.amount)}`);
+  toast('已确认到账');
+  closeModal();
+  renderPage(currentPageId);
+}
+
 function renderDelivery(c) {
+  const orders = DM.get('orders');
+  const todo = orders.filter(o => !o.shipDate);
+  const shipped = orders.filter(o => o.shipDate).slice().reverse();
+  const row = (o, done) => `<tr><td class="td-id" style="white-space:nowrap">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${esc(o.zone || '未定')}</td><td style="white-space:nowrap">${Number(o.freight) > 0 ? 'RM ' + money2(o.freight) : (o.freight === 0 ? '免费' : '—')}</td><td>${esc(o.courier || (done ? '—' : '未填'))}</td><td style="white-space:nowrap">${o.trackingNo ? esc(o.trackingNo) : (done ? '—' : '<span style="color:var(--gray-400)">未填</span>')}</td><td style="white-space:nowrap">${esc(o.shipDate || '—')}</td><td style="white-space:nowrap">${esc(o.etaDate || o.deliveryDate || '—')}</td><td style="white-space:nowrap">${o.shipDate ? '<span class="badge badge-green">已发货</span>' : productionBadge(o.productionStatus)}</td><td style="white-space:nowrap"><button class="btn btn-sm ${done ? 'btn-secondary' : 'btn-primary'}" onclick="shipOrder('${o.id}')">${done ? '修改' : '发货'}</button> <button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button></td></tr>`;
+  const head = '<thead><tr><th>订单号</th><th>客户</th><th>配送区域</th><th>运费</th><th>快递</th><th>快递单号</th><th>发货日期</th><th>预计送达</th><th>状态</th><th>操作</th></tr></thead>';
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">发货管理</h1><p class="page-desc">物流记录和配送跟踪</p></div></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>配送区域</th><th>运费</th><th>快递单号</th><th>发货日期</th><th>预计送达</th><th>状态</th></tr></thead>
-    <tbody><tr><td class="td-id">OD-2026-001</td><td class="td-name">L'Oréal Malaysia</td><td>Kuala Lumpur</td><td>免费</td><td>-</td><td>-</td><td>2026-10-20</td><td><span class="badge badge-yellow">待发货</span></td></tr></tbody></table></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">发货管理</h1><p class="page-desc">数据来自订单管理。生产到「待发货」的订单一律显示在这里，点「发货」填快递单号即完成出库</p></div><button class="btn btn-secondary" onclick="navigateTo('orders-list','订单管理','全部订单')">去全部订单</button></div>
+    <div class="card mb-20"><div class="card-header"><span class="card-title">🚚 待发货 <span class="badge badge-yellow">${todo.length}</span></span></div>
+      <div class="table-wrap"><table style="min-width:1020px">${head}<tbody>${todo.length ? todo.map(o => row(o, false)).join('') : `<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--gray-400)">没有待发货订单</td></tr>`}</tbody></table></div>
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">✅ 已发货 <span class="badge badge-green">${shipped.length}</span></span></div>
+      <div class="table-wrap"><table style="min-width:1020px">${head}<tbody>${shipped.length ? shipped.map(o => row(o, true)).join('') : `<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--gray-400)">还没有发出过货</td></tr>`}</tbody></table></div>
+    </div>`;
+}
+
+function unshipOrder(id) {
+  const orders = DM.get('orders');
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  o.shipDate = '';
+  o.trackingNo = '';
+  o.courier = '';
+  o.productionStatus = 'shipping';
+  DM.set('orders', orders);
+  writeLog('撤销发货', o.id + ' ' + o.customer);
+  toast('已退回「待发货」');
+  closeModal();
+  renderPage(currentPageId);
+}
+
+function shipOrder(id) {
+  const orders = DM.get('orders');
+  const o = orders.find(x => x.id === id);
+  if (!o) { toast('找不到这张订单'); return; }
+  showModal(o.shipDate ? '发货信息 ' + o.id : '登记发货 ' + o.id, `
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${esc(o.customer)}</div></div>
+      <div class="form-group"><label class="form-label">产品 / 内容</label><div style="padding:8px 0">${esc(o.product || '—')}</div></div>
+      <div class="form-group"><label class="form-label">配送区域</label><select class="form-select" id="s_zone">${selOpts(DELIVERY_ZONES.concat(DM.get('shippingZones').map(z => z.region)), o.zone, '未定')}</select></div>
+      <div class="form-group"><label class="form-label">运费 (RM，0 = 免费)</label><input class="form-input" type="number" min="0" step="0.01" id="s_freight" value="${o.freight === undefined || o.freight === '' ? '' : money2(o.freight)}" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label">快递 / 物流</label><select class="form-select" id="s_courier">${selOpts(COURIERS, o.courier, '未定')}</select></div>
+      <div class="form-group"><label class="form-label">快递单号</label><input class="form-input" id="s_tracking" placeholder="e.g. JTCT0012345678" value="${esc(o.trackingNo || '')}"></div>
+      <div class="form-group"><label class="form-label">发货日期</label><input class="form-input" type="date" id="s_date" value="${esc(o.shipDate || today())}"></div>
+      <div class="form-group"><label class="form-label">预计送达</label><input class="form-input" type="date" id="s_eta" value="${esc(o.etaDate || o.deliveryDate || '')}"></div>
+      <div class="form-group full"><label class="form-label">收货人 / 地址</label><input class="form-input" id="s_to" value="${esc(o.shipTo || '')}" placeholder="送到哪里、找谁签收"></div>
+      <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="s_note" rows="2">${esc(o.shipNote || '')}</textarea></div>
+    </div>
+    ${o.shipDate ? `<div style="margin-top:12px"><button class="btn btn-sm btn-danger" onclick="unshipOrder('${o.id}')">撤销发货，退回待发货</button></div>` : ''}
+  `, () => {
+    o.zone = val('s_zone');
+    const fr = parseFloat(val('s_freight'));
+    o.freight = isNaN(fr) ? 0 : +fr.toFixed(2);
+    o.courier = val('s_courier');
+    o.trackingNo = (val('s_tracking') || '').trim();
+    o.shipDate = val('s_date') || today();
+    o.etaDate = val('s_eta');
+    o.shipTo = val('s_to');
+    o.shipNote = (document.getElementById('s_note') || {}).value?.trim() || '';
+    if (!o.trackingNo && o.courier !== '自送') { toast('请填写快递单号，或把物流选成「自送」'); return false }
+    if (o.productionStatus !== 'done') o.productionStatus = 'shipped';
+    syncOrderMoney(o);
+    DM.set('orders', orders);
+    writeLog(o.shipDate ? '登记发货' : '更新发货信息', `${o.id} ${o.customer}｜${o.courier || '—'} ${o.trackingNo || '无单号'}｜${o.shipDate}`);
+    toast(`订单 ${o.id} 已标记为已发货`);
+    renderPage(currentPageId);
+  });
 }
 
 function renderDieline(c) {
@@ -2189,7 +2753,7 @@ function renderClients(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">合作品牌墙</h1><p class="page-desc">管理展示的客户 Logo</p></div><button class="btn btn-primary" onclick="openClientModal()">+ 上传 Logo</button></div>
     <div class="card"><div class="card-body">
-      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px">
         ${clients.map(cl=>`<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;cursor:pointer;position:relative" onclick="openClientModal('${cl.id}')">${cl.logoUrl?`<img src="${esc(cl.logoUrl)}" alt="${esc(cl.name)}" style="max-height:56px;max-width:100%;object-fit:contain;margin-bottom:8px">`:''}<div style="font-weight:700;color:var(--gray-400);font-size:14px;letter-spacing:2px">${esc(cl.name)}</div>${!cl.active?'<span class="badge badge-gray" style="position:absolute;top:4px;right:4px;font-size:9px">隐藏</span>':''}</div>`).join('')}
       </div>
     </div></div>`;
@@ -2685,13 +3249,25 @@ function saveSettingsFinance() {
 
 function renderUsers(c) {
   const users = DM.get('users');
-  const rows = users.map(u=>`<tr><td class="td-name">${esc(u.name)}</td><td>${esc(u.email||'—')}</td><td><span class="badge badge-blue">${esc(u.role)}</span></td><td>${u.needsConfirm?'<span class="badge badge-red">待验证邮箱</span>':(u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">已禁用</span>')}</td><td>${esc(u.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button>${u.email ? ` <button class="btn btn-sm btn-secondary" onclick="sendPasswordReset('${u.email}')">重发密码</button>` : ''}</td></tr>`).join('');
+  const rows = users.map(u=>`<tr><td class="td-name">${esc(u.name)}</td><td>${esc(u.email||'—')}</td><td><span class="badge badge-blue">${esc(u.role)}</span></td><td>${u.needsConfirm?'<span class="badge badge-red">待验证邮箱</span>':(u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">已禁用</span>')}</td><td>${esc(u.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button>${u.email ? ` <button class="btn btn-sm btn-secondary" onclick="sendPasswordReset('${u.email}')">重发密码</button>` : ''} <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">删除</button></td></tr>`).join('');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">管理员列表</h1><p class="page-desc">${Sync.ready ? '登录账号由 Supabase 托管，密码不写在这份代码里' : '未连接后端，当前只是本机演示名单'}</p></div><button class="btn btn-primary" onclick="openUserModal()">+ 新建账号</button></div>
     ${users.length
       ? `<div class="card"><div class="table-wrap"><table><thead><tr><th>姓名</th><th>登录邮箱</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div>`
       : `<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-500);padding:32px">还没有任何账号。点右上角「新建账号」给同事开一个。</div></div>`}
-    ${Sync.ready ? `<div style="margin-top:16px;font-size:12px;color:var(--gray-500);line-height:1.8">「重发密码」会给对方邮箱发一封重置邮件。要彻底删除账号，需到 Supabase 控制台 Authentication → Users 操作。</div>` : ''}`;
+    ${Sync.ready ? `<div style="margin-top:16px;font-size:12px;color:var(--gray-500);line-height:1.8">「重发密码」会给对方邮箱发一封重置邮件。「删除」只把这一行从名单里移除；让对方彻底登不进来，还需到 Supabase 控制台 Authentication → Users 里删掉同名邮箱。</div>` : ''}`;
+}
+
+function deleteUser(id) {
+  const users = DM.get('users');
+  const u = users.find(x => x.id === id);
+  if (!u) { toast('找不到这个账号'); return }
+  const me = Sync.user && String(Sync.user.id) === String(u.id);
+  if (!confirm(me ? `「${u.name}」就是你当前登录用的账号，确定把这条名单记录删掉？`
+                  : `把「${u.name}」从管理员名单里移除？\n\n这只删名单记录。如果这个邮箱还能登录，请到 Supabase 控制台 Authentication → Users 里一并删除。`)) return;
+  DM.set('users', users.filter(x => x.id !== id));
+  writeLog('移除管理员', `${u.name} <${u.email || '无邮箱'}>`);
+  toast('已从名单移除'); renderPage(currentPageId);
 }
 
 function openUserModal(id) {
