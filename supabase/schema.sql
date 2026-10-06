@@ -42,14 +42,19 @@ create policy "jl_public_insert_lead" on public.jl_records
 --     ⚠️ 这里必须是白名单枚举，绝不能写成 using(true)。
 --     一旦放开整表读权限，任何人拿官网页面上的 publishable key 就能读走
 --     全部客户线索、客户资料、报价、订单、付款记录和管理员账号。
---     清单与 js/main.js 里的 PUBLIC_COLS 一一对应：前台多渲染一个版块，
+--     清单与 js/main.js 里的 PUBLIC_COLS + DOC_COLS 一一对应：前台多渲染一个版块，
 --     这里才多放一个集合，反过来砍掉前台版块时也要同步砍掉，别多给。
---     policies / settings_* 目前前台是写死的，没走数据库，所以不放进来。
+--     settings_* 只放首页真正读的那 5 个；其余 settings_*（通知模板、税率、
+--     报价单模板、价格簿 pricebook 等）前台不读或含内部经营数据，绝不放开。
 drop policy if exists "jl_public_read_content" on public.jl_records;
 create policy "jl_public_read_content" on public.jl_records
   for select to anon
   using (
-    collection in ('clients', 'products', 'testimonials', 'faqs')
+    collection in (
+      'clients', 'products', 'testimonials', 'faqs',
+      'settings_banner', 'settings_advantages', 'settings_stats',
+      'settings_about', 'settings_process'
+    )
   );
 -- 只读策略不写 with check，anon 依然改不了、删不掉任何一行
 -- 登录员工由 1.1 的 jl_staff_full_access 覆盖，不需要在这里重复授权

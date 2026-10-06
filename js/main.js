@@ -435,6 +435,8 @@
   // 多列一个集合 = 对全网访客多暴露一类数据，所以这里绝不写「读全部」。
   const PUBLIC_COLS = ['clients', 'products', 'testimonials', 'faqs'];
   const ROW_COLS = new Set(['clients', 'products', 'testimonials', 'faqs']);
+  // 首页文案类：整块存成一条文档，后台「内容管理」改了前台就跟着变
+  const DOC_COLS = ['settings_banner', 'settings_advantages', 'settings_stats', 'settings_about', 'settings_process'];
 
   // 后台每段文字目前只存英文 + 可选中文，马来文沿用英文（与页面原有写法一致）
   function i18nText(node, en, zh) {
@@ -584,13 +586,110 @@
     return true;
   }
 
+  // 只覆盖后台填了的语言：英文没填就整条不动，中文没填就保留 index.html 里原有的中文，
+  // 否则会出现「后台只改英文，中文页突然变英文」的倒退。
+  function swap(el, en, zh) {
+    if (!el) return false;
+    const e = String(en == null ? '' : en).trim();
+    const z = String(zh == null ? '' : zh).trim();
+    if (!e && !z) return false;
+    if (e) { el.setAttribute('data-en', e); el.setAttribute('data-bm', e); }
+    if (z) el.setAttribute('data-zh', z);
+    return true;
+  }
+
+  const zhAttr = els => Array.from(els).map(el => (el ? el.getAttribute('data-zh') || '' : ''));
+
+  function applyBanner(d) {
+    if (!d || typeof d !== 'object') return false;
+    const ctas = document.querySelectorAll('.hero-ctas a');
+    let hit = false;
+    hit = swap(document.querySelector('.hero-badge'), d.badge) || hit;
+    hit = swap(document.querySelector('.hero-title'), d.title) || hit;
+    hit = swap(document.querySelector('.hero-subtitle'), d.subtitle) || hit;
+    hit = swap(ctas[0], d.cta1) || hit;
+    hit = swap(ctas[1], d.cta2) || hit;
+    const bg = document.querySelector('.hero-bg');
+    const url = safeUrl(d.bg || d.bgUrl || '');
+    if (bg && url) bg.style.backgroundImage = `url("${url}")`;
+    return hit;
+  }
+
+  function applyAdvantages(list) {
+    const cards = document.querySelectorAll('.advantages-grid .advantage-card');
+    const rows = (Array.isArray(list) ? list : []).filter(a => a && (a.title || a.desc));
+    if (!cards.length || !rows.length) return false;
+    const zhH = zhAttr(Array.from(cards).map(c => c.querySelector('h3')));
+    const zhP = zhAttr(Array.from(cards).map(c => c.querySelector('p')));
+    let hit = false;
+    rows.slice(0, cards.length).forEach((a, i) => {
+      hit = swap(cards[i].querySelector('h3'), a.title, zhH[i]) || hit;
+      hit = swap(cards[i].querySelector('p'), a.desc, zhP[i]) || hit;
+    });
+    return hit;
+  }
+
+  function applyStats(list) {
+    const host = document.querySelector('.about-stats');
+    const rows = (Array.isArray(list) ? list : []).filter(s => s && (s.num || s.label));
+    if (!host || !rows.length) return false;
+    const zh = zhAttr(host.querySelectorAll('.about-stat-label'));
+    host.textContent = '';
+    rows.forEach((s, i) => {
+      const box = make('div', 'about-stat');
+      const num = make('span', 'about-stat-number', s.num);
+      const label = make('span', 'about-stat-label', s.label, zh[i]);
+      box.appendChild(num);
+      box.appendChild(label);
+      host.appendChild(box);
+    });
+    return true;
+  }
+
+  function applyAbout(d) {
+    if (!d || typeof d !== 'object') return false;
+    let hit = false;
+    const content = document.querySelector('.about-content');
+    const h2 = content && content.querySelector('h2.section-title');
+    const intro = h2 && h2.nextElementSibling;
+    if (intro && intro.tagName === 'P') hit = swap(intro, d.intro) || hit;
+    const certHost = document.querySelector('.about-certifications');
+    const certs = (Array.isArray(d.certs) ? d.certs : []).filter(Boolean);
+    if (certHost && certs.length) {
+      certHost.textContent = '';
+      certs.forEach(c => certHost.appendChild(make('div', 'cert-badge', c)));
+      hit = true;
+    }
+    hit = swap(document.querySelector('.about-factory span'), d.address) || hit;
+    return hit;
+  }
+
+  function applyProcess(steps) {
+    const host = document.querySelector('.process-steps');
+    const rows = (Array.isArray(steps) ? steps : []).filter(s => s && (s.title || s.desc));
+    if (!host || !rows.length) return false;
+    const cards = host.querySelectorAll('.process-step');
+    const zhH = zhAttr(Array.from(cards).map(c => c.querySelector('h3')));
+    const zhP = zhAttr(Array.from(cards).map(c => c.querySelector('p')));
+    host.textContent = '';
+    rows.forEach((s, i) => {
+      if (i) host.appendChild(make('div', 'process-connector'));
+      const card = make('div', 'process-step');
+      card.appendChild(make('div', 'step-number', String(i + 1).padStart(2, '0')));
+      card.appendChild(make('h3', null, s.title, zhH[i]));
+      card.appendChild(make('p', null, [s.desc, s.days].filter(Boolean).join(' '), zhP[i]));
+      host.appendChild(card);
+    });
+    return true;
+  }
+
   async function loadPublicContent() {
     if (!sb) return;
     let rows;
     try {
       const { data, error } = await sb.from('jl_records')
         .select('collection, payload')
-        .in('collection', PUBLIC_COLS);
+        .in('collection', PUBLIC_COLS.concat(DOC_COLS));
       if (error) return;
       rows = data || [];
     } catch (e) {
@@ -599,8 +698,10 @@
     if (!rows.length) return;
 
     const bag = {};
+    const docs = {};
     rows.forEach(r => {
       if (ROW_COLS.has(r.collection)) (bag[r.collection] = bag[r.collection] || []).push(r.payload);
+      else if (DOC_COLS.includes(r.collection) && !docs[r.collection]) docs[r.collection] = r.payload;
     });
 
     let changed = false;
@@ -608,7 +709,12 @@
       [renderClients, bag.clients],
       [renderProducts, bag.products],
       [renderTestimonials, bag.testimonials],
-      [renderFaqs, bag.faqs]
+      [renderFaqs, bag.faqs],
+      [applyBanner, docs.settings_banner],
+      [applyAdvantages, docs.settings_advantages],
+      [applyStats, docs.settings_stats],
+      [applyAbout, docs.settings_about],
+      [applyProcess, docs.settings_process]
     ];
     parts.forEach(([fn, data]) => {
       // 单个版块渲染失败不影响整页，保留写死内容
