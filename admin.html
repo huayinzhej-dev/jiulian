@@ -576,8 +576,8 @@ function seedData() {
 
   if (!DM.get('payments') || DM.get('payments').length === 0) {
     const payments = [
-      {id:'PAY-001',orderId:'OD-2026-001',orderNo:'OD-2026-001',customer:"L'Oréal Malaysia",type:'deposit',typeLabel:'定金 50%',amount:918.50,method:'银行转账',bankName:'Maybank',accountNo:'5123 4567 8901',accountName:'United YL Printers Sdn Bhd',date:'2026-10-04',receiptNo:'RCT-2026-001',status:'confirmed',note:'银行转账凭证已确认'},
-      {id:'PAY-002',orderId:'OD-2026-001',orderNo:'OD-2026-001',customer:"L'Oréal Malaysia",type:'final',typeLabel:'尾款 50%',amount:918.50,method:'银行转账',bankName:'Maybank',accountNo:'5123 4567 8901',accountName:'United YL Printers Sdn Bhd',date:'',receiptNo:'',status:'pending',note:'待生产完成后收取'}
+      {id:'PAY-001',orderId:'OD-2026-001',orderNo:'OD-2026-001',customer:"L'Oréal Malaysia",type:'deposit',typeLabel:'定金 50%',amount:918.50,method:'银行转账',bankName:'Maybank',accountNo:'5123 4567 8901',accountName:'JIU LIAN INDUSTRIAL SDN. BHD.',date:'2026-10-04',receiptNo:'RCT-2026-001',status:'confirmed',note:'银行转账凭证已确认'},
+      {id:'PAY-002',orderId:'OD-2026-001',orderNo:'OD-2026-001',customer:"L'Oréal Malaysia",type:'final',typeLabel:'尾款 50%',amount:918.50,method:'银行转账',bankName:'Maybank',accountNo:'5123 4567 8901',accountName:'JIU LIAN INDUSTRIAL SDN. BHD.',date:'',receiptNo:'',status:'pending',note:'待生产完成后收取'}
     ];
     seedOne('payments', payments);
   }
@@ -693,19 +693,22 @@ function seedData() {
     DM.set('proofs', [{id:'PF-001',orderId:'OD-2026-001',customer:"L'Oréal Malaysia",type:'数字打样 (颜色确认)',status:'pending_confirm',uploaded:'2026-10-04',fileUrl:''}]);
   }
   if (!DM.has('settings_site')) {
-    DM.set('settings_site', {enName:'United YL Printers Sdn Bhd',zhName:'玖联包装印刷',phone:'017-583 6916',email:'enquiry@uylprinter.com',address:'Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur',googleMaps:'',waze:'',facebook:'',instagram:'',linkedin:''});
+    DM.set('settings_site', {enName:'JIU LIAN INDUSTRIAL SDN. BHD.',zhName:'玖联包装印刷',phone:'016-724 1814',email:'marketing@jiulianpack.com.my',address:'Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur',googleMaps:'',waze:'',facebook:'',instagram:'',linkedin:''});
   }
   if (!DM.has('settings_seo')) {
     DM.set('settings_seo', {title:'Jiulian Packaging — Premium Printing & Packaging Solutions',description:'Jiulian Packaging is a leading printing and packaging manufacturer offering custom boxes, bags, and labels for global brands.',keywords:'packaging, printing, custom boxes, mailer box, food packaging, Malaysia',gaId:'',gscId:'',fbPixel:''});
   }
   if (!DM.has('settings_notifications')) {
-    DM.set('settings_notifications', {notifyEmail:'enquiry@uylprinter.com',leadTemplate:'新询盘通知：\n客户：{{客户名}}\n公司：{{公司}}\n盒型：{{盒型}}\n数量：{{数量}}\n\n请及时跟进。',quoteTemplate:'尊敬的 {{客户名}}，\n\n感谢您的询价。附件是报价单 {{报价号}}，有效期 {{有效期}}。\n\n如有任何疑问请随时联系我们。'});
+    DM.set('settings_notifications', {notifyEmail:'marketing@jiulianpack.com.my',leadTemplate:'新询盘通知：\n客户：{{客户名}}\n公司：{{公司}}\n盒型：{{盒型}}\n数量：{{数量}}\n\n请及时跟进。',quoteTemplate:'尊敬的 {{客户名}}，\n\n感谢您的询价。附件是报价单 {{报价号}}，有效期 {{有效期}}。\n\n如有任何疑问请随时联系我们。'});
   }
   if (!DM.has('settings_finance')) {
     DM.set('settings_finance', {sstRate:10,currency:'MYR (RM)',validDays:14,depositPercent:50});
   }
+  if (!DM.has('settings_quote_template')) {
+    DM.set('settings_quote_template', {header:'JIU LIAN INDUSTRIAL SDN. BHD.',terms:'50% 定金，50% 发货前付清。银行转账/TT。',delivery:'确认打样后 10-14 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
+  }
   if (!DM.has('settings_about')) {
-    DM.set('settings_about', {intro:'Jiulian Packaging (United YL Printers Sdn Bhd) has been a trusted packaging partner since 2008. With over 30 years of combined experience, we serve 500+ clients across 50+ countries.',address:'Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur',certs:['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ']});
+    DM.set('settings_about', {intro:'Jiulian Packaging (JIU LIAN INDUSTRIAL SDN. BHD.) has been a trusted packaging partner since 2008. With over 30 years of combined experience, we serve 500+ clients across 50+ countries.',address:'Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur',certs:['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ']});
   }
   if (!DM.has('settings_process')) {
     DM.set('settings_process', [{title:'Enquire & Quote',desc:'Submit your requirements via our 60-second quote form',days:'1-2 days'},{title:'Artwork & Die-Line',desc:'Upload your artwork or use our 40+ ready moulds',days:'2-3 days'},{title:'Proof & Mock-Up',desc:'Digital proof for color + blank mock-up for structure',days:'3-5 days'},{title:'Production',desc:'Mass production with strict QC at every stage',days:'10-14 days'},{title:'Free Delivery',desc:'Free delivery within KL & Selangor',days:'1-3 days'}]);
@@ -754,9 +757,9 @@ function renderSidebar() {
   nav.innerHTML = MENU.map(group => `
     <div class="nav-group">
       <div class="nav-item nav-parent" data-group="${group.id}" onclick="toggleGroup('${group.id}')">
-        <span class="icon">${group.icon}</span>
-        <span>${group.label}</span>
-        ${group.badge ? `<span class="badge">${group.badge}</span>` : ''}
+        <span class="icon">${esc(group.icon)}</span>
+        <span>${esc(group.label)}</span>
+        ${group.badge ? `<span class="badge">${esc(group.badge)}</span>` : ''}
         <span class="arrow">▶</span>
       </div>
       <div class="nav-children" id="children-${group.id}">
@@ -788,7 +791,7 @@ function navigateTo(pageId, groupLabel, pageLabel) {
   currentPageId = pageId;
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
   document.querySelector(`[data-page="${pageId}"]`)?.classList.add('active');
-  document.getElementById('breadcrumb').innerHTML = `${groupLabel} / <span>${pageLabel}</span>`;
+  document.getElementById('breadcrumb').innerHTML = `${groupLabel} / <span>${esc(pageLabel)}</span>`;
   renderPage(pageId);
 }
 
@@ -849,7 +852,7 @@ function renderPage(id) {
 }
 
 function renderPlaceholder(c, id) {
-  c.innerHTML = `<div class="page-header"><h1 class="page-title">${id}</h1></div><div class="empty"><div class="icon">🚧</div><p>此模块正在建设中</p></div>`;
+  c.innerHTML = `<div class="page-header"><h1 class="page-title">${esc(id)}</h1></div><div class="empty"><div class="icon">🚧</div><p>此模块正在建设中</p></div>`;
 }
 
 // ========== DASHBOARD ==========
@@ -862,15 +865,15 @@ function renderDashboard(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">数据看板</h1><p class="page-desc">核心业务指标概览</p></div></div>
     <div class="stats-row">
-      <div class="stat-card"><div class="icon-box icon-blue">📥</div><div class="label">今日新询盘</div><div class="value">${newLeads}</div><div class="change up">需及时跟进</div></div>
-      <div class="stat-card"><div class="icon-box icon-yellow">💰</div><div class="label">待报价数</div><div class="value">${pendingQuotes}</div><div class="change">待处理</div></div>
-      <div class="stat-card"><div class="icon-box icon-green">📦</div><div class="label">本周订单</div><div class="value">${orders.length}</div><div class="change up">↑ 12% 较上周</div></div>
+      <div class="stat-card"><div class="icon-box icon-blue">📥</div><div class="label">今日新询盘</div><div class="value">${esc(newLeads)}</div><div class="change up">需及时跟进</div></div>
+      <div class="stat-card"><div class="icon-box icon-yellow">💰</div><div class="label">待报价数</div><div class="value">${esc(pendingQuotes)}</div><div class="change">待处理</div></div>
+      <div class="stat-card"><div class="icon-box icon-green">📦</div><div class="label">本周订单</div><div class="value">${esc(orders.length)}</div><div class="change up">↑ 12% 较上周</div></div>
       <div class="stat-card"><div class="icon-box icon-purple">💵</div><div class="label">本月销售额</div><div class="value">RM ${orders.reduce((s,o)=>s+o.amount,0).toLocaleString()}</div><div class="change up">↑ 8.5%</div></div>
-      <div class="stat-card"><div class="icon-box icon-red">✅</div><div class="label">本月成单</div><div class="value">${orders.length}</div><div class="change">目标: 20</div></div>
+      <div class="stat-card"><div class="icon-box icon-red">✅</div><div class="label">本月成单</div><div class="value">${esc(orders.length)}</div><div class="change">目标: 20</div></div>
     </div>
     <div class="card"><div class="card-header"><span class="card-title">最近 10 条新线索</span></div>
       <div class="table-wrap"><table><thead><tr><th>编号</th><th>客户</th><th>公司</th><th>盒型</th><th>数量</th><th>状态</th><th>时间</th></tr></thead>
-      <tbody>${leads.slice(0,10).map(l=>`<tr><td class="td-id">${l.id}</td><td class="td-name">${l.name}</td><td>${l.company}</td><td>${l.boxType}</td><td>${l.quantity}</td><td>${statusBadge(l.status)}</td><td>${l.created}</td></tr>`).join('')}</tbody>
+      <tbody>${leads.slice(0,10).map(l=>`<tr><td class="td-id">${esc(l.id)}</td><td class="td-name">${esc(l.name)}</td><td>${esc(l.company)}</td><td>${esc(l.boxType)}</td><td>${esc(l.quantity)}</td><td>${statusBadge(l.status)}</td><td>${esc(l.created)}</td></tr>`).join('')}</tbody>
       </table></div>
     </div>`;
 }
@@ -896,7 +899,7 @@ function renderDashboardTrend(c) {
       </div></div>
       <div class="card"><div class="card-header"><span class="card-title">产品类别 TOP 5</span></div><div class="card-body">
         <div style="display:flex;flex-direction:column;gap:10px">
-          ${[['飞机盒',85],['食品盒',62],['手提盒',48],['精装盒',35],['纸袋',28]].map(([n,v])=>`<div class="flex items-center justify-between"><span style="width:60px">${n}</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:${v}%;height:100%;background:var(--green);border-radius:4px"></div></div><span class="font-bold">${v}</span></div>`).join('')}
+          ${[['飞机盒',85],['食品盒',62],['手提盒',48],['精装盒',35],['纸袋',28]].map(([n,v])=>`<div class="flex items-center justify-between"><span style="width:60px">${esc(n)}</span><div style="flex:1;margin:0 12px;height:8px;background:var(--gray-200);border-radius:4px"><div style="width:${v}%;height:100%;background:var(--green);border-radius:4px"></div></div><span class="font-bold">${esc(v)}</span></div>`).join('')}
         </div>
       </div></div>
     </div>`;
@@ -908,7 +911,7 @@ function renderDashboardTodo(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">待办事项</h1><p class="page-desc">需要及时处理的事项</p></div></div>
     <div class="card mb-20"><div class="card-header"><span class="card-title" style="color:var(--red)">⚠️ 超过 24h 未回复的询盘</span></div>
-      <div class="card-body">${overdue.length ? overdue.map(l=>`<div class="flex items-center justify-between" style="padding:10px 0;border-bottom:1px solid var(--gray-100)"><div><span class="td-id">${l.id}</span> <span class="td-name">${l.name}</span> - ${l.company}</div><span class="badge badge-red">紧急</span></div>`).join('') : '<div class="empty"><p>暂无逾期询盘 ✅</p></div>'}</div>
+      <div class="card-body">${overdue.length ? overdue.map(l=>`<div class="flex items-center justify-between" style="padding:10px 0;border-bottom:1px solid var(--gray-100)"><div><span class="td-id">${esc(l.id)}</span> <span class="td-name">${esc(l.name)}</span> - ${l.company}</div><span class="badge badge-red">紧急</span></div>`).join('') : '<div class="empty"><p>暂无逾期询盘 ✅</p></div>'}</div>
     </div>
     <div class="card mb-20"><div class="card-header"><span class="card-title">📋 待客户确认打样</span></div><div class="card-body"><div class="empty"><p>暂无待确认打样</p></div></div></div>
     <div class="card mb-20"><div class="card-header"><span class="card-title">💰 待收尾款</span></div><div class="card-body"><div class="empty"><p>暂无待收尾款订单</p></div></div></div>
@@ -962,32 +965,32 @@ function applyLeadFilter() {
 function gotoLeadPage(n) { leadPage = n; applyLeadFilter(); }
 
 function leadRow(l) {
-  return `<tr><td class="td-id">${l.id}</td><td><span class="badge badge-gray">${l.source}</span></td><td class="td-name">${l.name}</td><td>${l.company}</td><td>${l.phone}</td><td>${l.boxType}</td><td>${l.quantity}</td><td>${statusBadge(l.status)}</td><td>${l.assignee}</td><td>${l.created}</td><td><button class="btn btn-sm btn-secondary" onclick="viewLead('${l.id}')">查看</button> <button class="btn btn-sm btn-danger" onclick="deleteLead('${l.id}')">删除</button></td></tr>`;
+  return `<tr><td class="td-id">${esc(l.id)}</td><td><span class="badge badge-gray">${esc(l.source)}</span></td><td class="td-name">${esc(l.name)}</td><td>${esc(l.company)}</td><td>${esc(l.phone)}</td><td>${esc(l.boxType)}</td><td>${esc(l.quantity)}</td><td>${statusBadge(l.status)}</td><td>${esc(l.assignee)}</td><td>${esc(l.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="viewLead('${l.id}')">查看</button> <button class="btn btn-sm btn-danger" onclick="deleteLead('${l.id}')">删除</button></td></tr>`;
 }
 
 function statusBadge(s) {
   const m = {new:'badge-blue',quoted:'badge-yellow',negotiating:'badge-purple',sample:'badge-yellow',won:'badge-green',lost:'badge-red',draft:'badge-gray',sent:'badge-blue',accepted:'badge-green',rejected:'badge-red',expired:'badge-gray'};
   const labels = {new:'新线索',quoted:'已报价',negotiating:'洽谈中',sample:'打样中',won:'已成交',lost:'已流失',draft:'草稿',sent:'已发出',accepted:'已接受',rejected:'已拒绝',expired:'已过期'};
-  return `<span class="badge ${m[s]||'badge-gray'}">${labels[s]||s}</span>`;
+  return `<span class="badge ${m[s]||'badge-gray'}">${esc(labels[s]||s)}</span>`;
 }
 
 function openLeadModal(lead) {
   const isEdit = !!lead;
   showModal(isEdit ? '编辑线索' : '新建线索', `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${lead?.name||''}"></div>
-      <div class="form-group"><label class="form-label">公司</label><input class="form-input" id="f_company" value="${lead?.company||''}"></div>
-      <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="f_phone" value="${lead?.phone||''}"></div>
-      <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="f_email" value="${lead?.email||''}"></div>
+      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${esc(lead?.name||'')}"></div>
+      <div class="form-group"><label class="form-label">公司</label><input class="form-input" id="f_company" value="${esc(lead?.company||'')}"></div>
+      <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="f_phone" value="${esc(lead?.phone||'')}"></div>
+      <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="f_email" value="${esc(lead?.email||'')}"></div>
       <div class="form-group"><label class="form-label">来源</label><select class="form-select" id="f_source"><option>表单</option><option>电话</option><option>邮件</option><option>Google</option></select></div>
       <div class="form-group"><label class="form-label">负责人</label><select class="form-select" id="f_assignee"><option>销售A</option><option>销售B</option></select></div>
-      <div class="form-group"><label class="form-label">盒型</label><select class="form-select" id="f_boxType">${DM.get('categories').map(c=>`<option>${c.name}</option>`).join('')}</select></div>
-      <div class="form-group"><label class="form-label">尺寸 (cm)</label><input class="form-input" id="f_size" placeholder="长×宽×高" value="${lead?.size||''}"></div>
-      <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" id="f_quantity" value="${lead?.quantity||''}"></div>
+      <div class="form-group"><label class="form-label">盒型</label><select class="form-select" id="f_boxType">${DM.get('categories').map(c=>`<option>${esc(c.name)}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">尺寸 (cm)</label><input class="form-input" id="f_size" placeholder="长×宽×高" value="${esc(lead?.size||'')}"></div>
+      <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" id="f_quantity" value="${esc(lead?.quantity||'')}"></div>
       <div class="form-group"><label class="form-label">印刷方式</label><select class="form-select" id="f_printing"><option>1C0C</option><option>1C1C</option><option>4C0C</option><option>4C1C</option><option>4C4C</option></select></div>
       <div class="form-group"><label class="form-label">表面处理</label><select class="form-select" id="f_finishing"><option>无覆膜</option><option>哑光覆膜</option><option>光面覆膜</option><option>Soft Touch</option><option>Spot UV</option><option>Emboss</option><option>Hot-stamp Foil</option></select></div>
       <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_status"><option value="new">新线索</option><option value="quoted">已报价</option><option value="negotiating">洽谈中</option><option value="sample">打样中</option><option value="won">已成交</option><option value="lost">已流失</option></select></div>
-      <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="f_notes">${lead?.notes||''}</textarea></div>
+      <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="f_notes">${esc(lead?.notes||'')}</textarea></div>
     </div>
   `, () => {
     const leads = DM.get('leads');
@@ -1011,14 +1014,14 @@ function viewLead(id) {
   if (!l) return;
   showModal('线索详情 - ' + id, `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
-      <div><strong>姓名:</strong> ${l.name}</div><div><strong>公司:</strong> ${l.company}</div>
-      <div><strong>电话:</strong> ${l.phone}</div><div><strong>邮箱:</strong> ${l.email}</div>
-      <div><strong>盒型:</strong> ${l.boxType}</div><div><strong>尺寸:</strong> ${l.size}</div>
-      <div><strong>数量:</strong> ${l.quantity}</div><div><strong>印刷:</strong> ${l.printing}</div>
-      <div><strong>表面处理:</strong> ${l.finishing}</div><div><strong>状态:</strong> ${statusBadge(l.status)}</div>
-      <div><strong>来源:</strong> ${l.source}</div><div><strong>负责人:</strong> ${l.assignee}</div>
-      <div style="grid-column:1/-1"><strong>备注:</strong> ${l.notes||'无'}</div>
-      <div style="grid-column:1/-1"><strong>跟进记录:</strong> ${l.followUps?.length ? l.followUps.map(f=>`<div style="padding:6px 0;border-bottom:1px solid var(--gray-100)">${f.time} - ${f.method} - ${f.content}</div>`).join('') : '暂无跟进记录'}</div>
+      <div><strong>姓名:</strong> ${esc(l.name)}</div><div><strong>公司:</strong> ${esc(l.company)}</div>
+      <div><strong>电话:</strong> ${esc(l.phone)}</div><div><strong>邮箱:</strong> ${esc(l.email)}</div>
+      <div><strong>盒型:</strong> ${esc(l.boxType)}</div><div><strong>尺寸:</strong> ${esc(l.size)}</div>
+      <div><strong>数量:</strong> ${esc(l.quantity)}</div><div><strong>印刷:</strong> ${esc(l.printing)}</div>
+      <div><strong>表面处理:</strong> ${esc(l.finishing)}</div><div><strong>状态:</strong> ${statusBadge(l.status)}</div>
+      <div><strong>来源:</strong> ${esc(l.source)}</div><div><strong>负责人:</strong> ${esc(l.assignee)}</div>
+      <div style="grid-column:1/-1"><strong>备注:</strong> ${esc(l.notes||'无')}</div>
+      <div style="grid-column:1/-1"><strong>跟进记录:</strong> ${l.followUps?.length ? l.followUps.map(f=>`<div style="padding:6px 0;border-bottom:1px solid var(--gray-100)">${esc(f.time)} - ${f.method} - ${f.content}</div>`).join('') : '暂无跟进记录'}</div>
     </div>
   `, null, [
     {label:'转报价',cls:'btn-primary',fn:()=>{convertLeadToQuote(l);closeModal();}},
@@ -1026,15 +1029,24 @@ function viewLead(id) {
   ]);
 }
 
+let quotePrefillLead = null;
+
 function convertLeadToQuote(l) {
+  const unitPrice = lookupTierPrice(l.boxType, l.quantity);
+  if (!(unitPrice > 0)) {
+    quotePrefillLead = l.id;
+    toast('价格簿里没有「' + (l.boxType || '该盒型') + '」' + (l.quantity || '') + 'pcs 这一档，请到新建报价里手填单价');
+    navigateTo('quotes-new','报价管理','新建报价');
+    return;
+  }
+  const t = quoteTotals(l.quantity, unitPrice);
   const quotes = DM.get('quotes');
-  const unitPrice = 1.5;
-  const subtotal = +(unitPrice * l.quantity).toFixed(2);
-  const sst = +(subtotal * 0.1).toFixed(2);
-  const q = {id:DM.genId('QT'), leadId:l.id, customer:l.company||l.name, product:l.boxType, size:l.size,
-             quantity:l.quantity, unitPrice, subtotal, sst, total:+(subtotal+sst).toFixed(2),
-             status:'draft', validUntil:new Date(Date.now()+14*864e5).toISOString().slice(0,10),
-             creator:'管理员', created:DM.now()};
+  const q = {id:DM.genId('QT'), leadId:l.id, customer:l.company||l.name, contact:[l.name,l.email||l.phone].filter(Boolean).join(' / '),
+             product:l.boxType, size:l.size, printing:l.printing, finish:l.finishing,
+             note:l.notes||'', quantity:l.quantity, unitPrice, subtotal:t.subtotal, sst:t.sst, total:t.total,
+             status:'draft', date:new Date().toISOString().slice(0,10),
+             validUntil:new Date(Date.now()+quoteFinance().validDays*864e5).toISOString().slice(0,10),
+             creator:whoami(), created:DM.now()};
   quotes.push(q);
   DM.set('quotes', quotes);
   const leads = DM.get('leads');
@@ -1058,7 +1070,7 @@ function renderCustomers(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">客户库</h1><p class="page-desc">按公司聚合的客户列表</p></div><button class="btn btn-primary" onclick="openCustomerModal()">+ 新建客户</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>公司</th><th>联系人</th><th>电话</th><th>邮箱</th><th>累计订单</th><th>累计金额</th><th>等级</th><th>操作</th></tr></thead>
-    <tbody>${customers.map(c=>`<tr><td class="td-name">${c.company}</td><td>${c.contact}</td><td>${c.phone}</td><td>${c.email}</td><td>${c.orders}</td><td>RM ${c.totalAmount.toLocaleString()}</td><td><span class="badge ${c.level==='VIP'?'badge-purple':'badge-gray'}">${c.level}</span></td><td><button class="btn btn-sm btn-secondary" onclick="viewCustomer('${c.id}')">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${customers.map(c=>`<tr><td class="td-name">${esc(c.company)}</td><td>${esc(c.contact)}</td><td>${esc(c.phone)}</td><td>${esc(c.email)}</td><td>${esc(c.orders)}</td><td>RM ${c.totalAmount.toLocaleString()}</td><td><span class="badge ${c.level==='VIP'?'badge-purple':'badge-gray'}">${esc(c.level)}</span></td><td><button class="btn btn-sm btn-secondary" onclick="viewCustomer('${c.id}')">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function viewCustomer(id) {
@@ -1066,13 +1078,13 @@ function viewCustomer(id) {
   if (!c) return;
   showModal('客户详情', `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">公司</label><div style="padding:8px 0;font-weight:600">${c.company}</div></div>
-      <div class="form-group"><label class="form-label">联系人</label><div style="padding:8px 0">${c.contact}</div></div>
-      <div class="form-group"><label class="form-label">电话</label><div style="padding:8px 0">${c.phone}</div></div>
-      <div class="form-group"><label class="form-label">邮箱</label><div style="padding:8px 0">${c.email}</div></div>
-      <div class="form-group"><label class="form-label">累计订单</label><div style="padding:8px 0">${c.orders}</div></div>
+      <div class="form-group"><label class="form-label">公司</label><div style="padding:8px 0;font-weight:600">${esc(c.company)}</div></div>
+      <div class="form-group"><label class="form-label">联系人</label><div style="padding:8px 0">${esc(c.contact)}</div></div>
+      <div class="form-group"><label class="form-label">电话</label><div style="padding:8px 0">${esc(c.phone)}</div></div>
+      <div class="form-group"><label class="form-label">邮箱</label><div style="padding:8px 0">${esc(c.email)}</div></div>
+      <div class="form-group"><label class="form-label">累计订单</label><div style="padding:8px 0">${esc(c.orders)}</div></div>
       <div class="form-group"><label class="form-label">累计金额</label><div style="padding:8px 0">RM ${c.totalAmount.toLocaleString()}</div></div>
-      <div class="form-group"><label class="form-label">等级</label><div style="padding:8px 0"><span class="badge ${c.level==='VIP'?'badge-purple':'badge-gray'}">${c.level}</span></div></div>
+      <div class="form-group"><label class="form-label">等级</label><div style="padding:8px 0"><span class="badge ${c.level==='VIP'?'badge-purple':'badge-gray'}">${esc(c.level)}</span></div></div>
     </div>
   `, null, [{label:'关闭',cls:'btn-secondary'}]);
   document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
@@ -1102,7 +1114,7 @@ function renderFollowUp(c) {
   const leads = DM.get('leads').filter(l => l.followUps?.length > 0);
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">跟进记录</h1><p class="page-desc">销售跟进时间线</p></div></div>
-    <div class="card"><div class="card-body">${leads.length ? leads.map(l=>`<div style="padding:12px 0;border-bottom:1px solid var(--gray-100)"><div class="flex justify-between items-center mb-8"><span class="td-id">${l.id}</span><span class="td-name">${l.name} - ${l.company}</span></div>${l.followUps.map(f=>`<div style="padding:6px 0 6px 16px;border-left:2px solid var(--gray-200);margin-left:8px;font-size:13px"><span class="text-gray">${f.time}</span> · <span class="badge badge-blue">${f.method}</span> ${f.content}</div>`).join('')}</div>`).join('') : '<div class="empty"><div class="icon">📋</div><p>暂无跟进记录</p></div>'}</div></div>`;
+    <div class="card"><div class="card-body">${leads.length ? leads.map(l=>`<div style="padding:12px 0;border-bottom:1px solid var(--gray-100)"><div class="flex justify-between items-center mb-8"><span class="td-id">${esc(l.id)}</span><span class="td-name">${esc(l.name)} - ${l.company}</span></div>${l.followUps.map(f=>`<div style="padding:6px 0 6px 16px;border-left:2px solid var(--gray-200);margin-left:8px;font-size:13px"><span class="text-gray">${esc(f.time)}</span> · <span class="badge badge-blue">${esc(f.method)}</span> ${esc(f.content)}</div>`).join('')}</div>`).join('') : '<div class="empty"><div class="icon">📋</div><p>暂无跟进记录</p></div>'}</div></div>`;
 }
 
 // ========== QUOTES ==========
@@ -1110,8 +1122,8 @@ function renderQuotesList(c) {
   const quotes = DM.get('quotes');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">报价单</h1><p class="page-desc">管理所有报价</p></div><button class="btn btn-primary" onclick="navigateTo('quotes-new','报价管理','新建报价')">+ 新建报价</button></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>报价单号</th><th>客户</th><th>产品</th><th>数量</th><th>总额(RM)</th><th>SST 10%</th><th>状态</th><th>有效期</th><th>操作</th></tr></thead>
-    <tbody>${quotes.map(q=>`<tr><td class="td-id">${q.id}</td><td class="td-name">${q.customer}</td><td>${q.product}</td><td>${q.quantity}</td><td>${q.subtotal.toFixed(2)}</td><td>${q.sst.toFixed(2)}</td><td>${statusBadge(q.status)}</td><td>${q.validUntil}</td><td><button class="btn btn-sm btn-secondary" onclick="viewQuote('${q.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="editQuote('${q.id}')">编辑</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>报价单号</th><th>客户</th><th>产品</th><th>数量</th><th>合计(RM)</th><th>SST ${quoteFinance().sstRate}%</th><th>状态</th><th>有效期</th><th>操作</th></tr></thead>
+    <tbody>${quotes.map(q=>`<tr><td class="td-id">${esc(q.id)}</td><td class="td-name">${esc(q.customer)}</td><td>${esc(q.product)}</td><td>${esc(q.quantity)}</td><td>${money2(q.total)}</td><td>${money2(q.sst)}</td><td>${statusBadge(q.status)}</td><td>${esc(q.validUntil)}</td><td><button class="btn btn-sm btn-secondary" onclick="viewQuote('${q.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="editQuote('${q.id}')">编辑</button> <button class="btn btn-sm btn-secondary" onclick="printQuote('${q.id}')">打印</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function viewQuote(id) {
@@ -1119,17 +1131,17 @@ function viewQuote(id) {
   if (!q) return;
   showModal('报价单详情 ' + q.id, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${q.customer}</div></div>
-      <div class="form-group"><label class="form-label">产品</label><div style="padding:8px 0">${q.product}</div></div>
-      <div class="form-group"><label class="form-label">数量</label><div style="padding:8px 0">${q.quantity}</div></div>
-      <div class="form-group"><label class="form-label">总额</label><div style="padding:8px 0">RM ${q.subtotal.toFixed(2)}</div></div>
-      <div class="form-group"><label class="form-label">SST (10%)</label><div style="padding:8px 0">RM ${q.sst.toFixed(2)}</div></div>
-      <div class="form-group"><label class="form-label">合计</label><div style="padding:8px 0;font-weight:700;font-size:16px;color:var(--primary)">RM ${(q.subtotal + q.sst).toFixed(2)}</div></div>
+      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${esc(q.customer)}</div></div>
+      <div class="form-group"><label class="form-label">产品</label><div style="padding:8px 0">${esc(q.product)}</div></div>
+      <div class="form-group"><label class="form-label">数量</label><div style="padding:8px 0">${esc(q.quantity)}</div></div>
+      <div class="form-group"><label class="form-label">单价</label><div style="padding:8px 0">RM ${money2(q.unitPrice)}</div></div>
+      <div class="form-group"><label class="form-label">小计</label><div style="padding:8px 0">RM ${money2(q.subtotal)}</div></div>
+      <div class="form-group"><label class="form-label">SST (${quoteFinance().sstRate}%)</label><div style="padding:8px 0">RM ${money2(q.sst)}</div></div>
+      <div class="form-group"><label class="form-label">合计</label><div style="padding:8px 0;font-weight:700;font-size:16px;color:var(--primary)">RM ${money2(q.total)}</div></div>
       <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0">${statusBadge(q.status)}</div></div>
-      <div class="form-group"><label class="form-label">有效期至</label><div style="padding:8px 0">${q.validUntil}</div></div>
+      <div class="form-group"><label class="form-label">有效期至</label><div style="padding:8px 0">${esc(q.validUntil)}</div></div>
     </div>
-  `, null, [{label:'关闭',cls:'btn-secondary'}]);
-  document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
+  `, null, [{label:'打印 / 存为 PDF',cls:'btn-primary',fn:()=>printQuote(q.id)},{label:'关闭',cls:'btn-secondary',fn:closeModal}]);
   document.getElementById('modalSaveBtn')?.remove();
 }
 
@@ -1138,16 +1150,23 @@ function editQuote(id) {
   if (!q) return;
   showModal('编辑报价 ' + q.id, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">客户</label><input class="form-input" id="fq_customer" value="${q.customer}"></div>
-      <div class="form-group"><label class="form-label">产品</label><input class="form-input" id="fq_product" value="${q.product}"></div>
-      <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" id="fq_quantity" value="${q.quantity}"></div>
+      <div class="form-group"><label class="form-label">客户</label><input class="form-input" id="fq_customer" value="${esc(q.customer)}"></div>
+      <div class="form-group"><label class="form-label">产品</label><input class="form-input" id="fq_product" value="${esc(q.product)}"></div>
+      <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" id="fq_quantity" value="${esc(q.quantity)}"></div>
+      <div class="form-group"><label class="form-label">单价 (RM)</label><input class="form-input" type="number" min="0" step="0.01" id="fq_unitPrice" value="${esc(q.unitPrice)}"></div>
       <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="fq_status"><option ${q.status==='draft'?'selected':''}>draft</option><option ${q.status==='sent'?'selected':''}>sent</option><option ${q.status==='approved'?'selected':''}>approved</option><option ${q.status==='rejected'?'selected':''}>rejected</option></select></div>
-      <div class="form-group"><label class="form-label">有效期至</label><input class="form-input" type="date" id="fq_validUntil" value="${q.validUntil}"></div>
+      <div class="form-group"><label class="form-label">有效期至</label><input class="form-input" type="date" id="fq_validUntil" value="${esc(q.validUntil)}"></div>
     </div>
   `, () => {
     q.customer = val('fq_customer');
     q.product = val('fq_product');
     q.quantity = parseInt(val('fq_quantity')) || q.quantity;
+    const up = parseFloat(val('fq_unitPrice'));
+    if (up > 0) {
+      q.unitPrice = up;
+      const t = quoteTotals(q.quantity, up);
+      q.subtotal = t.subtotal; q.sst = t.sst; q.total = t.total;
+    }
     q.status = val('fq_status');
     q.validUntil = val('fq_validUntil');
     DM.set('quotes', DM.get('quotes'));
@@ -1155,44 +1174,263 @@ function editQuote(id) {
   });
 }
 
+function lookupTierPrice(boxType, qty) {
+  const rows = DM.get('pricebook')[boxType] || [];
+  const n = parseInt(qty) || 0;
+  let best = -1, bestTier = -1;
+  rows.forEach(r => {
+    (r.p || []).forEach((price, ti) => {
+      const tier = parseInt(PB_TIERS[ti]) || 0;
+      if (price > 0 && tier <= n && tier > bestTier) { bestTier = tier; best = ti; }
+    });
+  });
+  if (best < 0) return 0;
+  const row = rows.find(r => r.p && r.p[best] > 0);
+  return row ? Number(row.p[best]) : 0;
+}
+
+function quoteFinance() {
+  const f = DM.get('settings_finance', {});
+  return { sstRate: Number(f.sstRate) > 0 ? Number(f.sstRate) : 10, validDays: parseInt(f.validDays) > 0 ? parseInt(f.validDays) : 14 };
+}
+
+function quoteTotals(quantity, unitPrice) {
+  const { sstRate } = quoteFinance();
+  const subtotal = +(quantity * unitPrice).toFixed(2);
+  const sst = +(subtotal * sstRate / 100).toFixed(2);
+  return { subtotal, sst, total: +(subtotal + sst).toFixed(2), sstRate };
+}
+
 function renderQuoteNew(c) {
   const cats = DM.get('categories');
+  const leads = DM.get('leads');
+  const mats = DM.get('materials');
+  const printing = DM.get('printingOptions');
+  const finish = DM.get('finishingOptions');
+  const { validDays, sstRate } = quoteFinance();
+  const today = new Date().toISOString().slice(0, 10);
+  const defValid = new Date(Date.now() + validDays * 864e5).toISOString().slice(0, 10);
+  const opts = (arr, ph) => `<option value="">-- ${ph} --</option>` + arr.map(x => `<option value="${esc(x.name !== undefined ? x.name : x)}">${esc(x.name !== undefined ? x.name : x)}</option>`).join('');
+
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">新建报价</h1><p class="page-desc">基于线索创建报价单</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">新建报价</h1><p class="page-desc">可直接手填，或选择线索自动带入</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">选择线索</label><select class="form-select"><option value="">-- 选择线索 --</option>${DM.get('leads').map(l=>`<option value="${l.id}">${l.id} - ${l.name} (${l.company})</option>`).join('')}</select></div>
-        <div class="form-group"><label class="form-label">客户公司</label><input class="form-input" placeholder="自动填入"></div>
-        <div class="form-group"><label class="form-label">盒型</label><select class="form-select">${cats.map(c=>`<option>${c.name}</option>`).join('')}</select></div>
-        <div class="form-group"><label class="form-label">尺寸 (cm)</label><input class="form-input" placeholder="长×宽×高"></div>
-        <div class="form-group"><label class="form-label">材质</label><select class="form-select"><option>白卡纸 300g</option><option>白卡纸 350g</option><option>牛卡 E楞</option><option>瓦楞 B楞</option><option>食品级纸</option></select></div>
-        <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" placeholder="pcs"></div>
-        <div class="form-group"><label class="form-label">印刷色数</label><select class="form-select"><option>4C+0C</option><option>4C+1C</option><option>4C+4C</option><option>1C+0C</option><option>1C+1C</option><option>0C (无印刷)</option></select></div>
-        <div class="form-group"><label class="form-label">表面处理</label><select class="form-select"><option>哑光覆膜</option><option>光面覆膜</option><option>Soft Touch</option><option>无覆膜</option><option>Spot UV</option><option>Emboss</option><option>Hot-stamp Foil</option></select></div>
-        <div class="form-group"><label class="form-label">预估单价 (RM)</label><input class="form-input" type="number" step="0.01"></div>
-        <div class="form-group"><label class="form-label">有效期</label><input class="form-input" type="date" value="2026-10-19"></div>
+        <div class="form-group full"><label class="form-label">从线索带入</label><select class="form-select" id="q_lead" onchange="fillQuoteFromLead()">${opts(leads.map(l => ({ name: l.id + ' - ' + (l.name || '') + (l.company ? ' (' + l.company + ')' : '') })), '不选，手填')}</select></div>
+        <div class="form-group"><label class="form-label">客户公司 *</label><input class="form-input" id="q_customer" placeholder="e.g. XYZ Trading Sdn Bhd"></div>
+        <div class="form-group"><label class="form-label">联系人 / 邮箱</label><input class="form-input" id="q_contact" placeholder="选填"></div>
+        <div class="form-group"><label class="form-label">盒型 *</label><select class="form-select" id="q_boxType" onchange="autoQuotePrice()">${opts(cats, '选择盒型')}</select></div>
+        <div class="form-group"><label class="form-label">尺寸 (cm)</label><input class="form-input" id="q_size" placeholder="长×宽×高"></div>
+        <div class="form-group"><label class="form-label">材质</label><select class="form-select" id="q_material">${opts(mats, '选择材质')}</select></div>
+        <div class="form-group"><label class="form-label">数量 (pcs) *</label><input class="form-input" type="number" id="q_quantity" min="1" step="1" placeholder="3000" oninput="autoQuotePrice(); recalcQuote()"></div>
+        <div class="form-group"><label class="form-label">印刷色数</label><select class="form-select" id="q_printing">${opts(printing, '选择印刷')}</select></div>
+        <div class="form-group"><label class="form-label">表面处理</label><select class="form-select" id="q_finish">${opts(finish, '选择工艺')}</select></div>
+        <div class="form-group"><label class="form-label">单价 (RM) *</label><input class="form-input" type="number" id="q_unitPrice" min="0" step="0.01" placeholder="0.00" oninput="this.dataset.fromPb=''; recalcQuote()"></div>
+        <div class="form-group"><label class="form-label">报价日期</label><input class="form-input" type="date" id="q_date" value="${today}"></div>
+        <div class="form-group"><label class="form-label">有效期至</label><input class="form-input" type="date" id="q_validUntil" value="${defValid}"></div>
+        <div class="form-group full"><label class="form-label">备注（会印在报价单上）</label><textarea class="form-textarea" id="q_note" rows="2" placeholder="选填，例如含刀模费 / 不含运费"></textarea></div>
       </div>
       <div style="margin-top:16px;padding:16px;background:var(--gray-50);border-radius:8px">
-        <div class="flex justify-between mb-8"><span>小计:</span><span class="font-bold">RM 0.00</span></div>
-        <div class="flex justify-between mb-8"><span>SST (10%):</span><span class="font-bold">RM 0.00</span></div>
-        <div class="flex justify-between" style="font-size:16px"><span class="font-bold">总计:</span><span class="font-bold" style="color:var(--primary)">RM 0.00</span></div>
+        <div class="flex justify-between mb-8"><span>小计</span><span class="font-bold" id="q_sub">RM 0.00</span></div>
+        <div class="flex justify-between mb-8"><span>SST (<span id="q_sstRate">${sstRate}</span>%)</span><span class="font-bold" id="q_sst">RM 0.00</span></div>
+        <div class="flex justify-between" style="font-size:16px"><span class="font-bold">总计</span><span class="font-bold" style="color:var(--primary)" id="q_total">RM 0.00</span></div>
+        <div style="margin-top:8px;font-size:12px;color:var(--gray-500)" id="q_priceHint"></div>
       </div>
       <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="saveQuoteDraft()">保存草稿</button>
-        <button class="btn btn-primary" onclick="generateQuote()">生成报价单</button>
+        <button class="btn btn-secondary" onclick="generateQuote('draft')">保存草稿</button>
+        <button class="btn btn-primary" onclick="generateQuote('sent')">生成并发出报价</button>
       </div>
     </div></div>`;
+  if (quotePrefillLead) {
+    const sel = document.getElementById('q_lead');
+    const opt = sel && [...sel.options].find(o => o.value.startsWith(quotePrefillLead));
+    if (opt) { sel.value = opt.value; fillQuoteFromLead(); }
+    quotePrefillLead = null;
+  }
+  recalcQuote();
 }
 
-function saveQuoteDraft() {
-  toast('草稿已保存');
+function autoQuotePrice() {
+  const boxType = val('q_boxType');
+  const qty = parseInt((document.getElementById('q_quantity') || {}).value) || 0;
+  const price = boxType ? lookupTierPrice(boxType, qty) : 0;
+  const el = document.getElementById('q_unitPrice');
+  const hint = document.getElementById('q_priceHint');
+  if (!el) return;
+  if (price > 0) {
+    el.value = price.toFixed(2);
+    el.dataset.fromPb = '1';
+    if (hint) hint.textContent = `单价取自价格簿（${boxType}）`;
+  } else {
+    // 价格簿取不到时，自动填过的单价要清掉，否则会留着上一档的错误单价被当成手填价保存
+    if (el.dataset.fromPb === '1') { el.value = ''; el.dataset.fromPb = ''; }
+    if (hint) hint.textContent = qty && boxType ? '价格簿里没有这个盒型/数量档，请手填单价' : '';
+  }
+  recalcQuote();
 }
 
-function generateQuote() {
+function recalcQuote() {
+  const quantity = parseInt((document.getElementById('q_quantity') || {}).value) || 0;
+  const unitPrice = parseFloat((document.getElementById('q_unitPrice') || {}).value) || 0;
+  const t = quoteTotals(quantity, unitPrice);
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('q_sub', 'RM ' + t.subtotal.toFixed(2));
+  set('q_sst', 'RM ' + t.sst.toFixed(2));
+  set('q_total', 'RM ' + t.total.toFixed(2));
+}
+
+function fillQuoteFromLead() {
+  const pick = (document.getElementById('q_lead') || {}).value || '';
+  const l = DM.get('leads').find(x => x.id === pick.split(' - ')[0]);
+  if (!l) return;
+  const put = (id, v) => { const el = document.getElementById(id); if (el && !el.value) el.value = v || ''; };
+  put('q_customer', l.company || l.name);
+  put('q_contact', [l.name, l.email || l.phone].filter(Boolean).join(' / '));
+  put('q_size', l.size);
+  const box = document.getElementById('q_boxType');
+  if (box && l.boxType && [...box.options].some(o => o.value === l.boxType)) box.value = l.boxType;
+  const qel = document.getElementById('q_quantity');
+  if (qel && !qel.value) qel.value = parseInt(l.quantity) || '';
+  autoQuotePrice();
+}
+
+function generateQuote(status) {
+  const customer = val('q_customer');
+  const product = val('q_boxType');
+  const quantity = parseInt(val('q_quantity')) || 0;
+  const unitPrice = parseFloat(val('q_unitPrice')) || 0;
+  if (!customer) { toast('请填写客户公司'); return; }
+  if (!product) { toast('请选择盒型'); return; }
+  if (quantity <= 0) { toast('请填写数量'); return; }
+  if (unitPrice <= 0) { toast('请填写单价（或在价格簿里维护该盒型价格）'); return; }
+  const t = quoteTotals(quantity, unitPrice);
+  const q = {
+    id: DM.genId('QT'),
+    leadId: (val('q_lead') || '').split(' - ')[0],
+    customer, contact: val('q_contact'), product,
+    size: val('q_size'), material: val('q_material'), printing: val('q_printing'), finish: val('q_finish'),
+    note: (document.getElementById('q_note') || {}).value?.trim() || '',
+    quantity, unitPrice, subtotal: t.subtotal, sst: t.sst, total: t.total,
+    status: status || 'draft',
+    validUntil: val('q_validUntil') || new Date(Date.now() + quoteFinance().validDays * 864e5).toISOString().slice(0, 10),
+    date: val('q_date') || new Date().toISOString().slice(0, 10),
+    creator: whoami(), created: DM.now()
+  };
   const quotes = DM.get('quotes');
-  quotes.push({id:DM.genId('QT'),leadId:'',customer:'(手动)',product:'',size:'',quantity:0,unitPrice:0,subtotal:0,sst:0,total:0,status:'draft',validUntil:'2026-10-19',creator:'管理员',created:DM.now()});
+  quotes.push(q);
   DM.set('quotes', quotes);
-  toast('报价单已生成'); navigateTo('quotes-list','报价','报价列表');
+  if (q.leadId) {
+    const leads = DM.get('leads');
+    const lead = leads.find(x => x.id === q.leadId);
+    if (lead) { lead.status = 'quoted'; DM.set('leads', leads); }
+  }
+  toast(status === 'sent' ? `报价单 ${q.id} 已生成（RM ${q.total.toFixed(2)}）` : `草稿 ${q.id} 已保存`);
+  navigateTo('quotes-list', '报价管理', '报价单');
+  if (status === 'sent') setTimeout(() => printQuote(q.id), 400);
+}
+
+function quotePrintHtml(q) {
+  const tpl = DM.get('settings_quote_template', {});
+  const site = DM.get('settings_site', {});
+  const f = quoteFinance();
+  const header = (tpl.header || site.enName || '').trim() || 'QUOTATION';
+  const contactLine = [site.phone, site.email, site.address].filter(Boolean).join('  ·  ');
+  const money = n => 'RM ' + (Number(n) || 0).toFixed(2);
+  const row = (k, v) => v ? `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>` : '';
+  const specRows = [
+    row('Box Type', q.product), row('Size (cm)', q.size), row('Material', q.material),
+    row('Printing', q.printing), row('Surface Finish', q.finish), row('Quantity', q.quantity ? q.quantity + ' pcs' : '')
+  ].join('');
+  const terms = [
+    tpl.terms ? `<div class="blk"><h4>Payment Terms</h4><p>${esc(tpl.terms)}</p></div>` : '',
+    tpl.delivery ? `<div class="blk"><h4>Lead Time</h4><p>${esc(tpl.delivery)}</p></div>` : '',
+    tpl.sst ? `<div class="blk"><h4>Tax</h4><p>${esc(tpl.sst)}</p></div>` : '',
+    (tpl.validity || q.validUntil) ? `<div class="blk"><h4>Validity</h4><p>${q.validUntil ? 'This quotation is valid until ' + esc(q.validUntil) + '.' : 'Valid for ' + esc(tpl.validity) + ' days from the date above.'}</p></div>` : '',
+    q.note ? `<div class="blk"><h4>Remarks</h4><p>${esc(q.note)}</p></div>` : ''
+  ].filter(Boolean).join('');
+
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Quotation ${esc(q.id)}</title><style>
+  @page { size: A4; margin: 14mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font: 13px/1.55 "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif; color: #1f2430; margin: 0; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1f4e79; padding-bottom: 14px; }
+  .co { font-size: 21px; font-weight: 700; letter-spacing: .3px; color: #1f4e79; }
+  .co-sub { font-size: 11px; color: #5b6472; margin-top: 6px; word-break: break-all; }
+  .doc-type { text-align: right; }
+  .doc-type b { font-size: 24px; letter-spacing: 3px; color: #1f4e79; }
+  .meta { font-size: 12px; color: #3b4252; margin-top: 6px; }
+  .meta div { margin-top: 2px; }
+  .parties { display: flex; gap: 24px; margin: 20px 0; }
+  .party { flex: 1; border: 1px solid #d9dee7; border-radius: 6px; padding: 10px 12px; }
+  .party h5 { margin: 0 0 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #7a828f; }
+  .party .nm { font-size: 15px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; }
+  .spec th { text-align: left; width: 150px; background: #f4f6fa; font-weight: 600; }
+  .spec th, .spec td { border: 1px solid #d9dee7; padding: 7px 10px; }
+  .price { margin-top: 18px; }
+  .price th { background: #1f4e79; color: #fff; text-align: left; padding: 8px 10px; font-size: 12px; }
+  .price td { border-bottom: 1px solid #e3e7ee; padding: 9px 10px; }
+  .num { text-align: right; white-space: nowrap; }
+  .sum { margin-top: 12px; width: 280px; margin-left: auto; }
+  .sum td { padding: 5px 10px; border-bottom: 1px solid #eef1f6; }
+  .sum tr:last-child td { border-bottom: none; font-size: 16px; font-weight: 700; color: #1f4e79; }
+  .terms { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+  .blk { border-left: 3px solid #1f4e79; padding: 2px 0 2px 10px; }
+  .blk h4 { margin: 0 0 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #1f4e79; }
+  .blk p { margin: 0; white-space: pre-wrap; }
+  .foot { margin-top: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .sig { border-top: 1px solid #9aa3b1; width: 200px; padding-top: 5px; font-size: 11px; color: #5b6472; }
+  .note { font-size: 11px; color: #7a828f; margin-top: 18px; }
+  @media print { .noprint { display: none !important; } body { padding: 0; } }
+  .toolbar { padding: 10px 14px; background: #f4f6fa; border-bottom: 1px solid #d9dee7; font-size: 12px; }
+  .toolbar button { font: inherit; padding: 6px 14px; border: 1px solid #1f4e79; background: #1f4e79; color: #fff; border-radius: 4px; cursor: pointer; margin-right: 8px; }
+  .toolbar button.ghost { background: #fff; color: #1f4e79; }
+  </style></head><body>
+  <div class="toolbar noprint">在弹出的打印窗口里选择「<b>另存为 PDF</b>」即可导出。 <button onclick="window.print()">打印 / 存 PDF</button><button class="ghost" onclick="parent.closeQuotePrint()">关闭</button></div>
+  <div class="head">
+    <div><div class="co">${esc(header)}</div>${contactLine ? `<div class="co-sub">${esc(contactLine)}</div>` : ''}</div>
+    <div class="doc-type"><b>QUOTATION</b><div class="meta"><div>No. ${esc(q.id)}</div><div>Date: ${esc(q.date || (q.created || '').slice(0, 10))}</div></div></div>
+  </div>
+  <div class="parties">
+    <div class="party"><h5>To</h5><div class="nm">${esc(q.customer || '—')}</div>${q.contact ? `<div>${esc(q.contact)}</div>` : ''}</div>
+    <div class="party"><h5>Prepared by</h5><div class="nm">${esc(q.creator || '')}</div><div>${esc(site.enName || header)}</div>${site.email ? `<div>${esc(site.email)}</div>` : ''}</div>
+  </div>
+  <table class="spec"><tbody>${specRows}</tbody></table>
+  <table class="price"><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Unit Price</th><th class="num">Amount</th></tr></thead>
+  <tbody><tr><td>${esc([q.product, q.size ? 'L' + q.size + ' cm' : '', q.material, q.printing, q.finish].filter(Boolean).join(' / '))}</td><td class="num">${esc(q.quantity || '')} pcs</td><td class="num">${money(q.unitPrice)}</td><td class="num">${money(q.subtotal)}</td></tr></tbody></table>
+  <table class="sum"><tbody>
+    <tr><td>Subtotal</td><td class="num">${money(q.subtotal)}</td></tr>
+    <tr><td>SST (${f.sstRate}%)</td><td class="num">${money(q.sst)}</td></tr>
+    <tr><td>Total</td><td class="num">${money(q.total !== undefined ? q.total : (Number(q.subtotal) || 0) + (Number(q.sst) || 0))}</td></tr>
+  </tbody></table>
+  ${terms ? `<div class="terms">${terms}</div>` : ''}
+  <div class="foot"><div class="note">${site.address ? esc(site.address) + ' · ' : ''}Thank you for your inquiry. Prices are subject to final artwork approval.</div><div class="sig">Authorized Signature</div></div>
+  </body></html>`;
+}
+
+let quotePrintFrame = null;
+
+function printQuote(id) {
+  const q = DM.get('quotes').find(x => x.id === id);
+  if (!q) { toast('找不到这张报价单'); return; }
+  closeQuotePrint();
+  quotePrintFrame = document.createElement('iframe');
+  quotePrintFrame.setAttribute('aria-hidden', 'true');
+  quotePrintFrame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none';
+  document.body.appendChild(quotePrintFrame);
+  const doc = quotePrintFrame.contentDocument;
+  doc.open();
+  doc.write(quotePrintHtml(q));
+  doc.close();
+  const win = quotePrintFrame.contentWindow;
+  win.addEventListener('afterprint', closeQuotePrint);
+  setTimeout(() => { try { win.focus(); win.print(); } catch (e) { toast('打印窗口被浏览器拦截，请重试'); } }, 350);
+  // 打印对话框关掉后 iframe 会触发 afterprint；兜底防止残留
+  setTimeout(closeQuotePrint, 120000);
+}
+
+function closeQuotePrint() {
+  if (quotePrintFrame) { quotePrintFrame.remove(); quotePrintFrame = null; }
 }
 
 let pricebookTab = '飞机盒';
@@ -1210,13 +1448,13 @@ function renderPricebook(c) {
         <button class="btn btn-primary btn-sm" onclick="addPricebookRow()">+ 新增 SKU</button>
       </div>
     </div>
-    <div class="tabs">${tabs.map(t=>`<div class="tab ${t===pricebookTab?'active':''}" onclick="switchPriceTab('${t}')">${t}</div>`).join('')}</div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>SKU</th><th>尺寸(cm)</th>${PB_TIERS.map(t=>`<th>${t}pcs</th>`).join('')}<th>操作</th></tr></thead>
+    <div class="tabs">${tabs.map((t,i)=>`<div class="tab ${t===pricebookTab?'active':''}" onclick="switchPriceTab(${i})">${esc(t)}</div>`).join('')}</div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>SKU</th><th>尺寸(cm)</th>${PB_TIERS.map(t=>`<th>${esc(t)}pcs</th>`).join('')}<th>操作</th></tr></thead>
     <tbody>${rows.length===0?`<tr><td colspan="${PB_TIERS.length+3}" style="text-align:center;padding:40px;color:#999">此盒型暂无价格，点击「新增 SKU」添加</td></tr>`:
     rows.map((r,i)=>`<tr>
-      <td><input class="form-input pb-sku" data-i="${i}" value="${r.sku}" style="min-width:80px"></td>
-      <td><input class="form-input pb-size" data-i="${i}" value="${r.size}" style="min-width:110px"></td>
-      ${PB_TIERS.map((t,pi)=>`<td><input class="form-input pb-price" data-i="${i}" data-p="${pi}" type="number" step="0.01" value="${r.p[pi]??''}" style="width:76px;text-align:right"></td>`).join('')}
+      <td><input class="form-input pb-sku" data-i="${i}" value="${esc(r.sku)}" style="min-width:80px"></td>
+      <td><input class="form-input pb-size" data-i="${i}" value="${esc(r.size)}" style="min-width:110px"></td>
+      ${PB_TIERS.map((t,pi)=>`<td><input class="form-input pb-price" data-i="${i}" data-p="${pi}" type="number" step="0.01" value="${esc(r.p[pi]??'')}" style="width:76px;text-align:right"></td>`).join('')}
       <td><button class="btn btn-sm btn-danger" onclick="deletePricebookRow(${i})">删除</button></td>
     </tr>`).join('')}</tbody></table></div>
     <div class="pagination"><span>共 ${rows.length} 个 SKU · ${pricebookTab}</span><div style="display:flex;gap:8px;align-items:center"><span class="text-sm text-gray">修改已自动保存</span></div></div></div>`;
@@ -1236,7 +1474,12 @@ function savePricebook(c) {
   toast('价格已保存');
 }
 
-function switchPriceTab(t) { pricebookTab = t; renderPage(currentPageId); }
+function switchPriceTab(i) {
+  const tabs = Object.keys(DM.get('pricebook'));
+  if (tabs[i] === undefined) return;
+  pricebookTab = tabs[i];
+  renderPage(currentPageId);
+}
 
 function addPricebookRow() {
   const pb = DM.get('pricebook');
@@ -1245,7 +1488,7 @@ function addPricebookRow() {
     <div class="form-grid">
       <div class="form-group"><label class="form-label">SKU 编号 *</label><input class="form-input" id="f_pb_sku" placeholder="e.g. M1-6"></div>
       <div class="form-group"><label class="form-label">尺寸 (cm) *</label><input class="form-input" id="f_pb_size" placeholder="长×宽×高"></div>
-      ${PB_TIERS.map(t=>`<div class="form-group"><label class="form-label">${t} pcs (RM)</label><input class="form-input" type="number" step="0.01" id="f_pb_${t}"></div>`).join('')}
+      ${PB_TIERS.map(t=>`<div class="form-group"><label class="form-label">${esc(t)} pcs (RM)</label><input class="form-input" type="number" step="0.01" id="f_pb_${t}"></div>`).join('')}
     </div>
   `, () => {
     const sku = val('f_pb_sku'), size = val('f_pb_size');
@@ -1266,17 +1509,17 @@ function deletePricebookRow(i) {
 }
 
 function renderQuoteTemplate(c) {
-  const tpl = DM.get('settings_quote_template', {header:'United YL Printers Sdn Bhd',terms:'50% 定金，50% 发货前付清。银行转账/TT。',delivery:'确认打样后 10-14 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
+  const tpl = DM.get('settings_quote_template', {header:'JIU LIAN INDUSTRIAL SDN. BHD.',terms:'50% 定金，50% 发货前付清。银行转账/TT。',delivery:'确认打样后 10-14 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">PDF 模板</h1><p class="page-desc">报价单 PDF 模板配置</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">公司抬头</label><input class="form-input" id="fs_header" value="${tpl.header||''}"></div>
+        <div class="form-group"><label class="form-label">公司抬头</label><input class="form-input" id="fs_header" value="${esc(tpl.header||'')}"></div>
         <div class="form-group"><label class="form-label">Logo</label><input class="form-input" type="file" accept="image/*"></div>
-        <div class="form-group full"><label class="form-label">付款条款</label><textarea class="form-textarea" id="fs_terms" rows="2">${tpl.terms||''}</textarea></div>
-        <div class="form-group full"><label class="form-label">交期说明</label><textarea class="form-textarea" id="fs_delivery" rows="2">${tpl.delivery||''}</textarea></div>
-        <div class="form-group full"><label class="form-label">SST 说明</label><textarea class="form-textarea" id="fs_sst_desc" rows="2">${tpl.sst||''}</textarea></div>
-        <div class="form-group"><label class="form-label">默认有效期</label><input class="form-input" type="number" id="fs_validity" value="${tpl.validity||14}"> 天</div>
+        <div class="form-group full"><label class="form-label">付款条款</label><textarea class="form-textarea" id="fs_terms" rows="2">${esc(tpl.terms||'')}</textarea></div>
+        <div class="form-group full"><label class="form-label">交期说明</label><textarea class="form-textarea" id="fs_delivery" rows="2">${esc(tpl.delivery||'')}</textarea></div>
+        <div class="form-group full"><label class="form-label">SST 说明</label><textarea class="form-textarea" id="fs_sst_desc" rows="2">${esc(tpl.sst||'')}</textarea></div>
+        <div class="form-group"><label class="form-label">默认有效期</label><input class="form-input" type="number" id="fs_validity" value="${esc(tpl.validity||14)}"> 天</div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="DM.set('settings_quote_template',{header:val('fs_header'),terms:val('fs_terms'),delivery:val('fs_delivery'),sst:val('fs_sst_desc'),validity:val('fs_validity')});toast('模板已保存')">保存模板</button></div>
     </div></div>`;
@@ -1288,7 +1531,7 @@ function renderOrdersList(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">全部订单</h1><p class="page-desc">订单管理</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>金额(RM)</th><th>定金状态</th><th>生产状态</th><th>预计交货</th><th>负责人</th><th>操作</th></tr></thead>
-    <tbody>${orders.map(o=>`<tr><td class="td-id">${o.id}</td><td class="td-name">${o.customer}</td><td>${o.amount.toFixed(2)}</td><td>${o.depositPaid?'<span class="badge badge-green">已付</span>':'<span class="badge badge-yellow">待付</span>'}</td><td>${productionBadge(o.productionStatus)}</td><td>${o.deliveryDate}</td><td>${o.assignee}</td><td><button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${orders.map(o=>`<tr><td class="td-id">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${o.amount.toFixed(2)}</td><td>${o.depositPaid?'<span class="badge badge-green">已付</span>':'<span class="badge badge-yellow">待付</span>'}</td><td>${productionBadge(o.productionStatus)}</td><td>${esc(o.deliveryDate)}</td><td>${esc(o.assignee)}</td><td><button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function viewOrder(id) {
@@ -1297,12 +1540,12 @@ function viewOrder(id) {
   const statusLabels = {pending_deposit:'待付定金',deposit_paid:'已付定金',artwork:'刀模/Artwork',proofing:'打样中',confirming:'待客户确认',producing:'生产中',shipping:'待发货',shipped:'已发货',done:'完成'};
   showModal('订单详情 ' + o.id, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${o.customer}</div></div>
+      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${esc(o.customer)}</div></div>
       <div class="form-group"><label class="form-label">金额</label><div style="padding:8px 0">RM ${o.amount.toFixed(2)}</div></div>
       <div class="form-group"><label class="form-label">定金状态</label><div style="padding:8px 0">${o.depositPaid?'<span class="badge badge-green">已付</span>':'<span class="badge badge-yellow">待付</span>'}</div></div>
       <div class="form-group"><label class="form-label">生产状态</label><div style="padding:8px 0">${productionBadge(o.productionStatus)}</div></div>
-      <div class="form-group"><label class="form-label">预计交货</label><div style="padding:8px 0">${o.deliveryDate}</div></div>
-      <div class="form-group"><label class="form-label">负责人</label><div style="padding:8px 0">${o.assignee}</div></div>
+      <div class="form-group"><label class="form-label">预计交货</label><div style="padding:8px 0">${esc(o.deliveryDate)}</div></div>
+      <div class="form-group"><label class="form-label">负责人</label><div style="padding:8px 0">${esc(o.assignee)}</div></div>
     </div>
   `, null, [{label:'关闭',cls:'btn-secondary'}]);
   document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
@@ -1312,7 +1555,7 @@ function viewOrder(id) {
 function productionBadge(s) {
   const m = {pending_deposit:'badge-gray',deposit_paid:'badge-blue',artwork:'badge-purple',proofing:'badge-yellow',confirming:'badge-yellow',producing:'badge-blue',shipping:'badge-purple',shipped:'badge-green',done:'badge-green'};
   const labels = {pending_deposit:'待付定金',deposit_paid:'已付定金',artwork:'刀模/Artwork',proofing:'打样中',confirming:'待客户确认',producing:'生产中',shipping:'待发货',shipped:'已发货',done:'完成'};
-  return `<span class="badge ${m[s]||'badge-gray'}">${labels[s]||s}</span>`;
+  return `<span class="badge ${m[s]||'badge-gray'}">${esc(labels[s]||s)}</span>`;
 }
 
 function renderProduction(c) {
@@ -1323,7 +1566,7 @@ function renderProduction(c) {
     <div class="page-header"><div><h1 class="page-title">生产工单看板</h1><p class="page-desc">拖拽更改状态</p></div></div>
     <div class="kanban">${statuses.map(s => {
       const items = orders.filter(o => o.productionStatus === s);
-      return `<div class="kanban-col"><h4>${labels[s]} <span class="count">${items.length}</span></h4>${items.map(o=>`<div class="kanban-card"><div class="title">${o.id}</div><div class="meta">${o.customer}</div><div class="meta">RM ${o.amount.toFixed(2)}</div></div>`).join('') || '<div style="text-align:center;color:var(--gray-400);font-size:11px;padding:12px">空</div>'}</div>`;
+      return `<div class="kanban-col"><h4>${labels[s]} <span class="count">${esc(items.length)}</span></h4>${items.map(o=>`<div class="kanban-card"><div class="title">${esc(o.id)}</div><div class="meta">${esc(o.customer)}</div><div class="meta">RM ${o.amount.toFixed(2)}</div></div>`).join('') || '<div style="text-align:center;color:var(--gray-400);font-size:11px;padding:12px">空</div>'}</div>`;
     }).join('')}</div>`;
 }
 
@@ -1332,7 +1575,7 @@ function renderPayments(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">收款记录</h1><p class="page-desc">管理定金和尾款</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>类型</th><th>金额(RM)</th><th>付款方式</th><th>到账日期</th><th>凭证</th></tr></thead>
-    <tbody>${payments.map(p=>`<tr><td class="td-id">${p.orderNo}</td><td class="td-name">${p.customer}</td><td><span class="badge badge-blue">${p.typeLabel}</span></td><td>${p.amount.toFixed(2)}</td><td>${p.method}</td><td>${p.date || '-'}</td><td><button class="btn btn-sm btn-secondary" onclick="viewPayment('${p.id}')">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${payments.map(p=>`<tr><td class="td-id">${esc(p.orderNo)}</td><td class="td-name">${esc(p.customer)}</td><td><span class="badge badge-blue">${esc(p.typeLabel)}</span></td><td>${p.amount.toFixed(2)}</td><td>${esc(p.method)}</td><td>${esc(p.date || '-')}</td><td><button class="btn btn-sm btn-secondary" onclick="viewPayment('${p.id}')">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function viewPayment(id) {
@@ -1342,17 +1585,17 @@ function viewPayment(id) {
   const statusLabels = {confirmed:'已确认',pending:'待确认',rejected:'已拒绝'};
   showModal('收款凭证 ' + p.receiptNo, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">订单号</label><div style="padding:8px 0;font-weight:600">${p.orderNo}</div></div>
-      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0">${p.customer}</div></div>
-      <div class="form-group"><label class="form-label">类型</label><div style="padding:8px 0"><span class="badge badge-blue">${p.typeLabel}</span></div></div>
+      <div class="form-group"><label class="form-label">订单号</label><div style="padding:8px 0;font-weight:600">${esc(p.orderNo)}</div></div>
+      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0">${esc(p.customer)}</div></div>
+      <div class="form-group"><label class="form-label">类型</label><div style="padding:8px 0"><span class="badge badge-blue">${esc(p.typeLabel)}</span></div></div>
       <div class="form-group"><label class="form-label">金额</label><div style="padding:8px 0;font-weight:700;font-size:16px;color:var(--primary)">RM ${p.amount.toFixed(2)}</div></div>
-      <div class="form-group"><label class="form-label">付款方式</label><div style="padding:8px 0">${p.method}</div></div>
-      <div class="form-group"><label class="form-label">银行</label><div style="padding:8px 0">${p.bankName}</div></div>
-      <div class="form-group"><label class="form-label">收款账号</label><div style="padding:8px 0">${p.accountNo}</div></div>
-      <div class="form-group"><label class="form-label">收款户名</label><div style="padding:8px 0">${p.accountName}</div></div>
-      <div class="form-group"><label class="form-label">到账日期</label><div style="padding:8px 0">${p.date || '-'}</div></div>
-      <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0"><span class="badge ${statusMap[p.status]||'badge-gray'}">${statusLabels[p.status]||p.status}</span></div></div>
-      <div class="form-group full"><label class="form-label">备注</label><div style="padding:8px 0">${p.note || '-'}</div></div>
+      <div class="form-group"><label class="form-label">付款方式</label><div style="padding:8px 0">${esc(p.method)}</div></div>
+      <div class="form-group"><label class="form-label">银行</label><div style="padding:8px 0">${esc(p.bankName)}</div></div>
+      <div class="form-group"><label class="form-label">收款账号</label><div style="padding:8px 0">${esc(p.accountNo)}</div></div>
+      <div class="form-group"><label class="form-label">收款户名</label><div style="padding:8px 0">${esc(p.accountName)}</div></div>
+      <div class="form-group"><label class="form-label">到账日期</label><div style="padding:8px 0">${esc(p.date || '-')}</div></div>
+      <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0"><span class="badge ${statusMap[p.status]||'badge-gray'}">${esc(statusLabels[p.status]||p.status)}</span></div></div>
+      <div class="form-group full"><label class="form-label">备注</label><div style="padding:8px 0">${esc(p.note || '-')}</div></div>
     </div>
   `, null, [{label:'关闭',cls:'btn-secondary'}]);
   document.getElementById('modal-btn-关闭')?.addEventListener('click', closeModal);
@@ -1371,14 +1614,14 @@ function renderDieline(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">刀模/Artwork 模板库</h1><p class="page-desc">40+ 现成刀模管理</p></div><button class="btn btn-primary" onclick="openUploadDieModal()">+ 上传刀模</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>编号</th><th>适用盒型</th><th>尺寸</th><th>刀模费</th><th>状态</th><th>操作</th></tr></thead>
-    <tbody>${dielines.map(d=>`<tr><td class="td-id">${d.id}</td><td>${d.boxType}</td><td>${d.size}</td><td>${d.fee}</td><td><span class="badge ${d.status==='available'?'badge-green':'badge-gray'}">${d.status==='available'?'可用':'不可用'}</span></td><td><button class="btn btn-sm btn-secondary" onclick="downloadDie('${d.id}')">下载</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${dielines.map(d=>`<tr><td class="td-id">${esc(d.id)}</td><td>${esc(d.boxType)}</td><td>${esc(d.size)}</td><td>${esc(d.fee)}</td><td><span class="badge ${d.status==='available'?'badge-green':'badge-gray'}">${d.status==='available'?'可用':'不可用'}</span></td><td><button class="btn btn-sm btn-secondary" onclick="downloadDie('${d.id}')">下载</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function openUploadDieModal() {
   const cats = DM.get('categories');
   showModal('上传刀模', `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">适用盒型 *</label><select class="form-select" id="f_die_boxtype">${cats.map(c=>`<option>${c.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">适用盒型 *</label><select class="form-select" id="f_die_boxtype">${cats.map(c=>`<option>${esc(c.name)}</option>`).join('')}</select></div>
       <div class="form-group"><label class="form-label">尺寸 (cm) *</label><input class="form-input" id="f_die_size" placeholder="长×宽×高"></div>
       <div class="form-group"><label class="form-label">刀模费</label><select class="form-select" id="f_die_fee"><option>已收</option><option>未收</option><option>免费</option></select></div>
       <div class="form-group full"><label class="form-label">上传文件 *</label><input class="form-input" type="file" id="f_die_file" accept=".ai,.pdf,.dxf,.dwg,.svg"></div>
@@ -1407,15 +1650,15 @@ function downloadDie(id) {
   if (!d) return;
   showModal('刀模详情', `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">编号</label><div style="padding:8px 0;font-weight:600">${d.id}</div></div>
-      <div class="form-group"><label class="form-label">适用盒型</label><div style="padding:8px 0">${d.boxType}</div></div>
-      <div class="form-group"><label class="form-label">尺寸</label><div style="padding:8px 0">${d.size}</div></div>
-      <div class="form-group"><label class="form-label">文件名</label><div style="padding:8px 0">${d.fileName || '未上传文件'}</div></div>
-      <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${d.uploaded}</div></div>
-      <div class="form-group"><label class="form-label">上传人</label><div style="padding:8px 0">${d.uploader || '—'}</div></div>
+      <div class="form-group"><label class="form-label">编号</label><div style="padding:8px 0;font-weight:600">${esc(d.id)}</div></div>
+      <div class="form-group"><label class="form-label">适用盒型</label><div style="padding:8px 0">${esc(d.boxType)}</div></div>
+      <div class="form-group"><label class="form-label">尺寸</label><div style="padding:8px 0">${esc(d.size)}</div></div>
+      <div class="form-group"><label class="form-label">文件名</label><div style="padding:8px 0">${esc(d.fileName || '未上传文件')}</div></div>
+      <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${esc(d.uploaded)}</div></div>
+      <div class="form-group"><label class="form-label">上传人</label><div style="padding:8px 0">${esc(d.uploader || '—')}</div></div>
     </div>
     <div style="margin-top:16px;padding:12px;background:var(--gray-50);border-radius:6px;font-size:13px;color:var(--gray-600)">
-      ${d.url ? `<a href="${d.url}" target="_blank" download style="color:var(--primary);font-weight:600">点此下载原始文件</a>　<span style="word-break:break-all">${d.url}</span>` : '这条记录没有云端文件，需重新上传后才能下载。'}
+      ${d.url ? `<a href="${safeHref(d.url)}" target="_blank" download style="color:var(--primary);font-weight:600">点此下载原始文件</a>　<span style="word-break:break-all">${esc(d.url)}</span>` : '这条记录没有云端文件，需重新上传后才能下载。'}
     </div>
   `, null, [{label:d.url?'下载文件':'关闭',cls:d.url?'btn-primary':'btn-secondary',fn:()=>{ if (d.url) window.open(d.url, '_blank'); closeModal() }}]);
   document.getElementById('modalSaveBtn')?.remove();
@@ -1426,13 +1669,13 @@ function renderProof(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">打样管理</h1><p class="page-desc">数字打样与空白盒 mock-up</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>打样类型</th><th>状态</th><th>上传时间</th><th>操作</th></tr></thead>
-    <tbody>${proofs.map(p=>`<tr><td class="td-id">${p.orderId}</td><td class="td-name">${p.customer}</td><td>${p.type}</td><td>${p.status==='confirmed'?'<span class="badge badge-green">已确认</span>':'<span class="badge badge-yellow">待客户确认</span>'}</td><td>${p.uploaded}</td><td><button class="btn btn-sm btn-secondary" onclick="viewProof('${p.id}')">查看</button> ${p.status!=='confirmed'?'<button class="btn btn-sm btn-primary" onclick="sendProofConfirm(\''+p.id+'\')">发送确认</button>':''}</td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${proofs.map(p=>`<tr><td class="td-id">${esc(p.orderId)}</td><td class="td-name">${esc(p.customer)}</td><td>${esc(p.type)}</td><td>${p.status==='confirmed'?'<span class="badge badge-green">已确认</span>':'<span class="badge badge-yellow">待客户确认</span>'}</td><td>${esc(p.uploaded)}</td><td><button class="btn btn-sm btn-secondary" onclick="viewProof('${p.id}')">查看</button> ${p.status!=='confirmed'?'<button class="btn btn-sm btn-primary" onclick="sendProofConfirm(\''+p.id+'\')">发送确认</button>':''}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function proofPreviewHtml(p) {
   if (!p.fileUrl) return '<div style="padding:8px 0;color:var(--gray-400)">暂无文件，点击下方「上传打样文件」按钮添加</div>';
   const name = esc(p.fileName || '打样文件');
-  const url = esc(p.fileUrl);
+  const url = safeHref(p.fileUrl);
   const ext = String(p.fileName || p.fileUrl || '').split('?')[0];
   const isImg = /\.(png|jpe?g|gif|webp|svg)$/i.test(ext);
   const isPdf = /\.pdf$/i.test(ext);
@@ -1448,11 +1691,11 @@ function viewProof(id) {
   if (!p) return;
   showModal('打样详情', `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">订单号</label><div style="padding:8px 0;font-weight:600;color:var(--primary)">${p.orderId}</div></div>
-      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${p.customer}</div></div>
-      <div class="form-group"><label class="form-label">打样类型</label><div style="padding:8px 0">${p.type}</div></div>
+      <div class="form-group"><label class="form-label">订单号</label><div style="padding:8px 0;font-weight:600;color:var(--primary)">${esc(p.orderId)}</div></div>
+      <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${esc(p.customer)}</div></div>
+      <div class="form-group"><label class="form-label">打样类型</label><div style="padding:8px 0">${esc(p.type)}</div></div>
       <div class="form-group"><label class="form-label">状态</label><div style="padding:8px 0">${p.status==='confirmed'?'<span class="badge badge-green">已确认</span>':'<span class="badge badge-yellow">待客户确认</span>'}</div></div>
-      <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${p.uploaded}</div></div>
+      <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${esc(p.uploaded)}</div></div>
       <div class="form-group full"><label class="form-label">打样文件</label>${proofPreviewHtml(p)}</div>
     </div>
   `, null, [
@@ -1497,8 +1740,8 @@ function sendProofConfirm(id) {
   if (!p) return;
   showModal('发送打样确认', `
     <div class="form-grid">
-      <div class="form-group full"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${p.customer}</div></div>
-      <div class="form-group full"><label class="form-label">打样类型</label><div style="padding:8px 0">${p.type}</div></div>
+      <div class="form-group full"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${esc(p.customer)}</div></div>
+      <div class="form-group full"><label class="form-label">打样类型</label><div style="padding:8px 0">${esc(p.type)}</div></div>
       <div class="form-group full"><label class="form-label">通知方式</label><select class="form-select" id="f_proof_notify"><option>WhatsApp</option><option>邮件</option><option>系统站内信</option></select></div>
       <div class="form-group full"><label class="form-label">附言</label><textarea class="form-textarea" id="f_proof_note" rows="3">请查看附件中的打样效果，确认颜色和结构是否满意。如有修改意见请及时反馈。</textarea></div>
     </div>
@@ -1516,7 +1759,7 @@ function renderCategories(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">盒型分类</h1><p class="page-desc">管理产品分类</p></div><button class="btn btn-primary" onclick="openCategoryModal()">+ 新建分类</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>排序</th><th>图标</th><th>名称</th><th>Slug</th><th>状态</th><th>操作</th></tr></thead>
-    <tbody>${cats.map(cat=>`<tr><td>${cat.sort}</td><td>${cat.icon}</td><td class="td-name">${cat.name}</td><td>${cat.slug}</td><td>${cat.active?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openCategoryModal('${cat.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${cats.map(cat=>`<tr><td>${esc(cat.sort)}</td><td>${esc(cat.icon)}</td><td class="td-name">${esc(cat.name)}</td><td>${esc(cat.slug)}</td><td>${cat.active?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openCategoryModal('${cat.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function openCategoryModal(id) {
@@ -1525,10 +1768,10 @@ function openCategoryModal(id) {
   const title = cat ? '编辑分类' : '新建分类';
   showModal(title, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="f_name" value="${cat?.name||''}"></div>
-      <div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="f_slug" value="${cat?.slug||''}"></div>
-      <div class="form-group"><label class="form-label">图标</label><input class="form-input" id="f_icon" value="${cat?.icon||'📦'}"></div>
-      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="${cat?.sort||1}"></div>
+      <div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="f_name" value="${esc(cat?.name||'')}"></div>
+      <div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="f_slug" value="${esc(cat?.slug||'')}"></div>
+      <div class="form-group"><label class="form-label">图标</label><input class="form-input" id="f_icon" value="${esc(cat?.icon||'📦')}"></div>
+      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="${esc(cat?.sort||1)}"></div>
     </div>
   `, () => {
     const name = val('f_name');
@@ -1559,7 +1802,7 @@ function renderProductsList(c) {
     <div class="page-header"><div><h1 class="page-title">商品列表</h1><p class="page-desc">管理所有产品</p></div><button class="btn btn-primary" onclick="openProductModal()">+ 新建商品</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>分类</th><th>起步价</th><th>MOQ</th><th>状态</th><th>操作</th></tr></thead>
     <tbody>${products.length === 0 ? '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999">暂无商品，点击上方按钮创建</td></tr>' :
-    products.map(p=>`<tr><td class="td-name">${p.name}</td><td>${p.category}</td><td>RM ${p.price.toFixed(2)}</td><td>${p.moq} ${p.moqUnit}</td><td>${p.status==='active'?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openProductModal('${p.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    products.map(p=>`<tr><td class="td-name">${esc(p.name)}</td><td>${esc(p.category)}</td><td>RM ${p.price.toFixed(2)}</td><td>${esc(p.moq)} ${p.moqUnit}</td><td>${p.status==='active'?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openProductModal('${p.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function openProductModal(id) {
@@ -1570,14 +1813,14 @@ function openProductModal(id) {
 
   showModal(title, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">商品名称 (英文) *</label><input class="form-input" id="f_name" value="${p?.name||''}" placeholder="e.g. Mailer Box"></div>
-      <div class="form-group"><label class="form-label">商品名称 (中文)</label><input class="form-input" id="f_nameZh" value="${p?.nameZh||''}" placeholder="e.g. 飞机盒"></div>
+      <div class="form-group"><label class="form-label">商品名称 (英文) *</label><input class="form-input" id="f_name" value="${esc(p?.name)}" placeholder="e.g. Mailer Box"></div>
+      <div class="form-group"><label class="form-label">商品名称 (中文)</label><input class="form-input" id="f_nameZh" value="${esc(p?.nameZh)}" placeholder="e.g. 飞机盒"></div>
       <div class="form-group"><label class="form-label">分类 *</label><select class="form-select" id="f_category">
         <option value="">-- 选择分类 --</option>
-        ${categories.map(cat=>`<option value="${cat.id}" ${p?.categoryId===cat.id?'selected':''}>${cat.name}</option>`).join('')}
+        ${categories.map(cat=>`<option value="${esc(cat.id)}" ${p?.categoryId===cat.id?'selected':''}>${esc(cat.name)}</option>`).join('')}
       </select></div>
-      <div class="form-group"><label class="form-label">起步价 (RM) *</label><input class="form-input" type="number" step="0.01" id="f_price" value="${p?.price||''}" placeholder="0.00"></div>
-      <div class="form-group"><label class="form-label">MOQ 数量 *</label><input class="form-input" type="number" id="f_moq" value="${p?.moq||''}" placeholder="100"></div>
+      <div class="form-group"><label class="form-label">起步价 (RM) *</label><input class="form-input" type="number" step="0.01" id="f_price" value="${esc(p?.price||'')}" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label">MOQ 数量 *</label><input class="form-input" type="number" id="f_moq" value="${esc(p?.moq||'')}" placeholder="100"></div>
       <div class="form-group"><label class="form-label">MOQ 单位</label><select class="form-select" id="f_moqUnit">
         <option value="pcs" ${p?.moqUnit==='pcs'?'selected':''}>pcs</option>
         <option value="sets" ${p?.moqUnit==='sets'?'selected':''}>sets</option>
@@ -1587,15 +1830,29 @@ function openProductModal(id) {
         <option value="active" ${p?.status==='active'?'selected':''}>上架</option>
         <option value="inactive" ${p?.status==='inactive'?'selected':''}>下架</option>
       </select></div>
-      <div class="form-group" style="grid-column:span 2"><label class="form-label">商品描述</label><textarea class="form-input" id="f_desc" rows="3" placeholder="商品简短描述...">${p?.desc||''}</textarea></div>
+      <div class="form-group" style="grid-column:span 2"><label class="form-label">商品描述（英文，马来文页面同样用它）</label><textarea class="form-input" id="f_desc" rows="3" placeholder="商品简短描述...">${esc(p?.desc||'')}</textarea></div>
+      <div class="form-group" style="grid-column:span 2"><label class="form-label">商品描述（中文）</label><textarea class="form-input" id="f_descZh" rows="3" placeholder="留空则中文页显示英文">${esc(p?.descZh||'')}</textarea></div>
+      <div class="form-group full"><label class="form-label">商品图片${p?.image?'（留空则保持不变）':''}</label><input class="form-input" type="file" accept="image/*" id="f_p_image"></div>
     </div>
-  `, () => {
+    ${p?.image?`<div style="margin-top:12px;display:flex;align-items:center;gap:12px"><img src="${esc(p.image)}" style="height:64px;max-width:200px;object-fit:cover;background:#fff;border:1px solid var(--gray-200);border-radius:6px;padding:4px"><label style="font-size:13px;color:var(--gray-600)"><input type="checkbox" id="f_p_clear_image"> 删除当前图片</label></div>`:''}
+  `, async () => {
     const name = val('f_name');
     const categorySelect = document.getElementById('f_category');
     const categoryId = categorySelect.value;
     const categoryName = categorySelect.options[categorySelect.selectedIndex]?.text || '';
     if (!name) { toast('请填写商品名称'); return; }
     if (!categoryId) { toast('请选择分类'); return; }
+
+    let image = p ? (p.image || '') : '';
+    let imagePath = p ? (p.imagePath || '') : '';
+    if (document.getElementById('f_p_clear_image')?.checked) { image = ''; imagePath = ''; }
+    const imgFile = document.getElementById('f_p_image')?.files?.[0];
+    if (imgFile) {
+      if (!Sync.ready) { toast('未连接后端数据库，无法上传图片'); return false; }
+      toast('正在上传图片 …');
+      const up = await cloudUpload(imgFile, 'product');
+      image = up.url; imagePath = up.path;
+    }
 
     if (p) {
       p.name = name;
@@ -1607,6 +1864,9 @@ function openProductModal(id) {
       p.moqUnit = val('f_moqUnit');
       p.status = val('f_status');
       p.desc = val('f_desc');
+      p.descZh = val('f_descZh');
+      p.image = image;
+      p.imagePath = imagePath;
     } else {
       products.push({
         id: DM.genId('PRD'),
@@ -1618,8 +1878,10 @@ function openProductModal(id) {
         moq: parseInt(val('f_moq')) || 0,
         moqUnit: val('f_moqUnit'),
         status: val('f_status'),
-        image: '',
-        desc: val('f_desc')
+        image,
+        imagePath,
+        desc: val('f_desc'),
+        descZh: val('f_descZh')
       });
     }
     DM.set('products', products);
@@ -1640,7 +1902,7 @@ function renderPrintingMeta(c) {
   const options = DM.get('printingOptions');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">印刷色数库</h1><p class="page-desc">管理印刷选项</p></div><button class="btn btn-primary" onclick="addPrintingOption()">+ 新增选项</button></div>
-    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map(o=>`<span class="badge badge-blue" style="padding:8px 16px;font-size:13px;cursor:pointer" onclick="removePrintingOption('${o}')">${o} ×</span>`).join('')}</div></div></div>`;
+    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map((o,i)=>`<span class="badge badge-blue" style="padding:8px 16px;font-size:13px;cursor:pointer" onclick="removePrintingOption(${i})">${esc(o)} ×</span>`).join('')}</div></div></div>`;
 }
 
 function addPrintingOption() {
@@ -1657,9 +1919,12 @@ function addPrintingOption() {
   });
 }
 
-function removePrintingOption(name) {
+function removePrintingOption(idx) {
+  const opts = DM.get('printingOptions');
+  const name = opts[idx];
+  if (name === undefined) return;
   if (!confirm('确定删除选项 "' + name + '"？')) return;
-  const opts = DM.get('printingOptions').filter(o => o !== name);
+  opts.splice(idx, 1);
   DM.set('printingOptions', opts);
   toast('选项已删除'); renderPage(currentPageId);
 }
@@ -1668,7 +1933,7 @@ function renderFinishMeta(c) {
   const options = DM.get('finishingOptions');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">表面处理库</h1><p class="page-desc">管理表面处理选项</p></div><button class="btn btn-primary" onclick="addFinishOption()">+ 新增选项</button></div>
-    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map(o=>`<span class="badge badge-purple" style="padding:8px 16px;font-size:13px;cursor:pointer" onclick="removeFinishOption('${o}')">${o} ×</span>`).join('')}</div></div></div>`;
+    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${options.map((o,i)=>`<span class="badge badge-purple" style="padding:8px 16px;font-size:13px;cursor:pointer" onclick="removeFinishOption(${i})">${esc(o)} ×</span>`).join('')}</div></div></div>`;
 }
 
 function addFinishOption() {
@@ -1685,9 +1950,12 @@ function addFinishOption() {
   });
 }
 
-function removeFinishOption(name) {
+function removeFinishOption(idx) {
+  const opts = DM.get('finishingOptions');
+  const name = opts[idx];
+  if (name === undefined) return;
   if (!confirm('确定删除选项 "' + name + '"？')) return;
-  const opts = DM.get('finishingOptions').filter(o => o !== name);
+  opts.splice(idx, 1);
   DM.set('finishingOptions', opts);
   toast('选项已删除'); renderPage(currentPageId);
 }
@@ -1697,7 +1965,7 @@ function renderMaterialMeta(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">材质库</h1><p class="page-desc">管理材质选项</p></div><button class="btn btn-primary" onclick="openMaterialModal()">+ 新增材质</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>材质名称</th><th>FSC 认证</th><th>食品级</th><th>操作</th></tr></thead>
-    <tbody>${materials.map(m=>`<tr><td class="td-name">${m.name}</td><td>${m.fsc?'✅':'❌'}</td><td>${m.food?'✅':'❌'}</td><td><button class="btn btn-sm btn-secondary" onclick="openMaterialModal('${m.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteMaterial('${m.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${materials.map(m=>`<tr><td class="td-name">${esc(m.name)}</td><td>${m.fsc?'✅':'❌'}</td><td>${m.food?'✅':'❌'}</td><td><button class="btn btn-sm btn-secondary" onclick="openMaterialModal('${m.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteMaterial('${m.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function openMaterialModal(id) {
@@ -1705,7 +1973,7 @@ function openMaterialModal(id) {
   const m = id ? mats.find(x => x.id === id) : null;
   showModal(m ? '编辑材质' : '新增材质', `
     <div class="form-grid">
-      <div class="form-group full"><label class="form-label">材质名称 *</label><input class="form-input" id="f_mat_name" value="${m?.name||''}"></div>
+      <div class="form-group full"><label class="form-label">材质名称 *</label><input class="form-input" id="f_mat_name" value="${esc(m?.name||'')}"></div>
       <div class="form-group"><label class="form-label">FSC 认证</label><select class="form-select" id="f_mat_fsc"><option value="true" ${m?.fsc?'selected':''}>是</option><option value="false" ${!m?.fsc?'selected':''}>否</option></select></div>
       <div class="form-group"><label class="form-label">食品级</label><select class="form-select" id="f_mat_food"><option value="true" ${m?.food?'selected':''}>是</option><option value="false" ${!m?.food?'selected':''}>否</option></select></div>
     </div>
@@ -1734,7 +2002,7 @@ function renderArticles(c) {
     <div class="page-header"><div><h1 class="page-title">文章管理</h1><p class="page-desc">博客/资讯内容</p></div><button class="btn btn-primary" onclick="openArticleModal()">+ 新建文章</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>标题</th><th>分类</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
     <tbody>${articles.length===0?'<tr><td colspan="5" style="text-align:center;padding:40px;color:#999">暂无文章</td></tr>':
-    articles.map(a=>`<tr><td class="td-name">${a.title}</td><td>${a.category}</td><td>${a.status==='published'?'<span class="badge badge-green">已发布</span>':'<span class="badge badge-gray">草稿</span>'}</td><td>${a.created}</td><td><button class="btn btn-sm btn-secondary" onclick="openArticleModal('${a.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteArticle('${a.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    articles.map(a=>`<tr><td class="td-name">${esc(a.title)}</td><td>${esc(a.category)}</td><td>${a.status==='published'?'<span class="badge badge-green">已发布</span>':'<span class="badge badge-gray">草稿</span>'}</td><td>${esc(a.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="openArticleModal('${a.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteArticle('${a.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function openArticleModal(id) {
@@ -1742,11 +2010,11 @@ function openArticleModal(id) {
   const a = id ? articles.find(x => x.id === id) : null;
   showModal(a ? '编辑文章' : '新建文章', `
     <div class="form-grid">
-      <div class="form-group full"><label class="form-label">标题 *</label><input class="form-input" id="f_art_title" value="${a?.title||''}"></div>
+      <div class="form-group full"><label class="form-label">标题 *</label><input class="form-input" id="f_art_title" value="${esc(a?.title||'')}"></div>
       <div class="form-group"><label class="form-label">分类</label><select class="form-select" id="f_art_cat"><option ${a?.category==='Guide'?'selected':''}>Guide</option><option ${a?.category==='Sustainability'?'selected':''}>Sustainability</option><option ${a?.category==='News'?'selected':''}>News</option><option ${a?.category==='Tips'?'selected':''}>Tips</option></select></div>
       <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_art_status"><option value="draft" ${a?.status==='draft'?'selected':''}>草稿</option><option value="published" ${a?.status==='published'?'selected':''}>已发布</option></select></div>
-      <div class="form-group full"><label class="form-label">内容摘要</label><textarea class="form-textarea" id="f_art_excerpt" rows="3">${a?.excerpt||''}</textarea></div>
-      <div class="form-group full"><label class="form-label">正文内容</label><textarea class="form-textarea" id="f_art_content" rows="6">${a?.content||''}</textarea></div>
+      <div class="form-group full"><label class="form-label">内容摘要</label><textarea class="form-textarea" id="f_art_excerpt" rows="3">${esc(a?.excerpt||'')}</textarea></div>
+      <div class="form-group full"><label class="form-label">正文内容</label><textarea class="form-textarea" id="f_art_content" rows="6">${esc(a?.content||'')}</textarea></div>
     </div>
   `, () => {
     const title = val('f_art_title');
@@ -1773,7 +2041,7 @@ function renderFAQ(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">FAQ 管理</h1><p class="page-desc">前台常见问题</p></div><button class="btn btn-primary" onclick="openFAQModal()">+ 新建 FAQ</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>分类</th><th>问题</th><th>回答</th><th>排序</th><th>操作</th></tr></thead>
-    <tbody>${faqs.map(f=>`<tr><td><span class="badge badge-blue">${f.category}</span></td><td class="td-name">${f.question}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.answer}</td><td>${f.sort}</td><td><button class="btn btn-sm btn-secondary" onclick="openFAQModal('${f.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteFAQ('${f.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${faqs.map(f=>`<tr><td><span class="badge badge-blue">${esc(f.category)}</span></td><td class="td-name">${esc(f.question)}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.answer)}</td><td>${esc(f.sort)}</td><td><button class="btn btn-sm btn-secondary" onclick="openFAQModal('${f.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteFAQ('${f.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function openFAQModal(id) {
@@ -1783,10 +2051,12 @@ function openFAQModal(id) {
   const cats = ['MOQ','交期','配送','Artwork','认证','价格'];
   showModal(title, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">分类</label><select class="form-select" id="f_category">${cats.map(c=>`<option ${f?.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="${f?.sort||1}"></div>
-      <div class="form-group full"><label class="form-label">问题 *</label><input class="form-input" id="f_question" value="${f?.question||''}"></div>
-      <div class="form-group full"><label class="form-label">回答 *</label><textarea class="form-textarea" id="f_answer" rows="4">${f?.answer||''}</textarea></div>
+      <div class="form-group"><label class="form-label">分类</label><select class="form-select" id="f_category">${cats.map(c=>`<option ${f?.category===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="${esc(f?.sort||1)}"></div>
+      <div class="form-group full"><label class="form-label">问题 *（英文，马来文页面同样用它）</label><input class="form-input" id="f_question" value="${esc(f?.question||'')}"></div>
+      <div class="form-group full"><label class="form-label">问题（中文）</label><input class="form-input" id="f_questionZh" value="${esc(f?.questionZh||'')}" placeholder="留空则中文页显示英文"></div>
+      <div class="form-group full"><label class="form-label">回答 *（英文，马来文页面同样用它）</label><textarea class="form-textarea" id="f_answer" rows="4">${esc(f?.answer||'')}</textarea></div>
+      <div class="form-group full"><label class="form-label">回答（中文）</label><textarea class="form-textarea" id="f_answerZh" rows="4" placeholder="留空则中文页显示英文">${esc(f?.answerZh||'')}</textarea></div>
     </div>
   `, () => {
     const question = val('f_question');
@@ -1795,10 +2065,12 @@ function openFAQModal(id) {
     if (f) {
       f.category = val('f_category');
       f.question = question;
+      f.questionZh = val('f_questionZh');
       f.answer = answer;
+      f.answerZh = val('f_answerZh');
       f.sort = parseInt(val('f_sort')) || 1;
     } else {
-      faqs.push({id:DM.genId('FAQ'),category:val('f_category'),question,answer,sort:parseInt(val('f_sort'))||1});
+      faqs.push({id:DM.genId('FAQ'),category:val('f_category'),question,questionZh:val('f_questionZh'),answer,answerZh:val('f_answerZh'),sort:parseInt(val('f_sort'))||1});
     }
     DM.set('faqs', faqs);
     toast(f ? 'FAQ 已更新' : 'FAQ 已创建'); renderPage(currentPageId);
@@ -1816,10 +2088,10 @@ function renderBanner(c) {
     <div class="page-header"><div><h1 class="page-title">首页 Banner</h1><p class="page-desc">Hero 区域配置</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group full"><label class="form-label">主标题</label><input class="form-input" id="fs_banner_title" value="${(DM.get('settings_banner')||{}).title||'Custom Packaging That Elevates Your Brand'}"></div>
-        <div class="form-group full"><label class="form-label">副标题</label><textarea class="form-textarea" id="fs_banner_sub" rows="2">${(DM.get('settings_banner')||{}).subtitle||'From design to delivery — we manufacture premium printed boxes, bags, and labels for businesses worldwide.'}</textarea></div>
-        <div class="form-group"><label class="form-label">CTA 1 文案</label><input class="form-input" id="fs_banner_cta1" value="${(DM.get('settings_banner')||{}).cta1||'Request Free Quote'}"></div>
-        <div class="form-group"><label class="form-label">CTA 2 文案</label><input class="form-input" id="fs_banner_cta2" value="${(DM.get('settings_banner')||{}).cta2||'Explore Products'}"></div>
+        <div class="form-group full"><label class="form-label">主标题</label><input class="form-input" id="fs_banner_title" value="${esc((DM.get('settings_banner')||{}).title||'Custom Packaging That Elevates Your Brand')}"></div>
+        <div class="form-group full"><label class="form-label">副标题</label><textarea class="form-textarea" id="fs_banner_sub" rows="2">${esc((DM.get('settings_banner')||{}).subtitle||'From design to delivery — we manufacture premium printed boxes, bags, and labels for businesses worldwide.')}</textarea></div>
+        <div class="form-group"><label class="form-label">CTA 1 文案</label><input class="form-input" id="fs_banner_cta1" value="${esc((DM.get('settings_banner')||{}).cta1||'Request Free Quote')}"></div>
+        <div class="form-group"><label class="form-label">CTA 2 文案</label><input class="form-input" id="fs_banner_cta2" value="${esc((DM.get('settings_banner')||{}).cta2||'Explore Products')}"></div>
         <div class="form-group full"><label class="form-label">背景图</label><input class="form-input" type="file" accept="image/*"></div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="DM.set('settings_banner',{title:val('fs_banner_title'),subtitle:val('fs_banner_sub'),cta1:val('fs_banner_cta1'),cta2:val('fs_banner_cta2')});toast('Banner 已保存')">保存</button></div>
@@ -1831,7 +2103,7 @@ function renderAdvantages(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">优势图标区</h1><p class="page-desc">4 个核心卖点</p></div></div>
     <div class="card"><div class="card-body">
-      ${adv.map((a,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:24px">${a.icon}</span><div style="flex:1"><input class="form-input adv-title" data-idx="${i}" value="${a.title}" style="font-weight:600;margin-bottom:4px"><input class="form-input adv-desc" data-idx="${i}" value="${a.desc}" style="font-size:12px;color:var(--gray-500)"></div></div>`).join('')}
+      ${adv.map((a,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:24px">${esc(a.icon)}</span><div style="flex:1"><input class="form-input adv-title" data-idx="${i}" value="${esc(a.title)}" style="font-weight:600;margin-bottom:4px"><input class="form-input adv-desc" data-idx="${i}" value="${esc(a.desc)}" style="font-size:12px;color:var(--gray-500)"></div></div>`).join('')}
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveAdvantages()">保存</button></div>
     </div></div>`;
 }
@@ -1850,7 +2122,7 @@ function renderStats(c) {
     <div class="page-header"><div><h1 class="page-title">数据展示</h1><p class="page-desc">About 区域数字配置</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        ${st.map((s,i)=>`<div class="form-group"><label class="form-label">数字 ${i+1}</label><input class="form-input stat-num" data-idx="${i}" value="${s.num}"></div><div class="form-group"><label class="form-label">标签 ${i+1}</label><input class="form-input stat-label" data-idx="${i}" value="${s.label}"></div>`).join('')}
+        ${st.map((s,i)=>`<div class="form-group"><label class="form-label">数字 ${i+1}</label><input class="form-input stat-num" data-idx="${i}" value="${esc(s.num)}"></div><div class="form-group"><label class="form-label">标签 ${i+1}</label><input class="form-input stat-label" data-idx="${i}" value="${esc(s.label)}"></div>`).join('')}
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveStats()">保存</button></div>
     </div></div>`;
@@ -1869,7 +2141,7 @@ function renderTestimonials(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">客户评价</h1><p class="page-desc">管理客户评价</p></div><button class="btn btn-primary" onclick="openTestimonialModal()">+ 新建评价</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>头像</th><th>姓名</th><th>职位</th><th>公司</th><th>评分</th><th>评价</th><th>状态</th><th>操作</th></tr></thead>
-    <tbody>${items.map(t=>`<tr><td><div style="width:32px;height:32px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px">${t.avatar}</div></td><td class="td-name">${t.name}</td><td>${t.position}</td><td>${t.company}</td><td>${'⭐'.repeat(t.rating)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.content}</td><td>${t.active?'<span class="badge badge-green">展示</span>':'<span class="badge badge-gray">隐藏</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openTestimonialModal('${t.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteTestimonial('${t.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${items.map(t=>`<tr><td><div style="width:32px;height:32px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px">${esc(t.avatar)}</div></td><td class="td-name">${esc(t.name)}</td><td>${esc(t.position)}</td><td>${esc(t.company)}</td><td>${'⭐'.repeat(t.rating)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.content)}</td><td>${t.active?'<span class="badge badge-green">展示</span>':'<span class="badge badge-gray">隐藏</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openTestimonialModal('${t.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteTestimonial('${t.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function openTestimonialModal(id) {
@@ -1878,11 +2150,12 @@ function openTestimonialModal(id) {
   const title = t ? '编辑评价' : '新建评价';
   showModal(title, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${t?.name||''}"></div>
-      <div class="form-group"><label class="form-label">职位</label><input class="form-input" id="f_position" value="${t?.position||''}"></div>
-      <div class="form-group"><label class="form-label">公司</label><input class="form-input" id="f_company" value="${t?.company||''}"></div>
-      <div class="form-group"><label class="form-label">评分</label><select class="form-select" id="f_rating">${[5,4,3].map(r=>`<option value="${r}" ${t?.rating===r?'selected':''}>${r}</option>`).join('')}</select></div>
-      <div class="form-group full"><label class="form-label">评价内容 *</label><textarea class="form-textarea" id="f_content" rows="3">${t?.content||''}</textarea></div>
+      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${esc(t?.name)}"></div>
+      <div class="form-group"><label class="form-label">职位</label><input class="form-input" id="f_position" value="${esc(t?.position)}"></div>
+      <div class="form-group"><label class="form-label">公司</label><input class="form-input" id="f_company" value="${esc(t?.company)}"></div>
+      <div class="form-group"><label class="form-label">评分</label><select class="form-select" id="f_rating">${[5,4,3].map(r=>`<option value="${esc(r)}" ${t?.rating===r?'selected':''}>${esc(r)}</option>`).join('')}</select></div>
+      <div class="form-group full"><label class="form-label">评价内容 *（英文，马来文页面同样用它）</label><textarea class="form-textarea" id="f_content" rows="3">${esc(t?.content||'')}</textarea></div>
+      <div class="form-group full"><label class="form-label">评价内容（中文）</label><textarea class="form-textarea" id="f_contentZh" rows="3" placeholder="留空则中文页显示英文">${esc(t?.contentZh||'')}</textarea></div>
     </div>
   `, () => {
     const name = val('f_name');
@@ -1894,9 +2167,10 @@ function openTestimonialModal(id) {
       t.company = val('f_company');
       t.rating = parseInt(val('f_rating'));
       t.content = content;
+      t.contentZh = val('f_contentZh');
       t.avatar = name[0] || '?';
     } else {
-      items.push({id:DM.genId('T'),name,position:val('f_position'),company:val('f_company'),rating:parseInt(val('f_rating')),content,avatar:name[0]||'?',active:true});
+      items.push({id:DM.genId('T'),name,position:val('f_position'),company:val('f_company'),rating:parseInt(val('f_rating')),content,contentZh:val('f_contentZh'),avatar:name[0]||'?',active:true});
     }
     DM.set('testimonials', items);
     toast(t ? '评价已更新' : '评价已创建'); renderPage(currentPageId);
@@ -1915,7 +2189,7 @@ function renderClients(c) {
     <div class="page-header"><div><h1 class="page-title">合作品牌墙</h1><p class="page-desc">管理展示的客户 Logo</p></div><button class="btn btn-primary" onclick="openClientModal()">+ 上传 Logo</button></div>
     <div class="card"><div class="card-body">
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
-        ${clients.map(cl=>`<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;cursor:pointer;position:relative" onclick="openClientModal('${cl.id}')">${cl.logoUrl?`<img src="${esc(cl.logoUrl)}" alt="${esc(cl.name)}" style="max-height:56px;max-width:100%;object-fit:contain;margin-bottom:8px">`:''}<div style="font-weight:700;color:var(--gray-400);font-size:14px;letter-spacing:2px">${cl.name}</div>${!cl.active?'<span class="badge badge-gray" style="position:absolute;top:4px;right:4px;font-size:9px">隐藏</span>':''}</div>`).join('')}
+        ${clients.map(cl=>`<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;cursor:pointer;position:relative" onclick="openClientModal('${cl.id}')">${cl.logoUrl?`<img src="${esc(cl.logoUrl)}" alt="${esc(cl.name)}" style="max-height:56px;max-width:100%;object-fit:contain;margin-bottom:8px">`:''}<div style="font-weight:700;color:var(--gray-400);font-size:14px;letter-spacing:2px">${esc(cl.name)}</div>${!cl.active?'<span class="badge badge-gray" style="position:absolute;top:4px;right:4px;font-size:9px">隐藏</span>':''}</div>`).join('')}
       </div>
     </div></div>`;
 }
@@ -1925,7 +2199,7 @@ function openClientModal(id) {
   const cl = id ? clients.find(x => x.id === id) : null;
   showModal(cl ? '编辑品牌' : '上传品牌 Logo', `
     <div class="form-grid">
-      <div class="form-group full"><label class="form-label">品牌名称 *</label><input class="form-input" id="f_cl_name" value="${cl?.name||''}" placeholder="e.g. Nike"></div>
+      <div class="form-group full"><label class="form-label">品牌名称 *</label><input class="form-input" id="f_cl_name" value="${esc(cl?.name)}" placeholder="e.g. Nike"></div>
       <div class="form-group full"><label class="form-label">Logo 图片${cl?.logoUrl?'（留空则保持不变）':''}</label><input class="form-input" type="file" accept="image/*" id="f_cl_logo"></div>
       <div class="form-group"><label class="form-label">前台展示</label><select class="form-select" id="f_cl_active"><option value="true" ${cl?.active!==false?'selected':''}>展示</option><option value="false" ${cl?.active===false?'selected':''}>隐藏</option></select></div>
     </div>
@@ -1956,11 +2230,11 @@ function renderAbout(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">About 关于我们</h1><p class="page-desc">编辑 About 页面内容</p></div></div>
     <div class="card"><div class="card-body">
-      <div class="form-group"><label class="form-label">公司介绍</label><textarea class="form-textarea" id="fs_aboutIntro" rows="4">${s.intro||''}</textarea></div>
-      <div class="form-group"><label class="form-label">工厂地址</label><input class="form-input" id="fs_aboutAddress" value="${s.address||''}"></div>
+      <div class="form-group"><label class="form-label">公司介绍</label><textarea class="form-textarea" id="fs_aboutIntro" rows="4">${esc(s.intro||'')}</textarea></div>
+      <div class="form-group"><label class="form-label">工厂地址</label><input class="form-input" id="fs_aboutAddress" value="${esc(s.address||'')}"></div>
       <div class="form-group"><label class="form-label">认证勾选</label>
         <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px">
-          ${['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ'].map(cert=>`<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" class="about-cert-cb" value="${cert}" ${s.certs?.includes(cert)?'checked':''}> ${cert}</label>`).join('')}
+          ${['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ'].map(cert=>`<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" class="about-cert-cb" value="${esc(cert)}" ${s.certs?.includes(cert)?'checked':''}> ${esc(cert)}</label>`).join('')}
         </div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsAbout()">保存</button></div>
@@ -1977,7 +2251,7 @@ function renderProcess(c) {
   const steps = DM.get('settings_process');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">How We Work</h1><p class="page-desc">5 步流程配置</p></div></div>
-    <div class="card"><div class="card-body">${steps.map((s,i)=>`<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--gray-100)"><div style="width:40px;height:40px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${i+1}</div><div style="flex:1"><input class="form-input process-title" data-idx="${i}" value="${s.title}" style="font-weight:600;margin-bottom:4px"><input class="form-input process-desc" data-idx="${i}" value="${s.desc}" style="font-size:13px;margin-bottom:4px"><input class="form-input process-days" data-idx="${i}" value="${s.days}" style="width:120px;font-size:12px"></div></div>`).join('')}<div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsProcess()">保存</button></div></div></div>`;
+    <div class="card"><div class="card-body">${steps.map((s,i)=>`<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--gray-100)"><div style="width:40px;height:40px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${i+1}</div><div style="flex:1"><input class="form-input process-title" data-idx="${i}" value="${esc(s.title)}" style="font-weight:600;margin-bottom:4px"><input class="form-input process-desc" data-idx="${i}" value="${esc(s.desc)}" style="font-size:13px;margin-bottom:4px"><input class="form-input process-days" data-idx="${i}" value="${esc(s.days)}" style="width:120px;font-size:12px"></div></div>`).join('')}<div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsProcess()">保存</button></div></div></div>`;
 }
 
 function saveSettingsProcess() {
@@ -1994,7 +2268,7 @@ function renderPrintingGuide(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">印刷指南</h1><p class="page-desc">0C/1C/4C 说明及术语</p></div></div>
     <div class="card"><div class="card-body">
-      <div class="form-group"><label class="form-label">指南内容</label><textarea class="form-textarea" id="fs_guide_content" rows="12">${content}</textarea></div>
+      <div class="form-group"><label class="form-label">指南内容</label><textarea class="form-textarea" id="fs_guide_content" rows="12">${esc(content)}</textarea></div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="savePrintingGuide()">保存</button></div>
     </div></div>`;
 }
@@ -2020,7 +2294,7 @@ function renderQuoteConfig(c) {
     <div class="page-header"><div><h1 class="page-title">报价表单配置</h1><p class="page-desc">字段设计器</p></div></div>
     <div class="card"><div class="card-body">
       <div style="display:flex;flex-direction:column;gap:8px">
-        ${[['盒型','下拉选择',true],['尺寸 (cm)','文本输入',true],['采购数量','数字输入',true],['印刷方式','下拉选择',true],['表面处理','下拉选择',true],['特殊工艺','多选',false],['姓名','文本输入',true],['公司','文本输入',false],['电话','文本输入',true],['邮箱','邮箱输入',true],['备注','多行文本',false],['附件上传','文件上传',false]].map(([name,type,req])=>`<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--gray-50);border-radius:6px"><span style="width:20px;text-align:center">${req?'🔴':'⚪'}</span><span style="flex:1;font-weight:500">${name}</span><span class="badge badge-gray">${type}</span><span style="font-size:11px;color:var(--gray-400)">${req?'必填':'选填'}</span></div>`).join('')}
+        ${[['盒型','下拉选择',true],['尺寸 (cm)','文本输入',true],['采购数量','数字输入',true],['印刷方式','下拉选择',true],['表面处理','下拉选择',true],['特殊工艺','多选',false],['姓名','文本输入',true],['公司','文本输入',false],['电话','文本输入',true],['邮箱','邮箱输入',true],['备注','多行文本',false],['附件上传','文件上传',false]].map(([name,type,req])=>`<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--gray-50);border-radius:6px"><span style="width:20px;text-align:center">${req?'🔴':'⚪'}</span><span style="flex:1;font-weight:500">${esc(name)}</span><span class="badge badge-gray">${esc(type)}</span><span style="font-size:11px;color:var(--gray-400)">${req?'必填':'选填'}</span></div>`).join('')}
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('配置已保存');renderPage(currentPageId)">保存配置</button></div>
     </div></div>`;
@@ -2032,7 +2306,7 @@ function renderFormEntries(c) {
     <div class="page-header"><div><h1 class="page-title">表单提交记录</h1><p class="page-desc">所有表单提交</p></div><button class="btn btn-secondary btn-sm" onclick="exportCSV('leads')">📥 导出 Excel</button></div>
     <div class="toolbar"><div class="search"><input placeholder="搜索..."></div><select><option value="">全部表单</option><option>报价表单</option><option>联系表单</option></select></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>编号</th><th>表单</th><th>姓名</th><th>公司</th><th>盒型</th><th>数量</th><th>提交时间</th><th>操作</th></tr></thead>
-    <tbody>${leads.map(l=>`<tr><td class="td-id">${l.id}</td><td><span class="badge badge-blue">报价</span></td><td class="td-name">${l.name}</td><td>${l.company}</td><td>${l.boxType}</td><td>${l.quantity}</td><td>${l.created}</td><td><button class="btn btn-sm btn-secondary" onclick="viewLead('${l.id}')">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${leads.map(l=>`<tr><td class="td-id">${esc(l.id)}</td><td><span class="badge badge-blue">报价</span></td><td class="td-name">${esc(l.name)}</td><td>${esc(l.company)}</td><td>${esc(l.boxType)}</td><td>${esc(l.quantity)}</td><td>${esc(l.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="viewLead('${l.id}')">查看</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 // ========== MEDIA ==========
@@ -2053,7 +2327,7 @@ let mediaSearch = '', mediaTypeFilter = '';
 
 function mediaGridHtml(files) {
   if (!files.length) return `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#999">暂无文件</div>`;
-  return files.map(f=>`<div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;cursor:pointer" onclick="viewMediaFile('${f.id}')">${f.url && f.type==='image' ? `<img src="${f.url}" loading="lazy" style="width:100%;height:100px;object-fit:cover;display:block">` : `<div style="height:100px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:24px">${f.type==='image'?'🖼️':f.type==='pdf'?'📄':'📁'}</div>`}<div style="padding:8px;font-size:11px;color:var(--gray-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div></div>`).join('');
+  return files.map(f=>`<div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;cursor:pointer" onclick="viewMediaFile('${f.id}')">${f.url && f.type==='image' ? `<img src="${safeHref(f.url)}" loading="lazy" style="width:100%;height:100px;object-fit:cover;display:block">` : `<div style="height:100px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:24px">${f.type==='image'?'🖼️':f.type==='pdf'?'📄':'📁'}</div>`}<div style="padding:8px;font-size:11px;color:var(--gray-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.name)}</div></div>`).join('');
 }
 
 function applyMediaFilter() {
@@ -2098,11 +2372,11 @@ function viewMediaFile(id) {
   if (!f) return;
   showModal('文件详情', `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">文件名</label><div style="padding:8px 0;font-weight:600">${f.name}</div></div>
-      <div class="form-group"><label class="form-label">类型</label><div style="padding:8px 0">${f.type}</div></div>
-      <div class="form-group"><label class="form-label">大小</label><div style="padding:8px 0">${f.size}</div></div>
-      <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${f.uploaded}</div></div>
-      <div class="form-group full"><label class="form-label">云端地址</label><div style="padding:8px 0">${f.url ? `<a href="${f.url}" target="_blank" style="color:var(--primary);word-break:break-all">${f.url}</a>` : '<span style="color:var(--gray-400)">旧记录，文件未上传到云端</span>'}</div></div>
+      <div class="form-group"><label class="form-label">文件名</label><div style="padding:8px 0;font-weight:600">${esc(f.name)}</div></div>
+      <div class="form-group"><label class="form-label">类型</label><div style="padding:8px 0">${esc(f.type)}</div></div>
+      <div class="form-group"><label class="form-label">大小</label><div style="padding:8px 0">${esc(f.size)}</div></div>
+      <div class="form-group"><label class="form-label">上传时间</label><div style="padding:8px 0">${esc(f.uploaded)}</div></div>
+      <div class="form-group full"><label class="form-label">云端地址</label><div style="padding:8px 0">${f.url ? `<a href="${safeHref(f.url)}" target="_blank" style="color:var(--primary);word-break:break-all">${esc(f.url)}</a>` : '<span style="color:var(--gray-400)">旧记录，文件未上传到云端</span>'}</div></div>
     </div>
   `, null, [{label:'删除',cls:'btn-danger',fn:async ()=>{
     if(!confirm('确定删除？云端文件也会一并删除。'))return;
@@ -2118,7 +2392,7 @@ function renderCasesList(c) {
     <div class="page-header"><div><h1 class="page-title">案例列表</h1><p class="page-desc">客户案例展示</p></div><button class="btn btn-primary" onclick="openCaseModal()">+ 新建案例</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>标题</th><th>分类</th><th>客户</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
     <tbody>${cases.length===0?'<tr><td colspan="6" style="text-align:center;padding:40px;color:#999">暂无案例</td></tr>':
-    cases.map(ca=>`<tr><td class="td-name">${ca.title}</td><td>${ca.category}</td><td>${ca.client}</td><td>${ca.status==='published'?'<span class="badge badge-green">已发布</span>':'<span class="badge badge-gray">草稿</span>'}</td><td>${ca.created}</td><td><button class="btn btn-sm btn-secondary" onclick="openCaseModal('${ca.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteCase('${ca.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    cases.map(ca=>`<tr><td class="td-name">${esc(ca.title)}</td><td>${esc(ca.category)}</td><td>${esc(ca.client)}</td><td>${ca.status==='published'?'<span class="badge badge-green">已发布</span>':'<span class="badge badge-gray">草稿</span>'}</td><td>${esc(ca.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="openCaseModal('${ca.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteCase('${ca.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function openCaseModal(id) {
@@ -2127,11 +2401,11 @@ function openCaseModal(id) {
   const cats = DM.get('caseCategories');
   showModal(ca ? '编辑案例' : '新建案例', `
     <div class="form-grid">
-      <div class="form-group full"><label class="form-label">标题 *</label><input class="form-input" id="f_case_title" value="${ca?.title||''}"></div>
-      <div class="form-group"><label class="form-label">分类</label><select class="form-select" id="f_case_cat">${cats.map(c=>`<option ${ca?.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="form-group"><label class="form-label">客户名称</label><input class="form-input" id="f_case_client" value="${ca?.client||''}"></div>
+      <div class="form-group full"><label class="form-label">标题 *</label><input class="form-input" id="f_case_title" value="${esc(ca?.title||'')}"></div>
+      <div class="form-group"><label class="form-label">分类</label><select class="form-select" id="f_case_cat">${cats.map(c=>`<option ${ca?.category===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">客户名称</label><input class="form-input" id="f_case_client" value="${esc(ca?.client||'')}"></div>
       <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_case_status"><option value="draft" ${ca?.status==='draft'?'selected':''}>草稿</option><option value="published" ${ca?.status==='published'?'selected':''}>已发布</option></select></div>
-      <div class="form-group full"><label class="form-label">案例描述</label><textarea class="form-textarea" id="f_case_desc" rows="4">${ca?.desc||''}</textarea></div>
+      <div class="form-group full"><label class="form-label">案例描述</label><textarea class="form-textarea" id="f_case_desc" rows="4">${esc(ca?.desc||'')}</textarea></div>
     </div>
   `, () => {
     const title = val('f_case_title');
@@ -2153,7 +2427,7 @@ function renderCasesCategories(c) {
   const cats = DM.get('caseCategories');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">案例分类</h1><p class="page-desc">按行业分类</p></div><button class="btn btn-primary" onclick="addCaseCategory()">+ 新建分类</button></div>
-    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${cats.map(cat=>`<span class="badge badge-green" style="padding:8px 16px;font-size:13px;cursor:pointer" onclick="editCaseCategory('${cat}')">${cat} ✎</span>`).join('')}</div></div></div>`;
+    <div class="card"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px">${cats.map((cat,i)=>`<span class="badge badge-green" style="padding:8px 16px;font-size:13px;cursor:pointer" onclick="editCaseCategory(${i})">${esc(cat)} ✎</span>`).join('')}</div></div></div>`;
 }
 
 function addCaseCategory() {
@@ -2170,19 +2444,32 @@ function addCaseCategory() {
   });
 }
 
-function editCaseCategory(old) {
+function editCaseCategory(idx) {
+  const cats = DM.get('caseCategories');
+  const old = cats[idx];
+  if (old === undefined) return;
   showModal('编辑分类', `
-    <div class="form-group"><label class="form-label">分类名称</label><input class="form-input" id="f_casecat_edit" value="${old}"></div>
-    <div style="margin-top:12px"><button class="btn btn-danger btn-sm" onclick="if(confirm('确定删除？')){const c=DM.get('caseCategories').filter(x=>x!=='${old}');DM.set('caseCategories',c);toast('已删除');closeModal();renderPage(currentPageId);}">删除此分类</button></div>
+    <div class="form-group"><label class="form-label">分类名称</label><input class="form-input" id="f_casecat_edit" value="${esc(old)}"></div>
+    <div style="margin-top:12px"><button class="btn btn-danger btn-sm" onclick="deleteCaseCategory(${idx})">删除此分类</button></div>
   `, () => {
     const name = val('f_casecat_edit');
     if (!name) { toast('请输入名称'); return; }
-    const cats = DM.get('caseCategories');
-    const idx = cats.indexOf(old);
-    if (idx >= 0) cats[idx] = name;
-    DM.set('caseCategories', cats);
+    const list = DM.get('caseCategories');
+    if (list[idx] === undefined) { toast('分类已变动，请重新打开'); return; }
+    list[idx] = name;
+    DM.set('caseCategories', list);
     toast('分类已更新'); renderPage(currentPageId);
   });
+}
+
+function deleteCaseCategory(idx) {
+  const cats = DM.get('caseCategories');
+  const name = cats[idx];
+  if (name === undefined) { toast('分类已变动，请刷新页面'); return; }
+  if (!confirm('确定删除「' + name + '」？')) return;
+  cats.splice(idx, 1);
+  DM.set('caseCategories', cats);
+  toast('已删除'); closeModal(); renderPage(currentPageId);
 }
 
 // ========== POLICIES ==========
@@ -2191,7 +2478,7 @@ function renderPoliciesList(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">政策列表</h1><p class="page-desc">法定页面管理</p></div><button class="btn btn-primary" onclick="openPolicyModal()">+ 新建政策</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>标题</th><th>Slug</th><th>更新时间</th><th>操作</th></tr></thead>
-    <tbody>${policies.map(p=>`<tr><td class="td-name">${p.title}</td><td>${p.slug}</td><td>${p.updated}</td><td><button class="btn btn-sm btn-secondary" onclick="openPolicyModal('${p.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deletePolicy('${p.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${policies.map(p=>`<tr><td class="td-name">${esc(p.title)}</td><td>${esc(p.slug)}</td><td>${esc(p.updated)}</td><td><button class="btn btn-sm btn-secondary" onclick="openPolicyModal('${p.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deletePolicy('${p.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function openPolicyModal(id) {
@@ -2200,9 +2487,9 @@ function openPolicyModal(id) {
   const title = p ? '编辑政策' : '新建政策';
   showModal(title, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">标题 *</label><input class="form-input" id="f_title" value="${p?.title||''}"></div>
-      <div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="f_slug" value="${p?.slug||''}"></div>
-      <div class="form-group full"><label class="form-label">内容 *</label><textarea class="form-textarea" id="f_content" rows="6">${p?.content||''}</textarea></div>
+      <div class="form-group"><label class="form-label">标题 *</label><input class="form-input" id="f_title" value="${esc(p?.title||'')}"></div>
+      <div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="f_slug" value="${esc(p?.slug||'')}"></div>
+      <div class="form-group full"><label class="form-label">内容 *</label><textarea class="form-textarea" id="f_content" rows="6">${esc(p?.content||'')}</textarea></div>
     </div>
   `, () => {
     const titleVal = val('f_title');
@@ -2234,16 +2521,16 @@ function renderSettingsSite(c) {
     <div class="page-header"><div><h1 class="page-title">基本信息</h1><p class="page-desc">站点和公司信息</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">公司英文名</label><input class="form-input" id="fs_enName" value="${s.enName||''}"></div>
-        <div class="form-group"><label class="form-label">公司中文名</label><input class="form-input" id="fs_zhName" value="${s.zhName||''}"></div>
-        <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="fs_phone" value="${s.phone||''}"></div>
-        <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="fs_email" value="${s.email||''}"></div>
-        <div class="form-group full"><label class="form-label">地址</label><input class="form-input" id="fs_address" value="${s.address||''}"></div>
-        <div class="form-group"><label class="form-label">Google Maps</label><input class="form-input" id="fs_googleMaps" value="${s.googleMaps||''}" placeholder="Maps 链接"></div>
-        <div class="form-group"><label class="form-label">Waze</label><input class="form-input" id="fs_waze" value="${s.waze||''}" placeholder="Waze 链接"></div>
-        <div class="form-group"><label class="form-label">Facebook</label><input class="form-input" id="fs_facebook" value="${s.facebook||''}" placeholder="FB 页面链接"></div>
-        <div class="form-group"><label class="form-label">Instagram</label><input class="form-input" id="fs_instagram" value="${s.instagram||''}" placeholder="IG 链接"></div>
-        <div class="form-group"><label class="form-label">LinkedIn</label><input class="form-input" id="fs_linkedin" value="${s.linkedin||''}" placeholder="LinkedIn 链接"></div>
+        <div class="form-group"><label class="form-label">公司英文名</label><input class="form-input" id="fs_enName" value="${esc(s.enName||'')}"></div>
+        <div class="form-group"><label class="form-label">公司中文名</label><input class="form-input" id="fs_zhName" value="${esc(s.zhName||'')}"></div>
+        <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="fs_phone" value="${esc(s.phone||'')}"></div>
+        <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="fs_email" value="${esc(s.email||'')}"></div>
+        <div class="form-group full"><label class="form-label">地址</label><input class="form-input" id="fs_address" value="${esc(s.address||'')}"></div>
+        <div class="form-group"><label class="form-label">Google Maps</label><input class="form-input" id="fs_googleMaps" value="${esc(s.googleMaps||'')}" placeholder="Maps 链接"></div>
+        <div class="form-group"><label class="form-label">Waze</label><input class="form-input" id="fs_waze" value="${esc(s.waze||'')}" placeholder="Waze 链接"></div>
+        <div class="form-group"><label class="form-label">Facebook</label><input class="form-input" id="fs_facebook" value="${esc(s.facebook||'')}" placeholder="FB 页面链接"></div>
+        <div class="form-group"><label class="form-label">Instagram</label><input class="form-input" id="fs_instagram" value="${esc(s.instagram||'')}" placeholder="IG 链接"></div>
+        <div class="form-group"><label class="form-label">LinkedIn</label><input class="form-input" id="fs_linkedin" value="${esc(s.linkedin||'')}" placeholder="LinkedIn 链接"></div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsSite()">保存</button></div>
     </div></div>`;
@@ -2264,12 +2551,12 @@ function renderSettingsSEO(c) {
     <div class="page-header"><div><h1 class="page-title">SEO 设置</h1><p class="page-desc">搜索引擎优化</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group full"><label class="form-label">全站 Title</label><input class="form-input" id="fs_title" value="${s.title||''}"></div>
-        <div class="form-group full"><label class="form-label">全站 Description</label><textarea class="form-textarea" id="fs_desc" rows="2">${s.description||''}</textarea></div>
-        <div class="form-group full"><label class="form-label">Keywords</label><input class="form-input" id="fs_keywords" value="${s.keywords||''}"></div>
-        <div class="form-group"><label class="form-label">Google Analytics ID</label><input class="form-input" id="fs_gaId" value="${s.gaId||''}" placeholder="G-XXXXXXXXXX"></div>
-        <div class="form-group"><label class="form-label">Google Search Console</label><input class="form-input" id="fs_gscId" value="${s.gscId||''}" placeholder="验证码"></div>
-        <div class="form-group"><label class="form-label">Facebook Pixel ID</label><input class="form-input" id="fs_fbPixel" value="${s.fbPixel||''}" placeholder="Pixel ID"></div>
+        <div class="form-group full"><label class="form-label">全站 Title</label><input class="form-input" id="fs_title" value="${esc(s.title||'')}"></div>
+        <div class="form-group full"><label class="form-label">全站 Description</label><textarea class="form-textarea" id="fs_desc" rows="2">${esc(s.description||'')}</textarea></div>
+        <div class="form-group full"><label class="form-label">Keywords</label><input class="form-input" id="fs_keywords" value="${esc(s.keywords||'')}"></div>
+        <div class="form-group"><label class="form-label">Google Analytics ID</label><input class="form-input" id="fs_gaId" value="${esc(s.gaId||'')}" placeholder="G-XXXXXXXXXX"></div>
+        <div class="form-group"><label class="form-label">Google Search Console</label><input class="form-input" id="fs_gscId" value="${esc(s.gscId||'')}" placeholder="验证码"></div>
+        <div class="form-group"><label class="form-label">Facebook Pixel ID</label><input class="form-input" id="fs_fbPixel" value="${esc(s.fbPixel||'')}" placeholder="Pixel ID"></div>
         <div class="form-group"><label class="form-label">OG 默认图</label><input class="form-input" type="file" accept="image/*"></div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsSEO()">保存</button></div>
@@ -2286,9 +2573,9 @@ function renderSettingsNotifications(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">通知模板</h1><p class="page-desc">自动邮件通知配置</p></div></div>
     <div class="card"><div class="card-body">
-      <div class="form-group"><label class="form-label">新询盘通知 (发送至)</label><input class="form-input" id="fs_notifyEmail" value="${s.notifyEmail||''}"></div>
-      <div class="form-group"><label class="form-label">新询盘邮件模板</label><textarea class="form-textarea" id="fs_leadTemplate" rows="3">${s.leadTemplate||''}</textarea></div>
-      <div class="form-group"><label class="form-label">报价发出模板</label><textarea class="form-textarea" id="fs_quoteTemplate" rows="3">${s.quoteTemplate||''}</textarea></div>
+      <div class="form-group"><label class="form-label">新询盘通知 (发送至)</label><input class="form-input" id="fs_notifyEmail" value="${esc(s.notifyEmail||'')}"></div>
+      <div class="form-group"><label class="form-label">新询盘邮件模板</label><textarea class="form-textarea" id="fs_leadTemplate" rows="3">${esc(s.leadTemplate||'')}</textarea></div>
+      <div class="form-group"><label class="form-label">报价发出模板</label><textarea class="form-textarea" id="fs_quoteTemplate" rows="3">${esc(s.quoteTemplate||'')}</textarea></div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsNotifications()">保存</button></div>
     </div></div>`;
 }
@@ -2308,12 +2595,12 @@ function renderSettingsCerts(c) {
         const thumb = rec && rec.url
           ? (rec.type === 'pdf'
               ? `<div style="width:60px;height:40px;background:var(--gray-100);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px">\ud83d\udcc4</div>`
-              : `<img src="${rec.url}" style="width:60px;height:40px;object-fit:cover;border-radius:4px">`)
+              : `<img src="${safeHref(rec.url)}" style="width:60px;height:40px;object-fit:cover;border-radius:4px">`)
           : `<div style="width:60px;height:40px;background:var(--gray-100);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--gray-400)">\u672a\u4e0a\u4f20</div>`;
         return `<div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--gray-100)">
-          <div style="flex:1"><span class="font-bold">${cert}</span><div style="font-size:11px;color:var(--gray-500)">${rec ? rec.fileName + ' \u00b7 ' + rec.uploaded + ' \u00b7 ' + rec.by : '\u5c1a\u672a\u4e0a\u4f20'}</div></div>
+          <div style="flex:1"><span class="font-bold">${esc(cert)}</span><div style="font-size:11px;color:var(--gray-500)">${rec ? esc(rec.fileName) + ' \u00b7 ' + esc(rec.uploaded) + ' \u00b7 ' + esc(rec.by) : '\u5c1a\u672a\u4e0a\u4f20'}</div></div>
           ${thumb}
-          ${rec && rec.url ? `<a class="btn btn-sm btn-secondary" href="${rec.url}" target="_blank">\u67e5\u770b</a>` : ''}
+          ${rec && rec.url ? `<a class="btn btn-sm btn-secondary" href="${safeHref(rec.url)}" target="_blank">\u67e5\u770b</a>` : ''}
           <button class="btn btn-sm ${rec ? 'btn-secondary' : 'btn-primary'}" onclick="uploadCert('${cert}')">${rec ? '\u66ff\u6362' : '\u4e0a\u4f20'}</button>
         </div>`;
       }).join('')}
@@ -2329,7 +2616,7 @@ function renderSettingsShipping(c) {
     </div></div>
     <div class="card"><div class="card-header"><span class="card-title">收费区域</span></div><div class="card-body">
       <div class="table-wrap"><table><thead><tr><th>区域</th><th>运费系数</th><th>操作</th></tr></thead>
-      <tbody>${zones.map(z=>`<tr><td>${z.region}</td><td>${z.rate}</td><td><button class="btn btn-sm btn-secondary" onclick="editShippingZone('${z.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteShippingZone('${z.id}')">删除</button></td></tr>`).join('')}</tbody></table></div>
+      <tbody>${zones.map(z=>`<tr><td>${esc(z.region)}</td><td>${esc(z.rate)}</td><td><button class="btn btn-sm btn-secondary" onclick="editShippingZone('${z.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteShippingZone('${z.id}')">删除</button></td></tr>`).join('')}</tbody></table></div>
     </div></div>`;
 }
 
@@ -2339,8 +2626,8 @@ function editShippingZone(id) {
   if (!z) return;
   showModal('编辑配送区域', `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">区域名称 *</label><input class="form-input" id="f_sz_region" value="${z.region}"></div>
-      <div class="form-group"><label class="form-label">运费系数 *</label><input class="form-input" id="f_sz_rate" value="${z.rate}" placeholder="e.g. 1.5x"></div>
+      <div class="form-group"><label class="form-label">区域名称 *</label><input class="form-input" id="f_sz_region" value="${esc(z.region)}"></div>
+      <div class="form-group"><label class="form-label">运费系数 *</label><input class="form-input" id="f_sz_rate" value="${esc(z.rate)}" placeholder="e.g. 1.5x"></div>
     </div>
   `, () => {
     const region = val('f_sz_region');
@@ -2381,10 +2668,10 @@ function renderSettingsFinance(c) {
     <div class="page-header"><div><h1 class="page-title">税率/货币</h1><p class="page-desc">财务参数配置</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">SST 税率</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" id="fs_sst" value="${s.sstRate||10}" style="width:80px"> <span>%</span></div></div>
+        <div class="form-group"><label class="form-label">SST 税率</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" id="fs_sst" value="${esc(s.sstRate||10)}" style="width:80px"> <span>%</span></div></div>
         <div class="form-group"><label class="form-label">货币</label><select class="form-select" id="fs_currency"><option ${s.currency==='MYR (RM)'?'selected':''}>MYR (RM)</option><option ${s.currency==='USD'?'selected':''}>USD</option><option ${s.currency==='SGD'?'selected':''}>SGD</option></select></div>
-        <div class="form-group"><label class="form-label">报价默认有效期</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" id="fs_validDays" value="${s.validDays||14}" style="width:80px"> <span>天</span></div></div>
-        <div class="form-group"><label class="form-label">定金比例</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" id="fs_deposit" value="${s.depositPercent||50}" style="width:80px"> <span>%</span></div></div>
+        <div class="form-group"><label class="form-label">报价默认有效期</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" id="fs_validDays" value="${esc(s.validDays||14)}" style="width:80px"> <span>天</span></div></div>
+        <div class="form-group"><label class="form-label">定金比例</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" id="fs_deposit" value="${esc(s.depositPercent||50)}" style="width:80px"> <span>%</span></div></div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsFinance()">保存</button></div>
     </div></div>`;
@@ -2397,7 +2684,7 @@ function saveSettingsFinance() {
 
 function renderUsers(c) {
   const users = DM.get('users');
-  const rows = users.map(u=>`<tr><td class="td-name">${u.name}</td><td>${u.email||'—'}</td><td><span class="badge badge-blue">${u.role}</span></td><td>${u.needsConfirm?'<span class="badge badge-red">待验证邮箱</span>':(u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">已禁用</span>')}</td><td>${u.created}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button>${u.email ? ` <button class="btn btn-sm btn-secondary" onclick="sendPasswordReset('${u.email}')">重发密码</button>` : ''}</td></tr>`).join('');
+  const rows = users.map(u=>`<tr><td class="td-name">${esc(u.name)}</td><td>${esc(u.email||'—')}</td><td><span class="badge badge-blue">${esc(u.role)}</span></td><td>${u.needsConfirm?'<span class="badge badge-red">待验证邮箱</span>':(u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">已禁用</span>')}</td><td>${esc(u.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button>${u.email ? ` <button class="btn btn-sm btn-secondary" onclick="sendPasswordReset('${u.email}')">重发密码</button>` : ''}</td></tr>`).join('');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">管理员列表</h1><p class="page-desc">${Sync.ready ? '登录账号由 Supabase 托管，密码不写在这份代码里' : '未连接后端，当前只是本机演示名单'}</p></div><button class="btn btn-primary" onclick="openUserModal()">+ 新建账号</button></div>
     ${users.length
@@ -2413,10 +2700,10 @@ function openUserModal(id) {
   const roleList = roles.length ? roles : ['超级管理员','销售','设计','财务','运营'];
   showModal(user ? '编辑账号' : '新建账号', `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${user ? user.name : ''}"></div>
-      <div class="form-group"><label class="form-label">角色</label><select class="form-select" id="f_role">${roleList.map(r=>`<option ${user && user.role===r?'selected':''}>${r}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${esc(user ? user.name : '')}"></div>
+      <div class="form-group"><label class="form-label">角色</label><select class="form-select" id="f_role">${roleList.map(r=>`<option ${user && user.role===r?'selected':''}>${esc(r)}</option>`).join('')}</select></div>
       ${user
-        ? `<div class="form-group"><label class="form-label">登录邮箱</label><div style="padding:8px 0;color:var(--gray-600)">${user.email||'—'}</div></div>
+        ? `<div class="form-group"><label class="form-label">登录邮箱</label><div style="padding:8px 0;color:var(--gray-600)">${esc(user.email||'—')}</div></div>
            <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_active"><option value="true" ${user.active?'selected':''}>启用</option><option value="false" ${!user.active?'selected':''}>禁用</option></select></div>`
         : `<div class="form-group"><label class="form-label">登录邮箱 *</label><input class="form-input" id="f_email" placeholder="同事的邮箱，登录时用它"></div>
            <div class="form-group"><label class="form-label">初始密码 *</label><input class="form-input" type="password" id="f_password" placeholder="至少 6 位"></div>`}
@@ -2477,7 +2764,7 @@ function resetUserPassword(id) {
   if (!user) return;
   showModal('重置密码', `
     <div class="form-grid">
-      <div class="form-group full"><label class="form-label">用户</label><div style="padding:8px 0;font-weight:600">${user.name} (${user.username})</div></div>
+      <div class="form-group full"><label class="form-label">用户</label><div style="padding:8px 0;font-weight:600">${esc(user.name)} (${user.username})</div></div>
       <div class="form-group full"><label class="form-label">新密码 *</label><input class="form-input" type="password" id="f_newpw"></div>
       <div class="form-group full"><label class="form-label">确认密码 *</label><input class="form-input" type="password" id="f_confirmpw"></div>
     </div>
@@ -2495,7 +2782,7 @@ function renderRoles(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">角色管理</h1><p class="page-desc">权限角色配置</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>角色</th><th>权限范围</th><th>操作</th></tr></thead>
-    <tbody>${roles.map(r=>`<tr><td class="td-name">${r.name}</td><td>${r.perms.join('、')}</td><td><button class="btn btn-sm btn-secondary" onclick="editRole('${r.id}')">编辑权限</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${roles.map(r=>`<tr><td class="td-name">${esc(r.name)}</td><td>${r.perms.join('、')}</td><td><button class="btn btn-sm btn-secondary" onclick="editRole('${r.id}')">编辑权限</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function editRole(id) {
@@ -2504,10 +2791,10 @@ function editRole(id) {
   if (!r) return;
   const allPerms = ['线索管理','报价管理','订单管理','商品管理','内容管理','媒体库','表单管理','案例','政策','数据看板','系统设置','管理员管理'];
   showModal('编辑权限 - ' + r.name, `
-    <div class="form-group"><label class="form-label">角色名称</label><input class="form-input" id="f_role_name" value="${r.name}"></div>
+    <div class="form-group"><label class="form-label">角色名称</label><input class="form-input" id="f_role_name" value="${esc(r.name)}"></div>
     <div class="form-group full"><label class="form-label">权限范围</label>
       <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">
-        ${allPerms.map(p=>`<label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" class="role-perm-cb" value="${p}" ${r.perms.includes(p)||r.perms[0]==='全部权限'?'checked':''}> ${p}</label>`).join('')}
+        ${allPerms.map(p=>`<label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" class="role-perm-cb" value="${esc(p)}" ${r.perms.includes(p)||r.perms[0]==='全部权限'?'checked':''}> ${esc(p)}</label>`).join('')}
       </div>
     </div>
   `, () => {
@@ -2525,20 +2812,30 @@ function renderLogs(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">操作日志</h1><p class="page-desc">审计追溯</p></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>时间</th><th>用户</th><th>操作</th><th>详情</th></tr></thead>
-    <tbody>${logs.map(l=>`<tr><td>${l.time}</td><td class="td-name">${l.user}</td><td><span class="badge badge-blue">${l.action}</span></td><td>${l.detail}</td></tr>`).join('')}</tbody></table></div></div>`;
+    <tbody>${logs.map(l=>`<tr><td>${esc(l.time)}</td><td class="td-name">${esc(l.user)}</td><td><span class="badge badge-blue">${esc(l.action)}</span></td><td>${esc(l.detail)}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 // ========== UTILITIES ==========
 function val(id) { return document.getElementById(id)?.value?.trim() || '' }
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+function money2(n) { return (Number(n) || 0).toFixed(2) }
+// 云端地址是后台可编辑字段，挡掉 javascript: 这类伪协议，只放行 http(s) 和站内路径
+function safeHref(u) {
+  const s = String(u ?? '').trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s)) return esc(s);
+  if (s.indexOf('//') === 0) return '';
+  if (s.split(/[?#]/)[0].split('/')[0].indexOf(':') !== -1) return '';
+  return esc(s.replace(/ /g, '%20'));
+}
 
 function showModal(title, bodyHtml, onSave, buttons) {
   const modal = document.getElementById('modal');
   const overlay = document.getElementById('modalOverlay');
-  const footerBtns = buttons ? buttons.map(b=>`<button class="btn ${b.cls}" id="modal-btn-${b.label}">${b.label}</button>`).join('') :
+  const footerBtns = buttons ? buttons.map(b=>`<button class="btn ${b.cls}" id="modal-btn-${b.label}">${esc(b.label)}</button>`).join('') :
     `<button class="btn btn-secondary" onclick="closeModal()">取消</button><button class="btn btn-primary" id="modalSaveBtn">保存</button>`;
   modal.innerHTML = `
-    <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-header"><h3>${esc(title)}</h3><button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="modal-body">${bodyHtml}</div>
     <div class="modal-footer">${footerBtns}</div>`;
   overlay.classList.add('active');
@@ -2718,7 +3015,7 @@ function openContactFormConfig() {
   const fields = DM.get('contactFormConfig');
   showModal('联系表单字段配置', `
     <div style="margin-bottom:12px"><button class="btn btn-sm btn-primary" onclick="this.nextElementSibling.style.display='block';this.style.display='none'">+ 添加字段</button><div style="display:none" class="form-grid"><div class="form-group"><input class="form-input" id="f_new_field" placeholder="字段名"></div><div class="form-group"><select class="form-select" id="f_new_field_type"><option>文本输入</option><option>邮箱输入</option><option>多行文本</option><option>下拉选择</option></select></div></div></div>
-    <div style="display:flex;flex-direction:column;gap:8px">${fields.map((f,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--gray-50);border-radius:6px"><span style="width:20px;text-align:center">${f.required?'🔴':'⚪'}</span><span style="flex:1;font-weight:500">${f.name}</span><span class="badge badge-gray">${f.type}</span><button class="btn btn-sm btn-danger" onclick="removeContactField(${i})">×</button></div>`).join('')}</div>
+    <div style="display:flex;flex-direction:column;gap:8px">${fields.map((f,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--gray-50);border-radius:6px"><span style="width:20px;text-align:center">${f.required?'🔴':'⚪'}</span><span style="flex:1;font-weight:500">${esc(f.name)}</span><span class="badge badge-gray">${esc(f.type)}</span><button class="btn btn-sm btn-danger" onclick="removeContactField(${i})">×</button></div>`).join('')}</div>
   `, () => {
     const newName = val('f_new_field');
     if (newName) {
@@ -2765,7 +3062,7 @@ function renderSettingsCloud(c) {
       : `<div class="banner banner-err">未连接后端数据库。当前录入的内容只保存在这台设备的浏览器里，同事看不到，换电脑也会丢。<br>状态：${Sync.msg || '未配置'}${Sync.errMsg ? ' · ' + Sync.errMsg : ''}</div>`}
     <div class="card mb-20"><div class="card-header"><span class="card-title">连接信息</span></div><div class="card-body">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
-        <div><strong>Project URL</strong><br><span style="color:var(--gray-500);word-break:break-all">${cfg.url || '未填写'}</span></div>
+        <div><strong>Project URL</strong><br><span style="color:var(--gray-500);word-break:break-all">${esc(cfg.url || '未填写')}</span></div>
         <div><strong>anon key</strong><br><span style="color:var(--gray-500)">${cfg.key ? cfg.key.slice(0,10) + '…（已配置）' : '未填写'}</span></div>
       </div>
       <div style="margin-top:16px;font-size:12px;color:var(--gray-500);line-height:1.9">
@@ -2857,7 +3154,7 @@ async function bootAdmin() {
   paintUser();
   startSessionGuard();
   if (ok && Sync.pendingLocal) {
-    showBanner('warn', `本机存有 <strong>${Sync.pendingLocal}</strong> 项后端开通前录入的数据，尚未共享给同事。<button onclick="doMigrateUp()">上传到服务器</button>`);
+    showBanner('warn', `本机存有 <strong>${esc(Sync.pendingLocal)}</strong> 项后端开通前录入的数据，尚未共享给同事。<button onclick="doMigrateUp()">上传到服务器</button>`);
   } else if (!ok) {
     showBanner('warn', `未连接后端数据库，你现在录入的内容只保存在这台设备上，同事看不到。<button onclick="navigateTo('settings-cloud','系统设置','后端状态')">查看配置方法</button>`);
   } else if (Sync.errMsg) {
