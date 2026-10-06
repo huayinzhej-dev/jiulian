@@ -546,6 +546,19 @@ function seedOne(key, demo) {
   DM.set(key, Sync.ready && DEMO_KEYS.has(key) ? [] : demo);
 }
 
+// 字典类集合（盒型 / 材质 / 印刷 / 表面工艺 / 案例分类 / 运费区域 / 角色）是全公司共用的
+// 基础选项，不是演示噪音。接上后端后 pullAll 会把云端没有行的集合直接写成本机空数组，
+// 于是这些页面下拉框一个选项都没有（新建报价的「盒型」「材质」就是被这样清空的）。
+// 所以这里改成"空即补"，补出来的默认值等启动解除静音后推上云端，让同事共享同一份。
+const DICT_HEALED = [];
+function seedDict(key, demo) {
+  const cur = DM.get(key, null);
+  if (Array.isArray(cur) && cur.length) return;
+  if (!Sync.ready && DM.has(key)) return;   // 本机模式下删空是用户自己的选择，不灌回去
+  DM.set(key, demo);
+  if (Sync.ready) DICT_HEALED.push(key);
+}
+
 function seedData() {
   const leads = [
     {id:'LD-001',name:'John Smith',company:'L\'Oréal Malaysia',phone:'+60123456789',email:'john@loreal.com',source:'表单',boxType:'飞机盒',size:'24×22×4',quantity:1000,printing:'4C1C',finishing:'哑光覆膜',status:'new',assignee:'销售A',notes:'需要食品级材料',created:'2026-10-04 10:30',followUps:[]},
@@ -606,7 +619,7 @@ function seedData() {
     {id:'CAT-12',name:'精装盒',slug:'rigid-box',icon:'💎',sort:12,active:true},
     {id:'CAT-13',name:'POS展示架',slug:'pos-display',icon:'🏪',sort:13,active:true}
   ];
-  seedOne('categories', categories);
+  seedDict('categories', categories);
 
   const faqs = [
     {id:'FAQ-01',category:'MOQ',question:'What is the minimum order quantity?',answer:'Our MOQ starts from 100 pieces for standard products and 500 pieces for custom printed items.',sort:1},
@@ -659,15 +672,9 @@ function seedData() {
     ];
     seedOne('products', products);
   }
-  if (!DM.has('printingOptions')) {
-    DM.set('printingOptions', ['0C (无印刷)','1C 单色','4C 四色','4C+0C','4C+1C','4C+4C','1C+0C','1C+1C','Flexo 1C','Flexo 2C','Brown Base','White Base','Laserfoil']);
-  }
-  if (!DM.has('finishingOptions')) {
-    DM.set('finishingOptions', ['哑光覆膜','光面覆膜','柔触感 Soft Touch','无覆膜','Spot UV','Emboss','Deboss','Hot-stamp Foil']);
-  }
-  if (!DM.has('materials')) {
-    DM.set('materials', [{id:'MAT-01',name:'白卡纸 300g',fsc:true,food:false},{id:'MAT-02',name:'白卡纸 350g',fsc:true,food:false},{id:'MAT-03',name:'牛卡 E楞',fsc:false,food:false},{id:'MAT-04',name:'瓦楞 B楞',fsc:false,food:false},{id:'MAT-05',name:'食品级纸',fsc:true,food:true}]);
-  }
+  seedDict('printingOptions', ['0C (无印刷)','1C 单色','4C 四色','4C+0C','4C+1C','4C+4C','1C+0C','1C+1C','Flexo 1C','Flexo 2C','Brown Base','White Base','Laserfoil']);
+  seedDict('finishingOptions', ['哑光覆膜','光面覆膜','柔触感 Soft Touch','无覆膜','Spot UV','Emboss','Deboss','Hot-stamp Foil']);
+  seedDict('materials', [{id:'MAT-01',name:'白卡纸 300g',fsc:true,food:false},{id:'MAT-02',name:'白卡纸 350g',fsc:true,food:false},{id:'MAT-03',name:'牛卡 E楞',fsc:false,food:false},{id:'MAT-04',name:'瓦楞 B楞',fsc:false,food:false},{id:'MAT-05',name:'食品级纸',fsc:true,food:true}]);
   if (!DM.has('articles')) {
     DM.set('articles', [{id:'ART-01',title:'How to Choose the Right Packaging for Your E-commerce Brand',category:'Guide',status:'published',created:'2026-09-15',updated:'2026-09-20'},{id:'ART-02',title:'FSC Certified Packaging: Why It Matters for Your Brand',category:'Sustainability',status:'published',created:'2026-09-10',updated:'2026-09-10'}]);
   }
@@ -680,15 +687,9 @@ function seedData() {
   if (!DM.has('cases')) {
     DM.set('cases', [{id:'CASE-01',title:'L\'Oréal Gift Box Series',category:'Luxury',client:"L'Oréal Malaysia",status:'published',created:'2026-09-15'},{id:'CASE-02',title:'Shopee Food Packaging Line',category:'F&B',client:'Shopee Foods',status:'published',created:'2026-09-10'}]);
   }
-  if (!DM.has('caseCategories')) {
-    DM.set('caseCategories', ['F&B','Retail','FMCG','Luxury','E-commerce']);
-  }
-  if (!DM.has('shippingZones')) {
-    DM.set('shippingZones', [{id:'SZ-01',region:'Penang',rate:'1.5x',active:true},{id:'SZ-02',region:'Johor',rate:'1.5x',active:true},{id:'SZ-03',region:'Melaka',rate:'1.5x',active:true},{id:'SZ-04',region:'Ipoh',rate:'1.3x',active:true},{id:'SZ-05',region:'East Malaysia',rate:'2.5x',active:true}]);
-  }
-  if (!DM.has('roles')) {
-    DM.set('roles', [{id:'R-01',name:'超级管理员',perms:['全部权限']},{id:'R-02',name:'销售',perms:['线索管理','报价管理','订单管理']},{id:'R-03',name:'设计',perms:['商品管理','内容管理','媒体库']},{id:'R-04',name:'财务',perms:['订单管理(付款)','数据看板']},{id:'R-05',name:'运营',perms:['内容管理','表单管理','案例','政策']}]);
-  }
+  seedDict('caseCategories', ['F&B','Retail','FMCG','Luxury','E-commerce']);
+  seedDict('shippingZones', [{id:'SZ-01',region:'Penang',rate:'1.5x',active:true},{id:'SZ-02',region:'Johor',rate:'1.5x',active:true},{id:'SZ-03',region:'Melaka',rate:'1.5x',active:true},{id:'SZ-04',region:'Ipoh',rate:'1.3x',active:true},{id:'SZ-05',region:'East Malaysia',rate:'2.5x',active:true}]);
+  seedDict('roles', [{id:'R-01',name:'超级管理员',perms:['全部权限']},{id:'R-02',name:'销售',perms:['线索管理','报价管理','订单管理']},{id:'R-03',name:'设计',perms:['商品管理','内容管理','媒体库']},{id:'R-04',name:'财务',perms:['订单管理(付款)','数据看板']},{id:'R-05',name:'运营',perms:['内容管理','表单管理','案例','政策']}]);
   if (!DM.has('proofs')) {
     DM.set('proofs', [{id:'PF-001',orderId:'OD-2026-001',customer:"L'Oréal Malaysia",type:'数字打样 (颜色确认)',status:'pending_confirm',uploaded:'2026-10-04',fileUrl:''}]);
   }
@@ -3147,6 +3148,12 @@ async function bootAdmin() {
   }
   seedData();
   Sync.muted = false;
+  // 云端还没人建过的字典（盒型/材质/印刷/工艺…）刚被 seedData 补上默认值，
+  // 现在静音已解除，把它们推上服务器，同事登录后拿到的就是同一份选项。
+  if (ok && DICT_HEALED.length) {
+    DICT_HEALED.forEach(k => Sync.track(k, [], DM.get(k)));
+    DICT_HEALED.length = 0;
+  }
   renderSidebar();
   navigateTo('dashboard-overview', '数据看板', '概览');
   toggleGroup('dashboard');
