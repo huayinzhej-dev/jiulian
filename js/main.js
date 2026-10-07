@@ -438,19 +438,19 @@
   // 首页文案类：整块存成一条文档，后台「内容管理」改了前台就跟着变
   const DOC_COLS = ['settings_banner', 'settings_advantages', 'settings_stats', 'settings_about', 'settings_process'];
 
-  // 后台每段文字目前只存英文 + 可选中文，马来文沿用英文（与页面原有写法一致）
-  function i18nText(node, en, zh) {
+  // 三语文案：马来文 / 中文留空时沿用英文，避免出现空白页
+  function i18nText(node, en, zh, bm) {
     node.setAttribute('data-en', en);
-    node.setAttribute('data-bm', en);
+    node.setAttribute('data-bm', bm || en);
     node.setAttribute('data-zh', zh || en);
     node.textContent = en;
     return node;
   }
 
-  function make(tag, cls, en, zh) {
+  function make(tag, cls, en, zh, bm) {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
-    if (en != null) i18nText(n, String(en), zh);
+    if (en != null) i18nText(n, String(en), zh, bm);
     return n;
   }
 
@@ -586,29 +586,39 @@
     return true;
   }
 
-  // 只覆盖后台填了的语言：英文没填就整条不动，中文没填就保留 index.html 里原有的中文，
+  // 只覆盖后台填了的语言：英文没填就整条不动，中文/马来文没填就各自保留原有内容或沿用英文，
   // 否则会出现「后台只改英文，中文页突然变英文」的倒退。
-  function swap(el, en, zh) {
+  function swap(el, en, zh, bm) {
     if (!el) return false;
     const e = String(en == null ? '' : en).trim();
     const z = String(zh == null ? '' : zh).trim();
-    if (!e && !z) return false;
-    if (e) { el.setAttribute('data-en', e); el.setAttribute('data-bm', e); }
+    const b = String(bm == null ? '' : bm).trim();
+    if (!e && !z && !b) return false;
+    if (e) { el.setAttribute('data-en', e); el.setAttribute('data-bm', b || e); }
+    else if (b) el.setAttribute('data-bm', b);
     if (z) el.setAttribute('data-zh', z);
     return true;
   }
 
   const zhAttr = els => Array.from(els).map(el => (el ? el.getAttribute('data-zh') || '' : ''));
 
+  // 「1-2 days」这类工期在中文页写成「1-2 天」、马来文页写成「1-2 hari」，后台不用再单独填一遍
+  const unitDays = (d, unit, working) => String(d == null ? '' : d)
+    .replace(/\bworking\s+days?\b/gi, working).replace(/\bdays?\b/gi, unit).trim();
+  const zhDays = d => unitDays(d, '天', '个工作日');
+  const bmDays = d => unitDays(d, 'hari', 'hari bekerja');
+
+  const CERT_ZH = { 'ISO 9001:2015': 'ISO 9001:2015 认证', 'FSC Certified': 'FSC 认证', 'Fogra 51': 'Fogra 51 认证', 'Free Delivery': '免费配送', 'Low MOQ': '低起订量' };
+
   function applyBanner(d) {
     if (!d || typeof d !== 'object') return false;
     const ctas = document.querySelectorAll('.hero-ctas a');
     let hit = false;
-    hit = swap(document.querySelector('.hero-badge'), d.badge) || hit;
-    hit = swap(document.querySelector('.hero-title'), d.title) || hit;
-    hit = swap(document.querySelector('.hero-subtitle'), d.subtitle) || hit;
-    hit = swap(ctas[0], d.cta1) || hit;
-    hit = swap(ctas[1], d.cta2) || hit;
+    hit = swap(document.querySelector('.hero-badge'), d.badge, d.badgeZh, d.badgeBm) || hit;
+    hit = swap(document.querySelector('.hero-title'), d.title, d.titleZh, d.titleBm) || hit;
+    hit = swap(document.querySelector('.hero-subtitle'), d.subtitle, d.subtitleZh, d.subtitleBm) || hit;
+    hit = swap(ctas[0], d.cta1, d.cta1Zh, d.cta1Bm) || hit;
+    hit = swap(ctas[1], d.cta2, d.cta2Zh, d.cta2Bm) || hit;
     const bg = document.querySelector('.hero-bg');
     const url = safeUrl(d.bg || d.bgUrl || '');
     if (bg && url) bg.style.backgroundImage = `url("${url}")`;
@@ -623,8 +633,8 @@
     const zhP = zhAttr(Array.from(cards).map(c => c.querySelector('p')));
     let hit = false;
     rows.slice(0, cards.length).forEach((a, i) => {
-      hit = swap(cards[i].querySelector('h3'), a.title, zhH[i]) || hit;
-      hit = swap(cards[i].querySelector('p'), a.desc, zhP[i]) || hit;
+      hit = swap(cards[i].querySelector('h3'), a.title, a.titleZh || zhH[i], a.titleBm) || hit;
+      hit = swap(cards[i].querySelector('p'), a.desc, a.descZh || zhP[i], a.descBm) || hit;
     });
     return hit;
   }
@@ -638,7 +648,7 @@
     rows.forEach((s, i) => {
       const box = make('div', 'about-stat');
       const num = make('span', 'about-stat-number', s.num);
-      const label = make('span', 'about-stat-label', s.label, zh[i]);
+      const label = make('span', 'about-stat-label', s.label, s.labelZh || zh[i], s.labelBm);
       box.appendChild(num);
       box.appendChild(label);
       host.appendChild(box);
@@ -652,15 +662,15 @@
     const content = document.querySelector('.about-content');
     const h2 = content && content.querySelector('h2.section-title');
     const intro = h2 && h2.nextElementSibling;
-    if (intro && intro.tagName === 'P') hit = swap(intro, d.intro) || hit;
+    if (intro && intro.tagName === 'P') hit = swap(intro, d.intro, d.introZh, d.introBm) || hit;
     const certHost = document.querySelector('.about-certifications');
     const certs = (Array.isArray(d.certs) ? d.certs : []).filter(Boolean);
     if (certHost && certs.length) {
       certHost.textContent = '';
-      certs.forEach(c => certHost.appendChild(make('div', 'cert-badge', c)));
+      certs.forEach(c => certHost.appendChild(make('div', 'cert-badge', c, CERT_ZH[c])));
       hit = true;
     }
-    hit = swap(document.querySelector('.about-factory span'), d.address) || hit;
+    hit = swap(document.querySelector('.about-factory span'), d.address, d.addressZh, d.addressBm) || hit;
     return hit;
   }
 
@@ -676,8 +686,10 @@
       if (i) host.appendChild(make('div', 'process-connector'));
       const card = make('div', 'process-step');
       card.appendChild(make('div', 'step-number', String(i + 1).padStart(2, '0')));
-      card.appendChild(make('h3', null, s.title, zhH[i]));
-      card.appendChild(make('p', null, [s.desc, s.days].filter(Boolean).join(' '), zhP[i]));
+      card.appendChild(make('h3', null, s.title, s.titleZh || zhH[i], s.titleBm));
+      card.appendChild(make('p', null, [s.desc, s.days].filter(Boolean).join(' '),
+        s.descZh ? [s.descZh, zhDays(s.days)].filter(Boolean).join(' ') : zhP[i],
+        s.descBm ? [s.descBm, bmDays(s.days)].filter(Boolean).join(' ') : undefined));
       host.appendChild(card);
     });
     return true;

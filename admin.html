@@ -2661,14 +2661,26 @@ function renderBanner(c) {
     ? `<img src="${safeHref(b.bg)}" alt="背景图" style="max-height:120px;max-width:100%;border:1px solid var(--gray-200);border-radius:6px;object-fit:cover"> <button class="btn btn-sm btn-secondary" onclick="removeBannerBg()">移除</button>`
     : '<span style="font-size:12px;color:var(--gray-500)">未设置，前台沿用默认背景</span>';
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">首页 Banner</h1><p class="page-desc">Hero 区域配置，保存后官网首页跟着变</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">首页 Banner</h1><p class="page-desc">Hero 区域配置，保存后官网首页跟着变。英文 / 马来文 / 中文三栏分开填，马来文或中文留空时该项沿用英文或网站原有内容</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        <div class="form-group full"><label class="form-label">小标题（主标题上方那行）</label><input class="form-input" id="fs_banner_badge" value="${esc(b.badge||'')}" placeholder="留空则前台保持原有文案"></div>
-        <div class="form-group full"><label class="form-label">主标题</label><input class="form-input" id="fs_banner_title" value="${esc(b.title||'Custom Packaging That Elevates Your Brand')}"></div>
-        <div class="form-group full"><label class="form-label">副标题</label><textarea class="form-textarea" id="fs_banner_sub" rows="2">${esc(b.subtitle||'From design to delivery — we manufacture premium printed boxes, bags, and labels for businesses worldwide.')}</textarea></div>
-        <div class="form-group"><label class="form-label">CTA 1 文案</label><input class="form-input" id="fs_banner_cta1" value="${esc(b.cta1||'Request Free Quote')}"></div>
-        <div class="form-group"><label class="form-label">CTA 2 文案</label><input class="form-input" id="fs_banner_cta2" value="${esc(b.cta2||'Explore Products')}"></div>
+        <div class="form-group full"><label class="form-label">小标题（英文）</label><input class="form-input" id="fs_banner_badge" value="${esc(b.badge||'')}" placeholder="留空则英文页保持原有文案"></div>
+        <div class="form-group full"><label class="form-label">主标题（英文）</label><input class="form-input" id="fs_banner_title" value="${esc(b.title||'Custom Packaging That Elevates Your Brand')}"></div>
+        <div class="form-group full"><label class="form-label">副标题（英文）</label><textarea class="form-textarea" id="fs_banner_sub" rows="2">${esc(b.subtitle||'From design to delivery — we manufacture premium printed boxes, bags, and labels for businesses worldwide.')}</textarea></div>
+        <div class="form-group"><label class="form-label">CTA 1 文案（英文）</label><input class="form-input" id="fs_banner_cta1" value="${esc(b.cta1||'Request Free Quote')}"></div>
+        <div class="form-group"><label class="form-label">CTA 2 文案（英文）</label><input class="form-input" id="fs_banner_cta2" value="${esc(b.cta2||'Explore Products')}"></div>
+        <div class="form-group full" style="margin-top:4px"><label class="form-label" style="color:var(--gray-500)">↓ 马来文版（BM 页）文案；哪一项留空，BM 页那一项就显示上面的英文</label></div>
+        <div class="form-group full"><label class="form-label">小标题（马来文）</label><input class="form-input" id="fs_banner_badge_bm" value="${esc(b.badgeBm||'')}" placeholder="e.g. Rakan Pembungkusan Dipercayai Sejak 2008"></div>
+        <div class="form-group full"><label class="form-label">主标题（马来文）</label><input class="form-input" id="fs_banner_title_bm" value="${esc(b.titleBm||'')}" placeholder="留空则 BM 页显示英文"></div>
+        <div class="form-group full"><label class="form-label">副标题（马来文）</label><textarea class="form-textarea" id="fs_banner_sub_bm" rows="2" placeholder="留空则 BM 页显示英文"></textarea></div>
+        <div class="form-group"><label class="form-label">CTA 1 文案（马来文）</label><input class="form-input" id="fs_banner_cta1_bm" value="${esc(b.cta1Bm||'')}" placeholder="e.g. Dapatkan Sebut Harga"></div>
+        <div class="form-group"><label class="form-label">CTA 2 文案（马来文）</label><input class="form-input" id="fs_banner_cta2_bm" value="${esc(b.cta2Bm||'')}" placeholder="e.g. Terokai Produk"></div>
+        <div class="form-group full" style="margin-top:4px"><label class="form-label" style="color:var(--gray-500)">↓ 中文版文案；哪一项留空，中文页那一项就保持网站原有内容</label></div>
+        <div class="form-group full"><label class="form-label">小标题（中文）</label><input class="form-input" id="fs_banner_badge_zh" value="${esc(b.badgeZh||'')}" placeholder="e.g. 自2008年起的信赖包装合作伙伴"></div>
+        <div class="form-group full"><label class="form-label">主标题（中文）</label><input class="form-input" id="fs_banner_title_zh" value="${esc(b.titleZh||'')}" placeholder="e.g. 定制包装，提升品牌价值"></div>
+        <div class="form-group full"><label class="form-label">副标题（中文）</label><textarea class="form-textarea" id="fs_banner_sub_zh" rows="2" placeholder="留空则中文页保持原有内容"></textarea></div>
+        <div class="form-group"><label class="form-label">CTA 1 文案（中文）</label><input class="form-input" id="fs_banner_cta1_zh" value="${esc(b.cta1Zh||'')}" placeholder="e.g. 免费获取报价"></div>
+        <div class="form-group"><label class="form-label">CTA 2 文案（中文）</label><input class="form-input" id="fs_banner_cta2_zh" value="${esc(b.cta2Zh||'')}" placeholder="e.g. 浏览产品"></div>
         <div class="form-group full"><label class="form-label">背景图</label><input class="form-input" type="file" accept="image/*" onchange="saveBannerBg(this)"><div id="fs_banner_bg_box" style="margin-top:8px">${bgBox}</div></div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveBanner()">保存</button></div>
@@ -2682,6 +2694,16 @@ function saveBanner() {
   b.subtitle = val('fs_banner_sub');
   b.cta1 = val('fs_banner_cta1');
   b.cta2 = val('fs_banner_cta2');
+  b.badgeZh = val('fs_banner_badge_zh');
+  b.titleZh = val('fs_banner_title_zh');
+  b.subtitleZh = val('fs_banner_sub_zh');
+  b.cta1Zh = val('fs_banner_cta1_zh');
+  b.cta2Zh = val('fs_banner_cta2_zh');
+  b.badgeBm = val('fs_banner_badge_bm');
+  b.titleBm = val('fs_banner_title_bm');
+  b.subtitleBm = val('fs_banner_sub_bm');
+  b.cta1Bm = val('fs_banner_cta1_bm');
+  b.cta2Bm = val('fs_banner_cta2_bm');
   DM.set('settings_banner', b);
   writeLog('保存首页 Banner', b.title || '');
   toast('Banner 已保存');
@@ -2717,9 +2739,9 @@ function removeBannerBg() {
 function renderAdvantages(c) {
   const adv = DM.get('settings_advantages', [{title:'Custom Solutions',desc:'Tailored packaging design',icon:'📦'},{title:'Fast Turnaround',desc:'15-25 day production cycle',icon:'⏱️'},{title:'Factory Direct',desc:'Competitive pricing, no middleman',icon:'🏭'},{title:'Global Shipping',desc:'Reliable worldwide delivery',icon:'🌍'}]);
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">优势图标区</h1><p class="page-desc">4 个核心卖点，保存后首页跟着变（图标沿用前台现有线条图标，这里只改文字）</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">优势图标区</h1><p class="page-desc">4 个核心卖点，保存后首页跟着变（图标沿用前台现有线条图标，这里只改文字；英文 / 马来文 / 中文三栏）</p></div></div>
     <div class="card"><div class="card-body">
-      ${adv.map((a,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:24px">${esc(a.icon)}</span><div style="flex:1"><input class="form-input adv-title" data-idx="${i}" value="${esc(a.title)}" style="font-weight:600;margin-bottom:4px"><input class="form-input adv-desc" data-idx="${i}" value="${esc(a.desc)}" style="font-size:12px;color:var(--gray-500)"></div></div>`).join('')}
+      ${adv.map((a,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:24px">${esc(a.icon)}</span><div style="flex:1"><input class="form-input adv-title" data-idx="${i}" value="${esc(a.title)}" placeholder="标题（英文）" style="font-weight:600;margin-bottom:4px"><input class="form-input adv-desc" data-idx="${i}" value="${esc(a.desc)}" placeholder="说明（英文）" style="font-size:12px;margin-bottom:4px"><input class="form-input adv-title-bm" data-idx="${i}" value="${esc(a.titleBm||'')}" placeholder="标题（马来文，留空显示英文）" style="font-size:13px;margin-bottom:4px"><input class="form-input adv-desc-bm" data-idx="${i}" value="${esc(a.descBm||'')}" placeholder="说明（马来文，留空显示英文）" style="font-size:12px;margin-bottom:4px"><input class="form-input adv-title-zh" data-idx="${i}" value="${esc(a.titleZh||'')}" placeholder="标题（中文，留空保持原有）" style="font-weight:600;font-size:13px;margin-bottom:4px"><input class="form-input adv-desc-zh" data-idx="${i}" value="${esc(a.descZh||'')}" placeholder="说明（中文，留空保持原有）" style="font-size:12px;color:var(--gray-500)"></div></div>`).join('')}
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveAdvantages()">保存</button></div>
     </div></div>`;
 }
@@ -2728,6 +2750,10 @@ function saveAdvantages() {
   const adv = DM.get('settings_advantages', [{icon:'📦'},{icon:'⏱️'},{icon:'🏭'},{icon:'🌍'}]);
   document.querySelectorAll('.adv-title').forEach(el => { adv[el.dataset.idx].title = el.value; });
   document.querySelectorAll('.adv-desc').forEach(el => { adv[el.dataset.idx].desc = el.value; });
+  document.querySelectorAll('.adv-title-bm').forEach(el => { adv[el.dataset.idx].titleBm = el.value; });
+  document.querySelectorAll('.adv-desc-bm').forEach(el => { adv[el.dataset.idx].descBm = el.value; });
+  document.querySelectorAll('.adv-title-zh').forEach(el => { adv[el.dataset.idx].titleZh = el.value; });
+  document.querySelectorAll('.adv-desc-zh').forEach(el => { adv[el.dataset.idx].descZh = el.value; });
   DM.set('settings_advantages', adv);
   toast('已保存');
 }
@@ -2735,10 +2761,10 @@ function saveAdvantages() {
 function renderStats(c) {
   const st = DM.get('settings_stats', [{num:'30+',label:'Years Est.'},{num:'500+',label:'Clients Served'},{num:'40+',label:'Ready Moulds'},{num:'50+',label:'Countries Exported'}]);
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">数据展示</h1><p class="page-desc">About 区域数字配置，保存后首页数字跟着变</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">数据展示</h1><p class="page-desc">About 区域数字配置，保存后首页数字跟着变（标签分英文 / 马来文 / 中文三栏）</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        ${st.map((s,i)=>`<div class="form-group"><label class="form-label">数字 ${i+1}</label><input class="form-input stat-num" data-idx="${i}" value="${esc(s.num)}"></div><div class="form-group"><label class="form-label">标签 ${i+1}</label><input class="form-input stat-label" data-idx="${i}" value="${esc(s.label)}"></div>`).join('')}
+        ${st.map((s,i)=>`<div class="form-group"><label class="form-label">数字 ${i+1}</label><input class="form-input stat-num" data-idx="${i}" value="${esc(s.num)}"></div><div class="form-group"><label class="form-label">标签 ${i+1}（英文）</label><input class="form-input stat-label" data-idx="${i}" value="${esc(s.label)}"><label class="form-label" style="margin-top:6px">标签 ${i+1}（马来文，留空显示英文）</label><input class="form-input stat-label-bm" data-idx="${i}" value="${esc(s.labelBm||'')}"><label class="form-label" style="margin-top:6px">标签 ${i+1}（中文，留空保持原有）</label><input class="form-input stat-label-zh" data-idx="${i}" value="${esc(s.labelZh||'')}"></div>`).join('')}
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveStats()">保存</button></div>
     </div></div>`;
@@ -2748,6 +2774,8 @@ function saveStats() {
   const st = DM.get('settings_stats', [{},{},{},{}]);
   document.querySelectorAll('.stat-num').forEach(el => { st[el.dataset.idx].num = el.value; });
   document.querySelectorAll('.stat-label').forEach(el => { st[el.dataset.idx].label = el.value; });
+  document.querySelectorAll('.stat-label-bm').forEach(el => { st[el.dataset.idx].labelBm = el.value; });
+  document.querySelectorAll('.stat-label-zh').forEach(el => { st[el.dataset.idx].labelZh = el.value; });
   DM.set('settings_stats', st);
   toast('已保存');
 }
@@ -2844,10 +2872,14 @@ function openClientModal(id) {
 function renderAbout(c) {
   const s = docVal('settings_about');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">About 关于我们</h1><p class="page-desc">公司介绍 / 认证勾选 / 工厂地址，保存后首页 About 区跟着变</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">About 关于我们</h1><p class="page-desc">公司介绍 / 认证勾选 / 工厂地址，保存后首页 About 区跟着变（分英文 / 马来文 / 中文三栏；认证徽章的中马来文由前台固定翻译）</p></div></div>
     <div class="card"><div class="card-body">
-      <div class="form-group"><label class="form-label">公司介绍</label><textarea class="form-textarea" id="fs_aboutIntro" rows="4">${esc(s.intro||'')}</textarea></div>
-      <div class="form-group"><label class="form-label">工厂地址</label><input class="form-input" id="fs_aboutAddress" value="${esc(s.address||'')}"></div>
+      <div class="form-group"><label class="form-label">公司介绍（英文）</label><textarea class="form-textarea" id="fs_aboutIntro" rows="4">${esc(s.intro||'')}</textarea></div>
+      <div class="form-group"><label class="form-label">公司介绍（马来文，留空显示英文）</label><textarea class="form-textarea" id="fs_aboutIntro_bm" rows="4">${esc(s.introBm||'')}</textarea></div>
+      <div class="form-group"><label class="form-label">公司介绍（中文，留空保持原有）</label><textarea class="form-textarea" id="fs_aboutIntro_zh" rows="4">${esc(s.introZh||'')}</textarea></div>
+      <div class="form-group"><label class="form-label">工厂地址（英文）</label><input class="form-input" id="fs_aboutAddress" value="${esc(s.address||'')}"></div>
+      <div class="form-group"><label class="form-label">工厂地址（马来文，留空显示英文）</label><input class="form-input" id="fs_aboutAddress_bm" value="${esc(s.addressBm||'')}"></div>
+      <div class="form-group"><label class="form-label">工厂地址（中文，留空保持原有）</label><input class="form-input" id="fs_aboutAddress_zh" value="${esc(s.addressZh||'')}"></div>
       <div class="form-group"><label class="form-label">认证勾选</label>
         <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px">
           ${['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ'].map(cert=>`<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" class="about-cert-cb" value="${esc(cert)}" ${s.certs?.includes(cert)?'checked':''}> ${esc(cert)}</label>`).join('')}
@@ -2859,15 +2891,15 @@ function renderAbout(c) {
 
 function saveSettingsAbout() {
   const checked = [...document.querySelectorAll('.about-cert-cb:checked')].map(cb=>cb.value);
-  DM.set('settings_about', {intro:val('fs_aboutIntro'),address:val('fs_aboutAddress'),certs:checked});
+  DM.set('settings_about', {intro:val('fs_aboutIntro'),introBm:val('fs_aboutIntro_bm'),introZh:val('fs_aboutIntro_zh'),address:val('fs_aboutAddress'),addressBm:val('fs_aboutAddress_bm'),addressZh:val('fs_aboutAddress_zh'),certs:checked});
   toast('已保存');
 }
 
 function renderProcess(c) {
   const steps = DM.get('settings_process');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">How We Work</h1><p class="page-desc">合作流程步骤，保存后首页流程区跟着变（步骤数量可增可减）</p></div></div>
-    <div class="card"><div class="card-body">${steps.map((s,i)=>`<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--gray-100)"><div style="width:40px;height:40px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${i+1}</div><div style="flex:1"><input class="form-input process-title" data-idx="${i}" value="${esc(s.title)}" style="font-weight:600;margin-bottom:4px"><input class="form-input process-desc" data-idx="${i}" value="${esc(s.desc)}" style="font-size:13px;margin-bottom:4px"><input class="form-input process-days" data-idx="${i}" value="${esc(s.days)}" style="width:120px;font-size:12px"></div></div>`).join('')}<div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsProcess()">保存</button></div></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">How We Work</h1><p class="page-desc">合作流程步骤，保存后首页流程区跟着变（步骤数量可增可减；英文 / 马来文 / 中文三栏分开填）</p></div></div>
+    <div class="card"><div class="card-body">${steps.map((s,i)=>`<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--gray-100)"><div style="width:40px;height:40px;background:var(--primary);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${i+1}</div><div style="flex:1"><input class="form-input process-title" data-idx="${i}" value="${esc(s.title)}" placeholder="步骤名称（英文）" style="font-weight:600;margin-bottom:4px"><input class="form-input process-desc" data-idx="${i}" value="${esc(s.desc)}" placeholder="说明（英文）" style="font-size:13px;margin-bottom:4px"><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px"><input class="form-input process-days" data-idx="${i}" value="${esc(s.days)}" placeholder="工期（英文）" style="width:130px;font-size:12px"><span style="font-size:12px;color:var(--gray-500);align-self:center">← 工期如 “1-2 days”，中文页自动写 “1-2 天”、马来文页写 “1-2 hari”</span></div><input class="form-input process-title-bm" data-idx="${i}" value="${esc(s.titleBm||'')}" placeholder="步骤名称（马来文，留空显示英文）" style="font-size:13px;margin-bottom:4px"><input class="form-input process-desc-bm" data-idx="${i}" value="${esc(s.descBm||'')}" placeholder="说明（马来文，留空显示英文）" style="font-size:13px;margin-bottom:4px"><input class="form-input process-title-zh" data-idx="${i}" value="${esc(s.titleZh||'')}" placeholder="步骤名称（中文，留空保持原有）" style="font-size:13px;margin-bottom:4px"><input class="form-input process-desc-zh" data-idx="${i}" value="${esc(s.descZh||'')}" placeholder="说明（中文，留空保持原有）" style="font-size:13px"></div></div>`).join('')}<div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsProcess()">保存</button></div></div></div>`;
 }
 
 function saveSettingsProcess() {
@@ -2875,6 +2907,10 @@ function saveSettingsProcess() {
   document.querySelectorAll('.process-title').forEach(el => { steps[el.dataset.idx].title = el.value; });
   document.querySelectorAll('.process-desc').forEach(el => { steps[el.dataset.idx].desc = el.value; });
   document.querySelectorAll('.process-days').forEach(el => { steps[el.dataset.idx].days = el.value; });
+  document.querySelectorAll('.process-title-bm').forEach(el => { steps[el.dataset.idx].titleBm = el.value; });
+  document.querySelectorAll('.process-desc-bm').forEach(el => { steps[el.dataset.idx].descBm = el.value; });
+  document.querySelectorAll('.process-title-zh').forEach(el => { steps[el.dataset.idx].titleZh = el.value; });
+  document.querySelectorAll('.process-desc-zh').forEach(el => { steps[el.dataset.idx].descZh = el.value; });
   DM.set('settings_process', steps);
   toast('已保存');
 }
