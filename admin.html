@@ -303,6 +303,20 @@ const CLOUD = {
         'settings_printing_guide','settings_advantages','settings_stats','settings_banner',
         'settings_quote_template','settings_certs','pricebook','contactFormConfig']
 };
+// 首页这五块文案：旧版后台的保存函数压根不写马来文/中文栏，云端那条记录因此键比本机少，
+// 整条覆盖会把本机刚填的内容抹掉。拉取时按字段合并（数组按下标合并），云端已有的字段仍以云端为准。
+const MERGE_ON_PULL = ['settings_banner','settings_about','settings_stats','settings_advantages','settings_process'];
+function mergeDoc(local, remote) {
+  if (Array.isArray(remote)) {
+    const l = Array.isArray(local) ? local : [];
+    return remote.map((r, i) => mergeDoc(l[i], r));
+  }
+  if (remote && typeof remote === 'object') {
+    if (!local || typeof local !== 'object' || Array.isArray(local)) return remote;
+    return Object.assign({}, local, remote);
+  }
+  return remote;
+}
 // 这些是演示用的业务/内容数据。接上后端后不再自动灌进共享库，
 // 否则同事会看到 L'Oréal、Shopee 这类假线索；需要时在系统设置里手动导入。
 const DEMO_KEYS = new Set(['leads','customers','quotes','orders','payments','dielines','logs',
@@ -415,7 +429,11 @@ const Sync = {
     const byCol = {};
     rows.forEach(r => (byCol[r.collection] = byCol[r.collection] || []).push(r));
     CLOUD.row.forEach(k => { DM.raw(k, (byCol[k] || []).map(r => r.payload)) });
-    CLOUD.doc.forEach(k => { if (byCol[k] && byCol[k].length) DM.raw(k, byCol[k][0].payload) });
+    CLOUD.doc.forEach(k => {
+      if (!byCol[k] || !byCol[k].length) return;
+      const remote = byCol[k][0].payload;
+      DM.raw(k, MERGE_ON_PULL.includes(k) ? mergeDoc(DM.get(k, null), remote) : remote);
+    });
     this.lastPull = Date.now();
     return rows.length;
   },
@@ -2729,8 +2747,9 @@ async function saveBannerBg(input) {
 
 function removeBannerBg() {
   const b = docVal('settings_banner');
-  delete b.bg;
-  delete b.bgPath;
+  // 写空串而不是删键：拉取时按字段合并，删掉的键会被本机旧值补回来，等于移除无效
+  b.bg = '';
+  b.bgPath = '';
   DM.set('settings_banner', b);
   toast('已移除背景图，前台恢复默认背景');
   renderPage(currentPageId);

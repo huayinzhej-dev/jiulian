@@ -438,12 +438,15 @@
   // 首页文案类：整块存成一条文档，后台「内容管理」改了前台就跟着变
   const DOC_COLS = ['settings_banner', 'settings_advantages', 'settings_stats', 'settings_about', 'settings_process'];
 
-  // 三语文案：马来文 / 中文留空时沿用英文，避免出现空白页
+  // 三语文案：马来文 / 中文留空时沿用英文，英文也留空时用已经填了的那一语兜底，
+  // 否则后台清空一个栏位就会把前台整块刷成空白。
+  const str = v => String(v == null ? '' : v).trim();
   function i18nText(node, en, zh, bm) {
-    node.setAttribute('data-en', en);
-    node.setAttribute('data-bm', bm || en);
-    node.setAttribute('data-zh', zh || en);
-    node.textContent = en;
+    const e = str(en) || str(bm) || str(zh);
+    node.setAttribute('data-en', e);
+    node.setAttribute('data-bm', str(bm) || e);
+    node.setAttribute('data-zh', str(zh) || e);
+    node.textContent = e;
     return node;
   }
 
@@ -602,6 +605,18 @@
 
   const zhAttr = els => Array.from(els).map(el => (el ? el.getAttribute('data-zh') || '' : ''));
 
+  // 抓下页面上这一版三语原文，供「后台某一栏留空」时回填；重建 DOM 的版块没有 swap 那样的
+  // 「不改就保留原文」能力，不回填就会出现空白洞。
+  const orig3 = els => Array.from(els).map(el => ({
+    en: el ? str(el.getAttribute('data-en') || el.textContent) : '',
+    bm: el ? str(el.getAttribute('data-bm')) : '',
+    zh: el ? str(el.getAttribute('data-zh')) : ''
+  }));
+  const BLANK3 = { en: '', bm: '', zh: '' };
+
+  // 任一语种有内容就算这一行还在；只看英文会让后台只填中文的行整条消失
+  const anyText = (o, keys) => !!o && typeof o === 'object' && keys.some(k => str(o[k]));
+
   // 「1-2 days」这类工期在中文页写成「1-2 天」、马来文页写成「1-2 hari」，后台不用再单独填一遍
   const unitDays = (d, unit, working) => String(d == null ? '' : d)
     .replace(/\bworking\s+days?\b/gi, working).replace(/\bdays?\b/gi, unit).trim();
@@ -627,7 +642,7 @@
 
   function applyAdvantages(list) {
     const cards = document.querySelectorAll('.advantages-grid .advantage-card');
-    const rows = (Array.isArray(list) ? list : []).filter(a => a && (a.title || a.desc));
+    const rows = (Array.isArray(list) ? list : []).filter(a => anyText(a, ['title', 'desc', 'titleBm', 'descBm', 'titleZh', 'descZh']));
     if (!cards.length || !rows.length) return false;
     const zhH = zhAttr(Array.from(cards).map(c => c.querySelector('h3')));
     const zhP = zhAttr(Array.from(cards).map(c => c.querySelector('p')));
@@ -641,16 +656,17 @@
 
   function applyStats(list) {
     const host = document.querySelector('.about-stats');
-    const rows = (Array.isArray(list) ? list : []).filter(s => s && (s.num || s.label));
+    const rows = (Array.isArray(list) ? list : []).filter(s => anyText(s, ['num', 'label', 'labelBm', 'labelZh']));
     if (!host || !rows.length) return false;
-    const zh = zhAttr(host.querySelectorAll('.about-stat-label'));
+    const on = orig3(host.querySelectorAll('.about-stat-number'));
+    const ol = orig3(host.querySelectorAll('.about-stat-label'));
     host.textContent = '';
     rows.forEach((s, i) => {
+      const n = on[i] || BLANK3, o = ol[i] || BLANK3;
+      const label = str(s.label) || o.en;
       const box = make('div', 'about-stat');
-      const num = make('span', 'about-stat-number', s.num);
-      const label = make('span', 'about-stat-label', s.label, s.labelZh || zh[i], s.labelBm);
-      box.appendChild(num);
-      box.appendChild(label);
+      box.appendChild(make('span', 'about-stat-number', str(s.num) || n.en));
+      box.appendChild(make('span', 'about-stat-label', label, str(s.labelZh) || o.zh || label, str(s.labelBm) || label));
       host.appendChild(box);
     });
     return true;
@@ -676,20 +692,24 @@
 
   function applyProcess(steps) {
     const host = document.querySelector('.process-steps');
-    const rows = (Array.isArray(steps) ? steps : []).filter(s => s && (s.title || s.desc));
+    const rows = (Array.isArray(steps) ? steps : [])
+      .filter(s => anyText(s, ['title', 'desc', 'days', 'titleBm', 'descBm', 'titleZh', 'descZh']));
     if (!host || !rows.length) return false;
     const cards = host.querySelectorAll('.process-step');
-    const zhH = zhAttr(Array.from(cards).map(c => c.querySelector('h3')));
-    const zhP = zhAttr(Array.from(cards).map(c => c.querySelector('p')));
+    const oh = orig3(Array.from(cards).map(c => c.querySelector('h3')));
+    const op = orig3(Array.from(cards).map(c => c.querySelector('p')));
     host.textContent = '';
     rows.forEach((s, i) => {
       if (i) host.appendChild(make('div', 'process-connector'));
+      const h = oh[i] || BLANK3, p = op[i] || BLANK3;
+      const title = str(s.title) || h.en;
+      const en = [str(s.desc) || p.en, str(s.days)].filter(Boolean).join(' ');
+      const zh = s.descZh ? [str(s.descZh), zhDays(s.days)].filter(Boolean).join(' ') : (p.zh || en);
+      const bm = s.descBm ? [str(s.descBm), bmDays(s.days)].filter(Boolean).join(' ') : (p.bm || en);
       const card = make('div', 'process-step');
       card.appendChild(make('div', 'step-number', String(i + 1).padStart(2, '0')));
-      card.appendChild(make('h3', null, s.title, s.titleZh || zhH[i], s.titleBm));
-      card.appendChild(make('p', null, [s.desc, s.days].filter(Boolean).join(' '),
-        s.descZh ? [s.descZh, zhDays(s.days)].filter(Boolean).join(' ') : zhP[i],
-        s.descBm ? [s.descBm, bmDays(s.days)].filter(Boolean).join(' ') : undefined));
+      card.appendChild(make('h3', null, title, str(s.titleZh) || h.zh || title, str(s.titleBm) || title));
+      card.appendChild(make('p', null, en, zh, bm));
       host.appendChild(card);
     });
     return true;
