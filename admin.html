@@ -2780,10 +2780,10 @@ function saveAdvantages() {
 function renderStats(c) {
   const st = DM.get('settings_stats', [{num:'30+',label:'Years Est.'},{num:'500+',label:'Clients Served'},{num:'40+',label:'Ready Moulds'},{num:'50+',label:'Countries Exported'}]);
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">数据展示</h1><p class="page-desc">About 区域数字配置，保存后首页数字跟着变（标签分英文 / 马来文 / 中文三栏）</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">数据展示</h1><p class="page-desc">About 区域卡片配置（大字 + 文字介绍，各分英文 / 马来文 / 中文三栏），保存后首页这块跟着变。大字可以填数字（30+），也可以填一个词（精工）；填中文词时英文 / 马来文页会自动用固定译名，想改就在对应栏填你自己的说法</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
-        ${st.map((s,i)=>`<div class="form-group"><label class="form-label">数字 ${i+1}</label><input class="form-input stat-num" data-idx="${i}" value="${esc(s.num)}"></div><div class="form-group"><label class="form-label">标签 ${i+1}（英文）</label><input class="form-input stat-label" data-idx="${i}" value="${esc(s.label)}"><label class="form-label" style="margin-top:6px">标签 ${i+1}（马来文，留空显示英文）</label><input class="form-input stat-label-bm" data-idx="${i}" value="${esc(s.labelBm||'')}"><label class="form-label" style="margin-top:6px">标签 ${i+1}（中文，留空保持原有）</label><input class="form-input stat-label-zh" data-idx="${i}" value="${esc(s.labelZh||'')}"></div>`).join('')}
+        ${st.map((s,i)=>`<div class="form-group"><label class="form-label">卡片 ${i+1} · 大字（数字或标题，英文）</label><input class="form-input stat-num" data-idx="${i}" value="${esc(s.num)}" placeholder="如 30+ / Craftsmanship"><label class="form-label" style="margin-top:6px">大字（马来文，留空显示英文）</label><input class="form-input stat-num-bm" data-idx="${i}" value="${esc(s.numBm||'')}"><label class="form-label" style="margin-top:6px">大字（中文，留空保持原有）</label><input class="form-input stat-num-zh" data-idx="${i}" value="${esc(s.numZh||'')}"></div><div class="form-group"><label class="form-label">卡片 ${i+1} · 文字介绍（英文）</label><input class="form-input stat-label" data-idx="${i}" value="${esc(s.label)}"><label class="form-label" style="margin-top:6px">文字介绍（马来文，留空显示英文）</label><input class="form-input stat-label-bm" data-idx="${i}" value="${esc(s.labelBm||'')}"><label class="form-label" style="margin-top:6px">文字介绍（中文，留空保持原有）</label><input class="form-input stat-label-zh" data-idx="${i}" value="${esc(s.labelZh||'')}"></div>`).join('')}
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveStats()">保存</button></div>
     </div></div>`;
@@ -2791,10 +2791,9 @@ function renderStats(c) {
 
 function saveStats() {
   const st = DM.get('settings_stats', [{},{},{},{}]);
-  document.querySelectorAll('.stat-num').forEach(el => { st[el.dataset.idx].num = el.value; });
-  document.querySelectorAll('.stat-label').forEach(el => { st[el.dataset.idx].label = el.value; });
-  document.querySelectorAll('.stat-label-bm').forEach(el => { st[el.dataset.idx].labelBm = el.value; });
-  document.querySelectorAll('.stat-label-zh').forEach(el => { st[el.dataset.idx].labelZh = el.value; });
+  const put = (sel, key) => document.querySelectorAll(sel).forEach(el => { if (st[el.dataset.idx]) st[el.dataset.idx][key] = el.value; });
+  put('.stat-num','num'); put('.stat-num-bm','numBm'); put('.stat-num-zh','numZh');
+  put('.stat-label','label'); put('.stat-label-bm','labelBm'); put('.stat-label-zh','labelZh');
   DM.set('settings_stats', st);
   toast('已保存');
 }
@@ -2890,28 +2889,102 @@ function openClientModal(id) {
 
 function renderAbout(c) {
   const s = docVal('settings_about');
+  const poster = s.videoPoster || '';
+  const posterBox = poster
+    ? `<img src="${safeHref(poster)}" alt="视频封面图" style="max-height:140px;max-width:100%;border:1px solid var(--gray-200);border-radius:6px;object-fit:cover"> <button class="btn btn-sm btn-secondary" onclick="removeAboutPoster()">移除</button>`
+    : '<span style="font-size:12px;color:var(--gray-500)">未上传，前台保持原来的橙色占位块</span>';
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">About 关于我们</h1><p class="page-desc">公司介绍 / 认证勾选 / 工厂地址，保存后首页 About 区跟着变（分英文 / 马来文 / 中文三栏；认证徽章的中马来文由前台固定翻译）</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">About 关于我们</h1><p class="page-desc">小标题 / 主标题 / 公司介绍 / 视频区 / 认证勾选 / 工厂地址，保存后首页 About 区跟着变（分英文 / 马来文 / 中文三栏；认证徽章的中马来文由前台固定翻译）</p></div></div>
     <div class="card"><div class="card-body">
-      <div class="form-group"><label class="form-label">公司介绍（英文）</label><textarea class="form-textarea" id="fs_aboutIntro" rows="4">${esc(s.intro||'')}</textarea></div>
-      <div class="form-group"><label class="form-label">公司介绍（马来文，留空显示英文）</label><textarea class="form-textarea" id="fs_aboutIntro_bm" rows="4">${esc(s.introBm||'')}</textarea></div>
-      <div class="form-group"><label class="form-label">公司介绍（中文，留空保持原有）</label><textarea class="form-textarea" id="fs_aboutIntro_zh" rows="4">${esc(s.introZh||'')}</textarea></div>
+      <div class="form-grid">
+      <div class="form-group full"><label class="form-label">小标题（英文，如 About Jiulian）</label><input class="form-input" id="fs_about_label" value="${esc(s.label||'')}" placeholder="留空保持前台原有文案"></div>
+      <div class="form-group full"><label class="form-label">小标题（马来文，留空显示英文）</label><input class="form-input" id="fs_about_label_bm" value="${esc(s.labelBm||'')}"></div>
+      <div class="form-group full"><label class="form-label">小标题（中文，留空保持原有）</label><input class="form-input" id="fs_about_label_zh" value="${esc(s.labelZh||'')}"></div>
+      <div class="form-group full"><label class="form-label">主标题（英文，首页那行大字）</label><input class="form-input" id="fs_about_title" value="${esc(s.title||'')}" placeholder="e.g. 30+ Years of Packaging Excellence"></div>
+      <div class="form-group full"><label class="form-label">主标题（马来文，留空显示英文）</label><input class="form-input" id="fs_about_title_bm" value="${esc(s.titleBm||'')}"></div>
+      <div class="form-group full"><label class="form-label">主标题（中文，留空保持原有）</label><input class="form-input" id="fs_about_title_zh" value="${esc(s.titleZh||'')}"></div>
+      <div class="form-group full"><label class="form-label">公司介绍（英文）</label><textarea class="form-textarea" id="fs_aboutIntro" rows="4">${esc(s.intro||'')}</textarea></div>
+      <div class="form-group full"><label class="form-label">公司介绍（马来文，留空显示英文）</label><textarea class="form-textarea" id="fs_aboutIntro_bm" rows="4">${esc(s.introBm||'')}</textarea></div>
+      <div class="form-group full"><label class="form-label">公司介绍（中文，留空保持原有）</label><textarea class="form-textarea" id="fs_aboutIntro_zh" rows="4">${esc(s.introZh||'')}</textarea></div>
+      <div class="form-group full" style="margin-top:4px"><label class="form-label" style="color:var(--gray-500)">↓ 左侧视频区：填了视频链接前台才会出现播放按钮并能点开播放，只传封面图则纯展示图片</label></div>
+      <div class="form-group full"><label class="form-label">视频链接（YouTube / Vimeo / mp4 直链，留空则不可点击）</label><input class="form-input" id="fs_about_video_url" value="${esc(s.videoUrl||'')}" placeholder="e.g. https://www.youtube.com/watch?v=xxxxxxxxxxx"></div>
+      <div class="form-group full"><label class="form-label">视频区文案（英文）</label><input class="form-input" id="fs_about_video_text" value="${esc(s.videoText||'')}" placeholder="留空保持前台原有文案"></div>
+      <div class="form-group full"><label class="form-label">视频区文案（马来文，留空显示英文）</label><input class="form-input" id="fs_about_video_text_bm" value="${esc(s.videoTextBm||'')}"></div>
+      <div class="form-group full"><label class="form-label">视频区文案（中文，留空保持原有）</label><input class="form-input" id="fs_about_video_text_zh" value="${esc(s.videoTextZh||'')}"></div>
+      <div class="form-group full"><label class="form-label">封面图</label><input class="form-input" type="file" accept="image/*" onchange="saveAboutPoster(this)"><div id="fs_about_video_poster_box" style="margin-top:8px">${posterBox}</div></div>
       <div class="form-group"><label class="form-label">工厂地址（英文）</label><input class="form-input" id="fs_aboutAddress" value="${esc(s.address||'')}"></div>
       <div class="form-group"><label class="form-label">工厂地址（马来文，留空显示英文）</label><input class="form-input" id="fs_aboutAddress_bm" value="${esc(s.addressBm||'')}"></div>
       <div class="form-group"><label class="form-label">工厂地址（中文，留空保持原有）</label><input class="form-input" id="fs_aboutAddress_zh" value="${esc(s.addressZh||'')}"></div>
-      <div class="form-group"><label class="form-label">认证勾选</label>
+      <div class="form-group full"><label class="form-label">认证勾选</label>
         <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px">
           ${['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ'].map(cert=>`<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" class="about-cert-cb" value="${esc(cert)}" ${s.certs?.includes(cert)?'checked':''}> ${esc(cert)}</label>`).join('')}
         </div>
+      </div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsAbout()">保存</button></div>
     </div></div>`;
 }
 
+// 必须合并写：封面图是上传后单独落库的，整条替换会把刚上传的地址冲掉
 function saveSettingsAbout() {
   const checked = [...document.querySelectorAll('.about-cert-cb:checked')].map(cb=>cb.value);
-  DM.set('settings_about', {intro:val('fs_aboutIntro'),introBm:val('fs_aboutIntro_bm'),introZh:val('fs_aboutIntro_zh'),address:val('fs_aboutAddress'),addressBm:val('fs_aboutAddress_bm'),addressZh:val('fs_aboutAddress_zh'),certs:checked});
+  const s = docVal('settings_about');
+  s.label = val('fs_about_label');
+  s.labelBm = val('fs_about_label_bm');
+  s.labelZh = val('fs_about_label_zh');
+  s.title = val('fs_about_title');
+  s.titleBm = val('fs_about_title_bm');
+  s.titleZh = val('fs_about_title_zh');
+  s.intro = val('fs_aboutIntro');
+  s.introBm = val('fs_aboutIntro_bm');
+  s.introZh = val('fs_aboutIntro_zh');
+  s.videoUrl = val('fs_about_video_url');
+  s.videoText = val('fs_about_video_text');
+  s.videoTextBm = val('fs_about_video_text_bm');
+  s.videoTextZh = val('fs_about_video_text_zh');
+  s.address = val('fs_aboutAddress');
+  s.addressBm = val('fs_aboutAddress_bm');
+  s.addressZh = val('fs_aboutAddress_zh');
+  s.certs = checked;
+  DM.set('settings_about', s);
+  writeLog('保存 About 关于我们', s.title || '');
   toast('已保存');
+}
+
+async function saveAboutPoster(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  try {
+    const up = await cloudUpload(file, 'branding');
+    const s = docVal('settings_about');
+    s.videoPoster = up.url;
+    s.videoPosterPath = up.path;
+    DM.set('settings_about', s);
+    paintAboutPoster();
+    toast('封面图已上传，保存文字后一起生效');
+  } catch (e) {
+    toast('封面图上传失败：' + e.message);
+    input.value = '';
+  }
+}
+
+function removeAboutPoster() {
+  const s = docVal('settings_about');
+  // 写空串而不是删键：拉取时按字段合并，删掉的键会被本机旧值补回来，等于移除无效
+  s.videoPoster = '';
+  s.videoPosterPath = '';
+  DM.set('settings_about', s);
+  paintAboutPoster();
+  toast('已移除封面图，前台恢复橙色占位块');
+}
+
+function paintAboutPoster() {
+  const box = document.getElementById('fs_about_video_poster_box');
+  if (!box) return;
+  const poster = docVal('settings_about').videoPoster || '';
+  box.innerHTML = poster
+    ? `<img src="${safeHref(poster)}" alt="视频封面图" style="max-height:140px;max-width:100%;border:1px solid var(--gray-200);border-radius:6px;object-fit:cover"> <button class="btn btn-sm btn-secondary" onclick="removeAboutPoster()">移除</button>`
+    : '<span style="font-size:12px;color:var(--gray-500)">未上传，前台保持原来的橙色占位块</span>';
 }
 
 function renderProcess(c) {

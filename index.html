@@ -163,8 +163,8 @@
     <div class="container">
       <div class="about-grid">
         <div class="about-video">
-          <div class="video-placeholder">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>
+          <div class="video-placeholder is-inert">
+            <svg class="video-play" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>
             <p data-en="Watch Our Story" data-bm="Tonton Cerita Kami" data-zh="观看我们的故事">Watch Our Story</p>
           </div>
         </div>
@@ -1014,6 +1014,14 @@
         <h3 class="guide-modal-subtitle" data-en="Production Timeline" data-bm="Garis Masa Pengeluaran" data-zh="生产周期">Production Timeline</h3>
         <p class="guide-modal-desc" data-en="Production begins after sample approval and deposit payment. Standard lead time: 10-14 business days. Rush orders available at additional cost." data-bm="Pengeluaran bermula selepas kelulusan sampel dan pembayaran deposit. Masa siap standard: 10-14 hari bekerja. Pesanan tergesa-gesa tersedia dengan kos tambahan." data-zh="生产在样品确认和定金支付后开始。标准交货期：10-14个工作日。可加急，需额外费用。">Production begins after sample approval and deposit payment. Standard lead time: 10-14 business days. Rush orders available at additional cost.</p>
       </div>
+    </div>
+  </div>
+
+  <!-- About 视频弹窗：后台「About 关于我们」里填了视频链接才会启用 -->
+  <div class="guide-modal-overlay" id="aboutVideoModal">
+    <div class="guide-modal video-modal">
+      <button class="guide-modal-close" aria-label="Close">&times;</button>
+      <div class="video-frame" id="aboutVideoFrame"></div>
     </div>
   </div>
 

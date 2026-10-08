@@ -654,22 +654,101 @@
     return hit;
   }
 
+  // 后台「数据展示」的大字栏常填成中文词（精工/速达这类），这里给这几个词固定翻译，
+  // 否则英文页会直接显示中文；用词刻意跟中文一样短，太长会在卡片里换行。
+  // 后台单独填了某一语种时以填写的为准。
+  const STAT_WORD = {
+    '精工': { en: 'Craft', bm: 'Teliti' },
+    '速达': { en: 'Rapid', bm: 'Pantas' },
+    '合规': { en: 'Certified', bm: 'Pematuhan' },
+    '定制': { en: 'Custom', bm: 'Tempahan' }
+  };
+  function statNum(raw, lang) {
+    const w = STAT_WORD[str(raw)];
+    if (!w) return str(raw);
+    return lang === 'zh' ? str(raw) : str(w[lang]);
+  }
+
   function applyStats(list) {
     const host = document.querySelector('.about-stats');
-    const rows = (Array.isArray(list) ? list : []).filter(s => anyText(s, ['num', 'label', 'labelBm', 'labelZh']));
+    const rows = (Array.isArray(list) ? list : []).filter(s => anyText(s, ['num', 'numBm', 'numZh', 'label', 'labelBm', 'labelZh']));
     if (!host || !rows.length) return false;
     const on = orig3(host.querySelectorAll('.about-stat-number'));
     const ol = orig3(host.querySelectorAll('.about-stat-label'));
     host.textContent = '';
     rows.forEach((s, i) => {
       const n = on[i] || BLANK3, o = ol[i] || BLANK3;
-      const label = str(s.label) || o.en;
+      // 大字那栏也可能是文字（精工/速达这类），同样分三语；某一栏没填就先退回本页原文，
+      // 再退回这行已经填过的任一种语言，避免出现一张空卡
+      const base = str(s.num) || n.en || str(s.numBm) || str(s.numZh);
+      const label = str(s.label) || o.en || str(s.labelBm) || str(s.labelZh);
       const box = make('div', 'about-stat');
-      box.appendChild(make('span', 'about-stat-number', str(s.num) || n.en));
+      box.appendChild(make('span', 'about-stat-number', statNum(base, 'en'), str(s.numZh) || statNum(base, 'zh'), str(s.numBm) || statNum(base, 'bm')));
       box.appendChild(make('span', 'about-stat-label', label, str(s.labelZh) || o.zh || label, str(s.labelBm) || label));
       host.appendChild(box);
     });
     return true;
+  }
+
+  // About 视频区：后台填了链接才允许点开播放；没链接时这块只是封面位，不能装作是按钮
+  const VIDEO_HOSTS = [
+    { re: /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,20})/i, make: id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0` },
+    { re: /vimeo\.com\/(?:video\/|channels\/[\w\/]+?\/)?(\d{4,12})/i, make: id => `https://player.vimeo.com/video/${id}?autoplay=1` }
+  ];
+
+  function videoSource(url) {
+    const s = str(url);
+    if (!s) return null;
+    for (const h of VIDEO_HOSTS) {
+      const m = s.match(h.re);
+      if (m) return { tag: 'iframe', src: h.make(m[1]) };
+    }
+    const direct = safeUrl(s);
+    if (/^https:/i.test(direct) && /\.(mp4|webm|ogg|m4v)(\?|#|$)/i.test(direct)) return { tag: 'video', src: direct };
+    return null;
+  }
+
+  const aboutVideoBox = document.querySelector('.video-placeholder');
+  const aboutVideoModal = document.getElementById('aboutVideoModal');
+  const aboutVideoFrame = document.getElementById('aboutVideoFrame');
+
+  function closeAboutVideo() {
+    if (aboutVideoModal) aboutVideoModal.classList.remove('active');
+    if (aboutVideoFrame) aboutVideoFrame.textContent = '';
+    document.body.style.overflow = '';
+  }
+
+  function openAboutVideo(url) {
+    const v = videoSource(url);
+    if (!v || !aboutVideoModal || !aboutVideoFrame) return false;
+    aboutVideoFrame.textContent = '';
+    const node = document.createElement(v.tag);
+    node.src = v.src;
+    if (v.tag === 'iframe') {
+      node.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture';
+      node.allowFullscreen = true;
+      node.title = 'Jiulian Packaging';
+    } else {
+      node.controls = true;
+      node.autoplay = true;
+      node.playsInline = true;
+    }
+    aboutVideoFrame.appendChild(node);
+    aboutVideoModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    return true;
+  }
+
+  if (aboutVideoBox) {
+    aboutVideoBox.addEventListener('click', () => {
+      if (aboutVideoBox.dataset.video) openAboutVideo(aboutVideoBox.dataset.video);
+    });
+  }
+  if (aboutVideoModal && aboutVideoFrame) {
+    // 关掉时把播放器摘掉，否则视频在已经看不见的弹窗里还在出声
+    aboutVideoModal.addEventListener('click', e => {
+      if (e.target === aboutVideoModal || e.target.closest('.guide-modal-close')) closeAboutVideo();
+    });
   }
 
   function applyAbout(d) {
@@ -678,7 +757,21 @@
     const content = document.querySelector('.about-content');
     const h2 = content && content.querySelector('h2.section-title');
     const intro = h2 && h2.nextElementSibling;
+    hit = swap(content && content.querySelector('.section-label'), d.label, d.labelZh, d.labelBm) || hit;
+    hit = swap(h2, d.title, d.titleZh, d.titleBm) || hit;
     if (intro && intro.tagName === 'P') hit = swap(intro, d.intro, d.introZh, d.introBm) || hit;
+    if (aboutVideoBox) {
+      hit = swap(aboutVideoBox.querySelector('p'), d.videoText, d.videoTextZh, d.videoTextBm) || hit;
+      const poster = safeUrl(d.videoPoster || d.videoPosterUrl || '').replace(/"/g, '%22');
+      aboutVideoBox.classList.toggle('has-poster', !!poster);
+      aboutVideoBox.style.backgroundImage = poster ? `linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)), url("${poster}")` : '';
+      // 判据是「这个链接放得出视频吗」，不是「链接框里有没有字」——
+      // 填了个网页地址或 javascript: 时不该装作能点
+      const vs = videoSource(d.videoUrl);
+      aboutVideoBox.classList.toggle('is-inert', !vs);
+      aboutVideoBox.dataset.video = vs ? str(d.videoUrl) : '';
+      hit = true;
+    }
     const certHost = document.querySelector('.about-certifications');
     const certs = (Array.isArray(d.certs) ? d.certs : []).filter(Boolean);
     if (certHost && certs.length) {

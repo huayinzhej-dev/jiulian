@@ -1254,6 +1254,32 @@ ul { list-style: none; }
   font-size: 16px;
   font-weight: 600;
 }
+/* 后台没填视频链接时这块只是个图片位，不该装作能点 */
+.video-placeholder.is-inert {
+  cursor: default;
+}
+.video-placeholder.is-inert:hover {
+  transform: none;
+}
+.video-placeholder.is-inert .video-play {
+  display: none;
+}
+.video-placeholder.has-poster {
+  background-size: cover;
+  background-position: center;
+}
+.video-modal {
+  max-width: 900px;
+  background: #000;
+  overflow: hidden;
+}
+.video-frame iframe,
+.video-frame video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+}
 .about-content .section-title {
   margin-bottom: 20px;
 }
@@ -1263,9 +1289,12 @@ ul { list-style: none; }
   line-height: 1.7;
   margin-bottom: 28px;
 }
+/* 后台可以填 4 个甚至更多卡片，英文/马来文的词又比中文长，一排摆不下会冲出 About 栏，
+   所以固定两列；窄屏再退成一列 */
 .about-stats {
-  display: flex;
-  gap: 32px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 24px;
   margin-bottom: 24px;
 }
 .about-stat {
@@ -1276,7 +1305,9 @@ ul { list-style: none; }
   font-family: var(--font-heading);
   font-size: 32px;
   font-weight: 700;
+  line-height: 1.15;
   color: var(--orange-600);
+  overflow-wrap: break-word;
 }
 .about-stat-label {
   font-size: 13px;
@@ -2000,6 +2031,7 @@ ul { list-style: none; }
   .cert-text h3 { font-size: 13px; }
   .cert-text p { font-size: 11px; }
   .guide-content { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .about-stat-number { font-size: 26px; }
 }
 
 /* ===== Animations ===== */
