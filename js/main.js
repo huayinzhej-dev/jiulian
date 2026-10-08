@@ -369,16 +369,19 @@
       },
       download: { en: 'Download LOWES Certificate ↓', bm: 'Muat Turun Sijil LOWES ↓', zh: '下载 LOWES 证书 ↓' }
     },
-    iso: {
-      img: 'images/certificates/ISO认证证书.png',
-      badge: { en: 'ISO 9001:2015', bm: 'ISO 9001:2015', zh: 'ISO 9001:2015' },
-      title: { en: 'ISO 9001:2015', bm: 'ISO 9001:2015', zh: 'ISO 9001:2015' },
+    cb: {
+      // 后台「内容管理 → 跨境电商卡片」维护；这里只是后台一条都没填时的兜底
+      img: '',
+      type: 'contact',
+      wa: '60167241814',
+      badge: { en: 'Cross-border', bm: 'Lintas Sempadan', zh: '跨境电商' },
+      title: { en: 'Cross-border E-commerce', bm: 'E-dagang Lintas Sempadan', zh: '跨境电商' },
       desc: {
-        en: 'ISO 9001:2015 certified quality management system ensuring consistent product quality, continuous improvement, and customer satisfaction across all our packaging manufacturing processes.',
-        bm: 'Sistem pengurusan kualiti ISO 9001:2015 yang disahkan memastikan kualiti produk yang konsisten, penambahbaikan berterusan, dan kepuasan pelanggan.',
-        zh: 'ISO 9001:2015认证质量管理体系，确保我们所有包装制造过程中产品质量一致、持续改进和客户满意。'
+        en: 'One-stop packaging for cross-border sellers — retail-ready cartons and mailers that meet overseas marketplace labelling and transit requirements, made from FSC® certified material with low MOQ and export-direct delivery.',
+        bm: 'Pembungkusan sehala untuk penjual lintas sempadan — karton dan penghantar sedia runcit yang memenuhi keperluan penandaan serta pengangkutan pasaran luar, dihasilkan daripada bahan bersijil FSC® dengan MOQ rendah dan penghantaran terus eksport.',
+        zh: '为跨境卖家提供一站式包装：符合海外平台贴标与运输要求的零售就绪纸箱与快递盒，采用 FSC® 认证材料，低起订量、可直接出口发货。'
       },
-      download: { en: 'Download ISO Certificate ↓', bm: 'Muat Turun Sijil ISO ↓', zh: '下载 ISO 证书 ↓' }
+      download: { en: 'Contact Us', bm: 'Hubungi Kami', zh: '联系我们' }
     }
   };
 
@@ -390,8 +393,12 @@
     const data = certData[certKey];
     if (!data) return;
 
-    document.getElementById('certModalImg').src = data.img;
-    document.getElementById('certModalImg').alt = data.title[currentLang] || data.title.en;
+    const img = document.getElementById('certModalImg');
+    const url = safeUrl(data.img);
+    // 没传图也保留左边那一栏、摆占位框：弹窗版式不随「有没有上传图」跳变
+    document.getElementById('certModalImage').classList.toggle('is-empty', !url);
+    if (url) img.src = url; else img.removeAttribute('src');
+    img.alt = data.title[currentLang] || data.title.en;
 
     const badge = document.getElementById('certModalBadge');
     badge.textContent = data.badge[currentLang] || data.badge.en;
@@ -400,7 +407,22 @@
     document.getElementById('certModalTitle').textContent = data.title[currentLang] || data.title.en;
     document.getElementById('certModalDesc').textContent = data.desc[currentLang] || data.desc.en;
     document.getElementById('certModalDownloadText').textContent = data.download[currentLang] || data.download.en;
-    document.getElementById('certModalDownload').href = data.img;
+
+    const dl = document.getElementById('certModalDownload');
+    // 类名带 is- 前缀：单叫 contact 会被首页联系版块那条 .contact{padding:96px 0} 命中，按钮被撑成竖条
+    dl.classList.toggle('is-contact', data.type === 'contact');
+    if (data.type === 'contact') {
+      // 前缀写死 + 号码只留数字，后台那一栏填什么都拼不出 javascript: 这类伪协议
+      dl.href = 'https://wa.me/' + String(data.wa || '').replace(/\D/g, '');
+      dl.target = '_blank';
+      dl.rel = 'noopener';
+      dl.removeAttribute('download');
+    } else {
+      dl.href = url;
+      dl.removeAttribute('target');
+      dl.removeAttribute('rel');
+      dl.setAttribute('download', '');
+    }
 
     certModal.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -468,7 +490,16 @@
     return s.replace(/ /g, '%20');
   }
 
-  const PRODUCT_ICON = '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
+  // 商品没传图时按顺序用这套配色+线框图标（取自 index.html 里那 6 张写死的卡片）。
+  // 只放固定字面量，后台填什么都不会进到这里，所以 innerHTML 是安全的。
+  const PRODUCT_ART = [
+    { bg:'#e8f5e9', stroke:'#1a5632', svg:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>' },
+    { bg:'#fff3e0', stroke:'#e65100', svg:'<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>' },
+    { bg:'#fce4ec', stroke:'#c62828', svg:'<rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/>' },
+    { bg:'#e3f2fd', stroke:'#1565c0', svg:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>' },
+    { bg:'#f3e5f5', stroke:'#7b1fa2', svg:'<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>' },
+    { bg:'#e0f2f1', stroke:'#00695c', svg:'<rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/>' }
+  ];
   const FAQ_CHEVRON = '<svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
 
   function renderClients(list) {
@@ -499,7 +530,7 @@
     const rows = (list || []).filter(p => p && p.name && p.status !== 'inactive');
     if (!host || !rows.length) return false;
     host.textContent = '';
-    rows.forEach(p => {
+    rows.forEach((p, i) => {
       const card = make('div', 'product-card');
       card.dataset.product = p.id || '';
       card.dataset.nameEn = p.name;
@@ -519,7 +550,9 @@
         img.loading = 'lazy';
         pic.appendChild(img);
       } else {
-        pic.innerHTML = PRODUCT_ICON;
+        const art = PRODUCT_ART[i % PRODUCT_ART.length];
+        pic.style.backgroundColor = art.bg;
+        pic.innerHTML = '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="' + art.stroke + '" stroke-width="1" aria-hidden="true">' + art.svg + '</svg>';
       }
       card.appendChild(pic);
 
@@ -783,6 +816,40 @@
     return hit;
   }
 
+  // 认证区第 4 张卡「跨境电商」：文案、产品组合图、WhatsApp 号码都存在 settings_about 的 cb* 字段里。
+  // 不另起一个集合，是因为前台匿名只读已经放行 settings_about；新集合要重新执行一次数据库策略，
+  // 用户漏跑就是「后台明明改了，前台却没反应」。
+  function applyCb(d) {
+    if (!d || typeof d !== 'object') return false;
+    // 后台每一栏都是三个字段：英文 cbTitle，马来文 cbTitleBm，中文 cbTitleZh
+    const three = base => ({ en: str(d[base]), bm: str(d[base + 'Bm']), zh: str(d[base + 'Zh']) });
+    const merge = (target, t) => {
+      let got = false;
+      ['en', 'bm', 'zh'].forEach(l => { if (t[l]) { target[l] = t[l]; got = true; } });
+      return got;
+    };
+    const cb = certData.cb;
+    const title = three('cbTitle');
+    const sub = three('cbSub');
+    let hit = merge(cb.title, title);
+    hit = merge(cb.badge, three('cbBadge')) || hit;
+    hit = merge(cb.desc, three('cbDesc')) || hit;
+    hit = merge(cb.download, three('cbBtn')) || hit;
+    const img = safeUrl(d.cbImage);
+    if (img) { cb.img = img; hit = true; }
+    const wa = String(d.cbWhatsapp == null ? '' : d.cbWhatsapp).replace(/\D/g, '');
+    // 至少 7 位才当号码：「javascript:alert(1)」去掉非数字只剩 1，当号码用会把联系按钮指到一个空号
+    if (wa.length >= 7) { cb.wa = wa; hit = true; }
+
+    const card = document.querySelector('.cert-card[data-cert="cb"]');
+    if (card) {
+      // 卡片上那两行走 swap：某一栏留空就保留 index.html 里写死的原文
+      hit = swap(card.querySelector('h3'), title.en, title.zh, title.bm) || hit;
+      hit = swap(card.querySelector('p'), sub.en, sub.zh, sub.bm) || hit;
+    }
+    return hit;
+  }
+
   function applyProcess(steps) {
     const host = document.querySelector('.process-steps');
     const rows = (Array.isArray(steps) ? steps : [])
@@ -839,6 +906,7 @@
       [applyAdvantages, docs.settings_advantages],
       [applyStats, docs.settings_stats],
       [applyAbout, docs.settings_about],
+      [applyCb, docs.settings_about],
       [applyProcess, docs.settings_process]
     ];
     parts.forEach(([fn, data]) => {

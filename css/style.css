@@ -1067,9 +1067,9 @@ ul { list-style: none; }
   background: #E3F2FD;
   color: #1565C0;
 }
-.cert-icon-iso {
-  background: #F3E5F5;
-  color: #7B1FA2;
+.cert-icon-cb {
+  background: #E0F2F1;
+  color: #00695C;
 }
 .cert-text {
   min-width: 0;
@@ -1182,7 +1182,7 @@ ul { list-style: none; }
 .cert-modal-badge-fsc { background: #E8F5E9; color: #2E7D32; }
 .cert-modal-badge-gmi { background: var(--orange-100); color: var(--orange-600); }
 .cert-modal-badge-lowes { background: #E3F2FD; color: #1565C0; }
-.cert-modal-badge-iso { background: #F3E5F5; color: #7B1FA2; }
+.cert-modal-badge-cb { background: #E0F2F1; color: #00695C; }
 .cert-modal-title {
   font-family: var(--font-heading);
   font-size: 28px;
@@ -1215,6 +1215,17 @@ ul { list-style: none; }
   background: var(--orange-500);
   transform: translateY(-1px);
 }
+/* 后台还没传产品组合图：左边那栏保留并换成虚线占位框，弹窗版式不随有没有图跳变 */
+.cert-modal-image.is-empty { margin: 24px; padding: 16px; border: 1px dashed var(--gray-300); border-radius: 12px; }
+.cert-modal-image.is-empty img { display: none; }
+.cert-modal-image-empty { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; width: 100%; min-height: 240px; color: var(--gray-400); font-size: 14px; }
+.cert-modal-image.is-empty .cert-modal-image-empty { display: flex; }
+/* 「联系我们」跳 WhatsApp，按钮换绿色并换聊天图标，铺满右栏做成横条 */
+.cert-modal-icon-wa { display: none; }
+.cert-modal-download.is-contact .cert-modal-icon-dl { display: none; }
+.cert-modal-download.is-contact .cert-modal-icon-wa { display: inline-block; }
+.cert-modal-download.is-contact { background: #25D366; width: 100%; justify-content: center; }
+.cert-modal-download.is-contact:hover { background: #1EB855; }
 
 /* ===== About Us Section ===== */
 .about-us {

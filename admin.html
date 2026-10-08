@@ -249,7 +249,7 @@ const MENU = [
     {id:'products-categories',label:'分类'},{id:'products-list',label:'商品列表'},{id:'products-printing',label:'印刷色数库'},{id:'products-finish',label:'表面处理库'},{id:'products-material',label:'材质库'}
   ]},
   { id:'content', icon:'📝', label:'内容管理', children:[
-    {id:'content-articles',label:'文章'},{id:'content-faq',label:'FAQ'},{id:'content-banner',label:'首页Banner'},{id:'content-advantages',label:'优势图标区'},{id:'content-stats',label:'数据展示'},{id:'content-testimonials',label:'评价'},{id:'content-clients',label:'合作品牌墙'},{id:'content-about',label:'About 关于我们'},{id:'content-process',label:'How We Work'},{id:'content-printing-guide',label:'印刷指南'}
+    {id:'content-articles',label:'文章'},{id:'content-faq',label:'FAQ'},{id:'content-banner',label:'首页Banner'},{id:'content-cb',label:'跨境电商卡片'},{id:'content-advantages',label:'优势图标区'},{id:'content-stats',label:'数据展示'},{id:'content-testimonials',label:'评价'},{id:'content-clients',label:'合作品牌墙'},{id:'content-about',label:'About 关于我们'},{id:'content-process',label:'How We Work'},{id:'content-printing-guide',label:'印刷指南'}
   ]},
   { id:'forms', icon:'📋', label:'表单管理', children:[
     {id:'forms-list',label:'表单列表'},{id:'forms-quote-config',label:'报价表单配置'},{id:'forms-entries',label:'表单提交记录'}
@@ -890,6 +890,7 @@ function renderPage(id) {
     'content-articles': renderArticles,
     'content-faq': renderFAQ,
     'content-banner': renderBanner,
+    'content-cb': renderCrossBorder,
     'content-advantages': renderAdvantages,
     'content-stats': renderStats,
     'content-testimonials': renderTestimonials,
@@ -2389,10 +2390,56 @@ function deleteCategory(id) {
 function renderProductsList(c) {
   const products = DM.get('products');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">商品列表</h1><p class="page-desc">管理所有产品</p></div><button class="btn btn-primary" onclick="openProductModal()">+ 新建商品</button></div>
+    <div class="page-header"><div><h1 class="page-title">商品列表</h1><p class="page-desc">管理所有产品</p></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-secondary" onclick="importShowcaseProducts()">导入首页展示的 6 个商品</button><button class="btn btn-primary" onclick="openProductModal()">+ 新建商品</button></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>分类</th><th>起步价</th><th>MOQ</th><th>状态</th><th>操作</th></tr></thead>
     <tbody>${products.length === 0 ? '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999">暂无商品，点击上方按钮创建</td></tr>' :
     products.map(p=>`<tr><td class="td-name">${esc(p.name)}</td><td>${esc(p.category)}</td><td>RM ${p.price.toFixed(2)}</td><td>${esc(p.moq)} ${p.moqUnit}</td><td>${p.status==='active'?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openProductModal('${p.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+// 首页那 6 张商品卡原本只写死在 index.html 里，商品库里一条都没有：前台只要库里有货就整排替换，
+// 所以谁先建一个商品，首页剩下的六个展示位就没了。这个按钮把首页内容原样搬进商品库，
+// 之后改价、换图、下架都在后台做。文案与 index.html 的 data-name/desc/price/moq 一一对应，改那边要改这边。
+const SHOWCASE_PRODUCTS = [
+  { id:'PRD-101', name:'Gift Box', nameZh:'礼品盒', price:1.32, moq:100, catKeys:['rigid-box','精装盒'],
+    desc:'Luxury rigid boxes with custom inserts, magnetic closure, and premium finishes.',
+    descZh:'奢华硬盒，配有定制内衬、磁扣和高端表面处理。' },
+  { id:'PRD-102', name:'Food Box', nameZh:'食品盒', price:0.80, moq:500, catKeys:['food-box','食品盒'],
+    desc:'Food-grade packaging with grease-resistant coating. FDA & EU compliant materials.',
+    descZh:'食品级包装，防油涂层。符合FDA和欧盟标准的材料。' },
+  { id:'PRD-103', name:'Cosmetic Box', nameZh:'化妆品盒', price:1.00, moq:200, catKeys:['rigid-box','精装盒'],
+    desc:'Elegant printing with embossing, foil stamping, and soft-touch lamination.',
+    descZh:'精美印刷，支持烫金、压花和柔触覆膜。' },
+  { id:'PRD-104', name:'Shipping Box', nameZh:'运输纸箱', price:0.90, moq:300, catKeys:['shipping-box','彩色运输盒'],
+    desc:'Durable corrugated mailers in various sizes. Custom printing available.',
+    descZh:'各种尺寸的耐用瓦楞纸邮寄盒。支持定制印刷。' },
+  { id:'PRD-105', name:'Paper Bag', nameZh:'纸袋', price:0.50, moq:500, catKeys:['paper-bag','纸袋'],
+    desc:'Kraft and art paper bags with custom handles. Perfect for retail and events.',
+    descZh:'牛皮纸和艺术纸袋，配有定制手柄。适合零售和活动。' },
+  { id:'PRD-106', name:'Label & Sticker', nameZh:'标签贴纸', price:0.05, moq:1000, catKeys:['pos-display','POS展示架'],
+    desc:'Custom die-cut labels in matte, glossy, or transparent finishes. Roll or sheet format.',
+    descZh:'定制模切标签，哑光、光面或透明材质。卷装或张装。' }
+];
+
+function importShowcaseProducts() {
+  const list = DM.get('products');
+  const cats = DM.get('categories');
+  const hasId = new Set(list.map(p => String(p && p.id)));
+  const hasName = new Set(list.map(p => String(p && p.name || '').trim().toLowerCase()));
+  const pickCat = keys => cats.find(c => keys.some(k => String(c.slug || '').toLowerCase() === k || String(c.name || '') === k))
+                        || cats.find(c => c.active !== false) || cats[0] || null;
+  const added = [];
+  SHOWCASE_PRODUCTS.forEach(s => {
+    if (hasId.has(s.id) || hasName.has(s.name.toLowerCase())) return;
+    const c = pickCat(s.catKeys);
+    added.push({ id:s.id, name:s.name, nameZh:s.nameZh, categoryId:c ? c.id : '', category:c ? c.name : '',
+                 price:s.price, moq:s.moq, moqUnit:'pcs', status:'active', image:'', imagePath:'',
+                 desc:s.desc, descZh:s.descZh });
+  });
+  if (!added.length) { toast('这 6 个商品已经都在列表里，没有重复添加'); return }
+  DM.set('products', list.concat(added));
+  writeLog('导入首页商品', added.map(p => p.name).join('、'));
+  renderPage(currentPageId);
+  toast(`已导入 ${added.length} 个商品${Sync.ready ? '，正在上传服务器…' : '（未连接后端，只存在这台设备上）'}`);
 }
 
 function openProductModal(id) {
@@ -2985,6 +3032,100 @@ function paintAboutPoster() {
   box.innerHTML = poster
     ? `<img src="${safeHref(poster)}" alt="视频封面图" style="max-height:140px;max-width:100%;border:1px solid var(--gray-200);border-radius:6px;object-fit:cover"> <button class="btn btn-sm btn-secondary" onclick="removeAboutPoster()">移除</button>`
     : '<span style="font-size:12px;color:var(--gray-500)">未上传，前台保持原来的橙色占位块</span>';
+}
+
+function renderCrossBorder(c) {
+  const s = docVal('settings_about');
+  const img = s.cbImage || '';
+  const box = img
+    ? `<img src="${safeHref(img)}" alt="产品组合图" style="max-height:200px;max-width:100%;border:1px solid var(--gray-200);border-radius:6px;object-fit:contain"> <button class="btn btn-sm btn-secondary" onclick="removeCbImage()">移除</button>`
+    : '<span style="font-size:12px;color:var(--gray-500)">未上传。没传图时前台弹窗只显示右边那栏文字介绍，不会留一个空图位</span>';
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">跨境电商卡片</h1><p class="page-desc">首页认证区第 4 张卡。卡片标题与弹窗大标题共用同一栏，副标题只在卡片上显示；每一栏分英文 / 马来文 / 中文，留空就保持前台原有文案（马来文留空显示英文）</p></div></div>
+    <div class="card"><div class="card-body">
+      <div class="form-grid">
+      <div class="form-group full"><label class="form-label">标题（英文 · 卡片 + 弹窗大标题）</label><input class="form-input" id="cb_title" value="${esc(s.cbTitle||'')}" placeholder="e.g. Cross-border E-commerce"></div>
+      <div class="form-group full"><label class="form-label">标题（马来文，留空显示英文）</label><input class="form-input" id="cb_title_bm" value="${esc(s.cbTitleBm||'')}"></div>
+      <div class="form-group full"><label class="form-label">标题（中文，留空保持原有）</label><input class="form-input" id="cb_title_zh" value="${esc(s.cbTitleZh||'')}" placeholder="跨境电商"></div>
+      <div class="form-group full"><label class="form-label">卡片副标题（英文 · 卡片上那行小字）</label><input class="form-input" id="cb_sub" value="${esc(s.cbSub||'')}" placeholder="e.g. Export Packaging"></div>
+      <div class="form-group full"><label class="form-label">卡片副标题（马来文，留空显示英文）</label><input class="form-input" id="cb_sub_bm" value="${esc(s.cbSubBm||'')}"></div>
+      <div class="form-group full"><label class="form-label">卡片副标题（中文，留空保持原有）</label><input class="form-input" id="cb_sub_zh" value="${esc(s.cbSubZh||'')}" placeholder="出口包装"></div>
+      <div class="form-group full" style="margin-top:4px"><label class="form-label" style="color:var(--gray-500)">↓ 点开卡片后的弹窗：上面是徽章小标签（可不填），中间是介绍，下面是按钮</label></div>
+      <div class="form-group full"><label class="form-label">徽章（英文，标题上方那个彩色小标签）</label><input class="form-input" id="cb_badge" value="${esc(s.cbBadge||'')}" placeholder="e.g. Cross-border"></div>
+      <div class="form-group full"><label class="form-label">徽章（马来文，留空显示英文）</label><input class="form-input" id="cb_badge_bm" value="${esc(s.cbBadgeBm||'')}"></div>
+      <div class="form-group full"><label class="form-label">徽章（中文，留空保持原有）</label><input class="form-input" id="cb_badge_zh" value="${esc(s.cbBadgeZh||'')}" placeholder="跨境电商"></div>
+      <div class="form-group full"><label class="form-label">介绍（英文）</label><textarea class="form-textarea" id="cb_desc" rows="5">${esc(s.cbDesc||'')}</textarea></div>
+      <div class="form-group full"><label class="form-label">介绍（马来文，留空显示英文）</label><textarea class="form-textarea" id="cb_desc_bm" rows="5">${esc(s.cbDescBm||'')}</textarea></div>
+      <div class="form-group full"><label class="form-label">介绍（中文，留空保持原有）</label><textarea class="form-textarea" id="cb_desc_zh" rows="5">${esc(s.cbDescZh||'')}</textarea></div>
+      <div class="form-group full"><label class="form-label">按钮文字（英文）</label><input class="form-input" id="cb_btn" value="${esc(s.cbBtn||'')}" placeholder="e.g. Contact Us"></div>
+      <div class="form-group full"><label class="form-label">按钮文字（马来文，留空显示英文）</label><input class="form-input" id="cb_btn_bm" value="${esc(s.cbBtnBm||'')}"></div>
+      <div class="form-group full"><label class="form-label">按钮文字（中文，留空保持原有）</label><input class="form-input" id="cb_btn_zh" value="${esc(s.cbBtnZh||'')}" placeholder="联系我们"></div>
+      <div class="form-group full"><label class="form-label">WhatsApp 号码（点按钮跳到这个号码，国际格式、只填数字）</label><input class="form-input" id="cb_wa" value="${esc(s.cbWhatsapp||'')}" placeholder="60167241814"></div>
+      <div class="form-group full"><label class="form-label">产品组合图</label><input class="form-input" type="file" accept="image/*" onchange="saveCbImage(this)"><div id="cb_img_box" style="margin-top:8px">${box}</div></div>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveCrossBorder()">保存</button></div>
+    </div></div>`;
+}
+
+// 必须合并写：这一页和「About 关于我们」共用 settings_about 那一条记录，
+// 整条替换会把 About 刚存的内容抹掉，图片地址也会被文字保存冲掉
+function saveCrossBorder() {
+  const s = docVal('settings_about');
+  s.cbTitle = val('cb_title');
+  s.cbTitleBm = val('cb_title_bm');
+  s.cbTitleZh = val('cb_title_zh');
+  s.cbSub = val('cb_sub');
+  s.cbSubBm = val('cb_sub_bm');
+  s.cbSubZh = val('cb_sub_zh');
+  s.cbBadge = val('cb_badge');
+  s.cbBadgeBm = val('cb_badge_bm');
+  s.cbBadgeZh = val('cb_badge_zh');
+  s.cbDesc = val('cb_desc');
+  s.cbDescBm = val('cb_desc_bm');
+  s.cbDescZh = val('cb_desc_zh');
+  s.cbBtn = val('cb_btn');
+  s.cbBtnBm = val('cb_btn_bm');
+  s.cbBtnZh = val('cb_btn_zh');
+  s.cbWhatsapp = val('cb_wa');
+  DM.set('settings_about', s);
+  writeLog('保存 跨境电商卡片', s.cbTitle || '');
+  toast('已保存');
+}
+
+async function saveCbImage(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  try {
+    const up = await cloudUpload(file, 'products');
+    const s = docVal('settings_about');
+    s.cbImage = up.url;
+    s.cbImagePath = up.path;
+    DM.set('settings_about', s);
+    paintCbImage();
+    toast('产品组合图已上传，保存文字后一起生效');
+  } catch (e) {
+    toast('上传失败：' + e.message);
+    input.value = '';
+  }
+}
+
+function removeCbImage() {
+  const s = docVal('settings_about');
+  // 写空串而不是删键：拉取时按字段合并，删掉的键会被本机旧值补回来，等于移除无效
+  s.cbImage = '';
+  s.cbImagePath = '';
+  DM.set('settings_about', s);
+  paintCbImage();
+  toast('已移除产品组合图，前台弹窗只显示文字介绍');
+}
+
+function paintCbImage() {
+  const box = document.getElementById('cb_img_box');
+  if (!box) return;
+  const img = docVal('settings_about').cbImage || '';
+  box.innerHTML = img
+    ? `<img src="${safeHref(img)}" alt="产品组合图" style="max-height:200px;max-width:100%;border:1px solid var(--gray-200);border-radius:6px;object-fit:contain"> <button class="btn btn-sm btn-secondary" onclick="removeCbImage()">移除</button>`
+    : '<span style="font-size:12px;color:var(--gray-500)">未上传。没传图时前台弹窗只显示右边那栏文字介绍，不会留一个空图位</span>';
 }
 
 function renderProcess(c) {
