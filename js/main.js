@@ -656,8 +656,6 @@
   const zhDays = d => unitDays(d, '天', '个工作日');
   const bmDays = d => unitDays(d, 'hari', 'hari bekerja');
 
-  const CERT_ZH = { 'ISO 9001:2015': 'ISO 9001:2015 认证', 'FSC Certified': 'FSC 认证', 'Fogra 51': 'Fogra 51 认证', 'Free Delivery': '免费配送', 'Low MOQ': '低起订量' };
-
   function applyBanner(d) {
     if (!d || typeof d !== 'object') return false;
     const ctas = document.querySelectorAll('.hero-ctas a');
@@ -805,14 +803,6 @@
       aboutVideoBox.dataset.video = vs ? str(d.videoUrl) : '';
       hit = true;
     }
-    const certHost = document.querySelector('.about-certifications');
-    const certs = (Array.isArray(d.certs) ? d.certs : []).filter(Boolean);
-    if (certHost && certs.length) {
-      certHost.textContent = '';
-      certs.forEach(c => certHost.appendChild(make('div', 'cert-badge', c, CERT_ZH[c])));
-      hit = true;
-    }
-    hit = swap(document.querySelector('.about-factory span'), d.address, d.addressZh, d.addressBm) || hit;
     return hit;
   }
 
@@ -875,6 +865,108 @@
     return true;
   }
 
+  // ===== Hero 商品轮播 =====
+  // 圆点和箭头只有在真的有多张图时才出现，只有一张时就是个静态图，不显示假控件。
+  const HERO_CAR_MS = 5000;
+
+  function heroSlidesOf(car) {
+    const host = car.querySelector('.hero-slides');
+    return host ? Array.from(host.querySelectorAll('.hero-slide')) : [];
+  }
+
+  function initHeroCarousel() {
+    const car = document.getElementById('heroCarousel');
+    if (!car || car.dataset.heroReady) return;
+    car.dataset.heroReady = '1';
+
+    const dotsHost = car.querySelector('.hero-car-dots');
+    const host = car.querySelector('.hero-slides');
+    if (!host || !dotsHost) return;
+    let timer = null;
+
+    const activeIndex = () => heroSlidesOf(car).findIndex(s => s.classList.contains('is-active'));
+
+    function show(i) {
+      const list = heroSlidesOf(car);
+      if (!list.length) return;
+      const n = (i + list.length) % list.length;
+      list.forEach((s, k) => s.classList.toggle('is-active', k === n));
+      Array.from(dotsHost.children).forEach((d, k) => d.classList.toggle('is-active', k === n));
+    }
+
+    function buildUi() {
+      const list = heroSlidesOf(car);
+      car.classList.toggle('has-many', list.length > 1);
+      dotsHost.textContent = '';
+      if (list.length < 2) return;
+      list.forEach((s, k) => {
+        const d = document.createElement('button');
+        d.type = 'button';
+        d.className = 'hero-car-dot';
+        d.setAttribute('aria-label', 'Image ' + (k + 1));
+        d.addEventListener('click', () => { show(k); restart(); });
+        dotsHost.appendChild(d);
+      });
+    }
+
+    // 鼠标悬停或切到别的标签页时停住，免得看着看着自己跳走
+    function start() {
+      if (timer || heroSlidesOf(car).length < 2) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      timer = setInterval(() => show(activeIndex() + 1), HERO_CAR_MS);
+    }
+    function stop() { clearInterval(timer); timer = null; }
+    function restart() { stop(); start(); }
+
+    const prev = car.querySelector('.hero-car-nav.prev');
+    const next = car.querySelector('.hero-car-nav.next');
+    if (prev) prev.addEventListener('click', () => { show(activeIndex() - 1); restart(); });
+    if (next) next.addEventListener('click', () => { show(activeIndex() + 1); restart(); });
+    car.addEventListener('mouseenter', stop);
+    car.addEventListener('mouseleave', start);
+    document.addEventListener('visibilitychange', () => { document.hidden ? stop() : start(); });
+
+    buildUi();
+    show(0);
+    start();
+    // 后台换成新图后要重建圆点，所以把 buildUi 挂在元素上给外面用
+    car._heroRefresh = () => { buildUi(); show(0); restart(); };
+  }
+
+  function applyHeroShowcase(list) {
+    const car = document.getElementById('heroCarousel');
+    const host = car && car.querySelector('.hero-slides');
+    if (!host) return false;
+    const rows = (list || []).filter(p => p && p.status !== 'inactive');
+    const built = [];
+    rows.forEach(p => {
+      const url = safeUrl(p.image || p.imagePath || '');
+      if (!url) return;
+      const slide = document.createElement('div');
+      slide.className = 'hero-slide';
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = p.name;
+      img.addEventListener('error', () => {
+        slide.remove();
+        if (car._heroRefresh) car._heroRefresh();
+      });
+      slide.appendChild(img);
+      const shade = document.createElement('div');
+      shade.className = 'hero-slide-shade';
+      slide.appendChild(shade);
+      slide.appendChild(make('p', 'hero-slide-caption', p.name, p.nameZh || p.name));
+      built.push(slide);
+    });
+    // 后台还没给商品配图就保留页面里那张演示图，不至于把首页开天窗
+    if (!built.length) return false;
+    host.textContent = '';
+    built.slice(0, 6).forEach(s => host.appendChild(s));
+    initHeroCarousel();
+    if (car._heroRefresh) car._heroRefresh();
+    return true;
+  }
+
   async function loadPublicContent() {
     if (!sb) return;
     let rows;
@@ -900,6 +992,7 @@
     const parts = [
       [renderClients, bag.clients],
       [renderProducts, bag.products],
+      [applyHeroShowcase, bag.products],
       [renderTestimonials, bag.testimonials],
       [renderFaqs, bag.faqs],
       [applyBanner, docs.settings_banner],
@@ -916,6 +1009,8 @@
     if (changed) switchLanguage(currentLang);
   }
 
+  initHeroCarousel();
+  initHeroCarousel();
   loadPublicContent();
 
   switchLanguage('en');

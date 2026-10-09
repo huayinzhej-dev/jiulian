@@ -759,7 +759,7 @@ function seedData() {
     DM.set('settings_quote_template', {header:'JIU LIAN INDUSTRIAL SDN. BHD.',terms:'50% 定金，50% 发货前付清。银行转账/TT。',delivery:'确认打样后 10-14 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
   }
   if (!DM.has('settings_about')) {
-    DM.set('settings_about', {intro:'Jiulian Packaging (JIU LIAN INDUSTRIAL SDN. BHD.) has been a trusted packaging partner since 2008. With over 30 years of combined experience, we serve 500+ clients across 50+ countries.',address:'Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur',certs:['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ']});
+    DM.set('settings_about', {intro:'Jiulian Packaging (JIU LIAN INDUSTRIAL SDN. BHD.) has been a trusted packaging partner since 2008. With over 30 years of combined experience, we serve 500+ clients across 50+ countries.'});
   }
   if (!DM.has('settings_process')) {
     DM.set('settings_process', [{title:'Enquire & Quote',desc:'Submit your requirements via our 60-second quote form',days:'1-2 days'},{title:'Artwork & Die-Line',desc:'Upload your artwork or use our 40+ ready moulds',days:'2-3 days'},{title:'Proof & Mock-Up',desc:'Digital proof for color + blank mock-up for structure',days:'3-5 days'},{title:'Production',desc:'Mass production with strict QC at every stage',days:'10-14 days'},{title:'Free Delivery',desc:'Free delivery within KL & Selangor',days:'1-3 days'}]);
@@ -2941,7 +2941,7 @@ function renderAbout(c) {
     ? `<img src="${safeHref(poster)}" alt="视频封面图" style="max-height:140px;max-width:100%;border:1px solid var(--gray-200);border-radius:6px;object-fit:cover"> <button class="btn btn-sm btn-secondary" onclick="removeAboutPoster()">移除</button>`
     : '<span style="font-size:12px;color:var(--gray-500)">未上传，前台保持原来的橙色占位块</span>';
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">About 关于我们</h1><p class="page-desc">小标题 / 主标题 / 公司介绍 / 视频区 / 认证勾选 / 工厂地址，保存后首页 About 区跟着变（分英文 / 马来文 / 中文三栏；认证徽章的中马来文由前台固定翻译）</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">About 关于我们</h1><p class="page-desc">小标题 / 主标题 / 公司介绍 / 视频区，保存后首页 About 区跟着变（分英文 / 马来文 / 中文三栏）</p></div></div>
     <div class="card"><div class="card-body">
       <div class="form-grid">
       <div class="form-group full"><label class="form-label">小标题（英文，如 About Jiulian）</label><input class="form-input" id="fs_about_label" value="${esc(s.label||'')}" placeholder="留空保持前台原有文案"></div>
@@ -2959,14 +2959,6 @@ function renderAbout(c) {
       <div class="form-group full"><label class="form-label">视频区文案（马来文，留空显示英文）</label><input class="form-input" id="fs_about_video_text_bm" value="${esc(s.videoTextBm||'')}"></div>
       <div class="form-group full"><label class="form-label">视频区文案（中文，留空保持原有）</label><input class="form-input" id="fs_about_video_text_zh" value="${esc(s.videoTextZh||'')}"></div>
       <div class="form-group full"><label class="form-label">封面图</label><input class="form-input" type="file" accept="image/*" onchange="saveAboutPoster(this)"><div id="fs_about_video_poster_box" style="margin-top:8px">${posterBox}</div></div>
-      <div class="form-group"><label class="form-label">工厂地址（英文）</label><input class="form-input" id="fs_aboutAddress" value="${esc(s.address||'')}"></div>
-      <div class="form-group"><label class="form-label">工厂地址（马来文，留空显示英文）</label><input class="form-input" id="fs_aboutAddress_bm" value="${esc(s.addressBm||'')}"></div>
-      <div class="form-group"><label class="form-label">工厂地址（中文，留空保持原有）</label><input class="form-input" id="fs_aboutAddress_zh" value="${esc(s.addressZh||'')}"></div>
-      <div class="form-group full"><label class="form-label">认证勾选</label>
-        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px">
-          ${['ISO 9001:2015','FSC Certified','Fogra 51','Free Delivery','Low MOQ'].map(cert=>`<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" class="about-cert-cb" value="${esc(cert)}" ${s.certs?.includes(cert)?'checked':''}> ${esc(cert)}</label>`).join('')}
-        </div>
-      </div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsAbout()">保存</button></div>
     </div></div>`;
@@ -2974,7 +2966,6 @@ function renderAbout(c) {
 
 // 必须合并写：封面图是上传后单独落库的，整条替换会把刚上传的地址冲掉
 function saveSettingsAbout() {
-  const checked = [...document.querySelectorAll('.about-cert-cb:checked')].map(cb=>cb.value);
   const s = docVal('settings_about');
   s.label = val('fs_about_label');
   s.labelBm = val('fs_about_label_bm');
@@ -2989,10 +2980,6 @@ function saveSettingsAbout() {
   s.videoText = val('fs_about_video_text');
   s.videoTextBm = val('fs_about_video_text_bm');
   s.videoTextZh = val('fs_about_video_text_zh');
-  s.address = val('fs_aboutAddress');
-  s.addressBm = val('fs_aboutAddress_bm');
-  s.addressZh = val('fs_aboutAddress_zh');
-  s.certs = checked;
   DM.set('settings_about', s);
   writeLog('保存 About 关于我们', s.title || '');
   toast('已保存');
