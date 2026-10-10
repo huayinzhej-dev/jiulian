@@ -581,6 +581,60 @@ function boxName(v) {
   return c ? c.name : String(v);
 }
 
+// ========== 商品分类：两级 ==========
+// parent 为空 = 一级（纯分组），有 parent = 二级。判断"能不能挂商品"不看层级，看有没有子分类：
+// 那 13 个老盒型在他归级之前既没上级也没孩子，按叶子处理才选得到；一旦他给盒型挂了上级，
+// 盒型自动变成二级、三条产品线自动变成不可选的一级，不需要任何数据迁移，也不会出现
+// "分级上线那天新建商品/报价单的盒型下拉集体变空"。
+function catChildren(id, cats) {
+  return cats.filter(c => String(c.parent || '') === String(id));
+}
+// 三条产品线永远是"一级"，哪怕下面暂时还没有二级（刚建完、或他把自己那条二级删了的时候）。
+// 不加这一条，空的产品线会掉进"未归级"变成可以挂商品，正好和"一级不能挂商品"矛盾。
+// 认的是 CAT_LINES 的别名（见文件末尾），所以他自己在后台先建的那三条一级同样认得出来。
+function isCatLine(c) { return CAT_LINES.some(l => isLineRow(l, c)); }
+const byCatSort = (a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0) || String(a.name).localeCompare(String(b.name), 'zh');
+// 返回 [{top:一级对象|null, items:[可选分类]}]，items 已按 sort 排好
+function catGroups(cats) {
+  const s = arr => arr.slice().sort(byCatSort);
+  const out = [];
+  const listed = new Set();
+  s(cats.filter(c => !c.parent)).forEach(t => {
+    const kids = s(catChildren(t.id, cats));
+    listed.add(String(t.id));
+    if (kids.length) {
+      out.push({ top: t, items: kids });
+      kids.forEach(k => listed.add(String(k.id)));
+    } else if (!isCatLine(t)) {
+      out.push({ top: null, items: [t] });
+    }
+  });
+  // 上级被删掉的二级、以及万一混进来的三级（挂在二级下面），都得出现在"未归级"里；
+  // 否则编辑旧商品时下拉里找不到它，一保存就把分类悄悄刷没了
+  const rest = cats.filter(c => !listed.has(String(c.id)));
+  if (rest.length) out.push({ top: null, items: s(rest) });
+  return out;
+}
+// ph 传 null 则不出占位项；cur 不在可选列表里时补一项，保证编辑旧数据不会被静默改掉
+function catOptions(cats, cur, ph, valueOf) {
+  const groups = [];
+  const loose = [];
+  catGroups(cats).forEach(g => (g.top ? groups : loose).push(g));
+  let html = ph === null ? '' : `<option value="">-- ${esc(ph || '选择分类')} --</option>`;
+  const opts = arr => arr.map(c => `<option value="${esc(valueOf(c))}"${String(cur) === String(valueOf(c)) ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
+  groups.forEach(g => { html += `<optgroup label="${esc(g.top.name)}">${opts(g.items)}</optgroup>`; });
+  const flat = loose.reduce((a, g) => a.concat(g.items), []);
+  if (flat.length) html += `<optgroup label="未归级（可直接挂商品）">${opts(flat)}</optgroup>`;
+  const all = groups.reduce((a, g) => a.concat(g.items), []).concat(flat);
+  if (cur && !all.some(c => String(valueOf(c)) === String(cur))) {
+    // 两种情况：分类被删了；或者它现在升级成一级了（他把二级挂到了它下面），旧商品得改挂到二级
+    const dead = cats.find(c => String(valueOf(c)) === String(cur));
+    const label = dead ? `${dead.name}（现在是分组，请改选它下面的二级）` : `${cur}（原分类已删除）`;
+    html += `<option value="${esc(cur)}" selected>${esc(label)}</option>`;
+  }
+  return html;
+}
+
 function fmtSize(n) {
   if (!n && n !== 0) return '—';
   return n > 1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(n/1024))+' KB';
@@ -654,20 +708,25 @@ function seedData() {
     seedOne('dielines', dielines);
   }
 
+  // 两级：3 条产品线做一级（只分组、不挂商品），原来的 13 种盒型全部挂到对应产品线下当二级。
+  // 一级名称沿用首页「产品中心」那句副标题的三条线：PET包装盒 / 精品彩盒 / 瓦楞外箱。
   const categories = [
-    {id:'CAT-01',name:'飞机盒',slug:'mailer-box',icon:'📦',sort:1,active:true},
-    {id:'CAT-02',name:'套筒盒',slug:'sleeve-box',icon:'🎁',sort:2,active:true},
-    {id:'CAT-03',name:'天地盖',slug:'lid-base-box',icon:'📦',sort:3,active:true},
-    {id:'CAT-04',name:'手提盒',slug:'handle-box',icon:'🛍️',sort:4,active:true},
-    {id:'CAT-05',name:'彩色运输盒',slug:'shipping-box',icon:'🚚',sort:5,active:true},
-    {id:'CAT-06',name:'蛋糕盒',slug:'cake-box',icon:'🎂',sort:6,active:true},
-    {id:'CAT-07',name:'食品盒',slug:'food-box',icon:'🍱',sort:7,active:true},
-    {id:'CAT-08',name:'纸袋',slug:'paper-bag',icon:'🛍️',sort:8,active:true},
-    {id:'CAT-09',name:'椰枣盒',slug:'date-box',icon:'🌴',sort:9,active:true},
-    {id:'CAT-10',name:'酒盒',slug:'wine-box',icon:'🍷',sort:10,active:true},
-    {id:'CAT-11',name:'插边盒',slug:'tuck-end-box',icon:'📦',sort:11,active:true},
-    {id:'CAT-12',name:'精装盒',slug:'rigid-box',icon:'💎',sort:12,active:true},
-    {id:'CAT-13',name:'POS展示架',slug:'pos-display',icon:'🏪',sort:13,active:true}
+    {id:'CAT-L1-PET',name:'PET包装',nameEn:'PET Packaging',nameBm:'Pembungkusan PET',parent:'',slug:'pet-packaging',icon:'🥡',sort:1,active:true},
+    {id:'CAT-L1-COLOUR',name:'精品彩盒',nameEn:'Colour Boxes',nameBm:'Kotak Warna',parent:'',slug:'colour-boxes',icon:'🎁',sort:2,active:true},
+    {id:'CAT-L1-CARTON',name:'瓦楞外箱',nameEn:'Corrugated Cartons',nameBm:'Kadbod Berombak',parent:'',slug:'corrugated-cartons',icon:'📦',sort:3,active:true},
+    {id:'CAT-01',name:'飞机盒',nameEn:'Mailer Box',nameBm:'',parent:'CAT-L1-CARTON',slug:'mailer-box',icon:'📦',sort:1,active:true},
+    {id:'CAT-02',name:'套筒盒',nameEn:'Sleeve Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'sleeve-box',icon:'🎁',sort:1,active:true},
+    {id:'CAT-03',name:'天地盖',nameEn:'Lid and Base Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'lid-base-box',icon:'📦',sort:2,active:true},
+    {id:'CAT-04',name:'手提盒',nameEn:'Handle Box',nameBm:'',parent:'CAT-L1-PET',slug:'handle-box',icon:'🛍️',sort:1,active:true},
+    {id:'CAT-05',name:'彩色运输盒',nameEn:'Colour Shipping Box',nameBm:'',parent:'CAT-L1-CARTON',slug:'shipping-box',icon:'🚚',sort:2,active:true},
+    {id:'CAT-06',name:'蛋糕盒',nameEn:'Cake Box',nameBm:'',parent:'CAT-L1-PET',slug:'cake-box',icon:'🎂',sort:2,active:true},
+    {id:'CAT-07',name:'食品盒',nameEn:'Food Box',nameBm:'',parent:'CAT-L1-PET',slug:'food-box',icon:'🍱',sort:3,active:true},
+    {id:'CAT-08',name:'纸袋',nameEn:'Paper Bag',nameBm:'',parent:'CAT-L1-COLOUR',slug:'paper-bag',icon:'🛍️',sort:3,active:true},
+    {id:'CAT-09',name:'椰枣盒',nameEn:'Date Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'date-box',icon:'🌴',sort:4,active:true},
+    {id:'CAT-10',name:'酒盒',nameEn:'Wine Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'wine-box',icon:'🍷',sort:5,active:true},
+    {id:'CAT-11',name:'插边盒',nameEn:'Tuck End Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'tuck-end-box',icon:'📦',sort:6,active:true},
+    {id:'CAT-12',name:'精装盒',nameEn:'Rigid Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'rigid-box',icon:'💎',sort:7,active:true},
+    {id:'CAT-13',name:'POS展示架',nameEn:'POS Display',nameBm:'',parent:'CAT-L1-CARTON',slug:'pos-display',icon:'🏪',sort:3,active:true}
   ];
   seedDict('categories', categories);
 
@@ -1125,7 +1184,7 @@ function openLeadModal(lead) {
       <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="f_email" value="${esc(lead?.email||'')}"></div>
       <div class="form-group"><label class="form-label">来源</label><select class="form-select" id="f_source">${selOpts(['表单','官网表单','电话','邮件','WhatsApp','Google'], lead?.source)}</select></div>
       <div class="form-group"><label class="form-label">负责人</label><select class="form-select" id="f_assignee">${selOpts(staffNames(), lead?.assignee || (isEdit ? '' : whoami()), '未分配')}</select></div>
-      <div class="form-group"><label class="form-label">盒型</label><select class="form-select" id="f_boxType">${selOpts(DM.get('categories'), boxName(lead?.boxType), '未确定')}</select></div>
+      <div class="form-group"><label class="form-label">盒型</label><select class="form-select" id="f_boxType">${catOptions(DM.get('categories'), boxName(lead?.boxType), '未确定', c => c.name)}</select></div>
       <div class="form-group"><label class="form-label">尺寸 (cm)</label><input class="form-input" id="f_size" placeholder="长×宽×高" value="${esc(lead?.size||'')}"></div>
       <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" id="f_quantity" value="${esc(lead?.quantity||'')}"></div>
       <div class="form-group"><label class="form-label">印刷方式</label><select class="form-select" id="f_printing">${selOpts(DM.get('printingOptions'), lead?.printing, '未确定')}</select></div>
@@ -1410,7 +1469,7 @@ function renderQuoteNew(c) {
         <div class="form-group full"><label class="form-label">从线索带入</label><select class="form-select" id="q_lead" onchange="fillQuoteFromLead()">${opts(leads.map(l => ({ name: l.id + ' - ' + (l.name || '') + (l.company ? ' (' + l.company + ')' : '') })), '不选，手填')}</select></div>
         <div class="form-group"><label class="form-label">客户公司 *</label><input class="form-input" id="q_customer" placeholder="e.g. XYZ Trading Sdn Bhd"></div>
         <div class="form-group"><label class="form-label">联系人 / 邮箱</label><input class="form-input" id="q_contact" placeholder="选填"></div>
-        <div class="form-group"><label class="form-label">盒型 *</label><select class="form-select" id="q_boxType" onchange="autoQuotePrice()">${opts(cats, '选择盒型')}</select></div>
+        <div class="form-group"><label class="form-label">盒型 *</label><select class="form-select" id="q_boxType" onchange="autoQuotePrice()">${catOptions(cats, '', '选择盒型', c => c.name)}</select></div>
         <div class="form-group"><label class="form-label">尺寸 (cm)</label><input class="form-input" id="q_size" placeholder="长×宽×高"></div>
         <div class="form-group"><label class="form-label">材质</label><select class="form-select" id="q_material">${opts(mats, '选择材质')}</select></div>
         <div class="form-group"><label class="form-label">数量 (pcs) *</label><input class="form-input" type="number" id="q_quantity" min="1" step="1" placeholder="3000" oninput="autoQuotePrice(); recalcQuote()"></div>
@@ -2212,7 +2271,7 @@ function openUploadDieModal() {
   const cats = DM.get('categories');
   showModal('上传刀模', `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">适用盒型 *</label><select class="form-select" id="f_die_boxtype">${cats.map(c=>`<option>${esc(c.name)}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">适用盒型 *</label><select class="form-select" id="f_die_boxtype">${catOptions(cats, '', null, c => c.name)}</select></div>
       <div class="form-group"><label class="form-label">尺寸 (cm) *</label><input class="form-input" id="f_die_size" placeholder="长×宽×高"></div>
       <div class="form-group"><label class="form-label">刀模费</label><select class="form-select" id="f_die_fee"><option>已收</option><option>未收</option><option>免费</option></select></div>
       <div class="form-group full"><label class="form-label">上传文件 *</label><input class="form-input" type="file" id="f_die_file" accept=".ai,.pdf,.dxf,.dwg,.svg"></div>
@@ -2345,35 +2404,176 @@ function sendProofConfirm(id) {
 }
 
 // ========== PRODUCTS ==========
+// 分类是两级的：一级只做分组（前台商品弹窗里的分类标签按二级出），二级才是商品真正挂的那一层。
+// 这张表同时还是报价单/线索/刀模的「盒型」字典，所以列表里必须看得出层级、
+// 并且让没归级的老盒型照样能选（见 catOptions）。
+// 三条产品线（一级）。名称来自首页「产品中心」那句副标题：PET包装盒 + 精品彩盒 + 瓦楞外箱。
+// aliases 是关键：他早就在后台自己建过三条一级（slug 是 pet-pack / color-print-pack / corrugated-pack），
+// 数据里认得出别名的那一行就直接拿来当产品线，绝不能再插一条同名的进去（否则分类页会出现 6 个一级）。
+const CAT_LINES = [
+  { id: 'CAT-L1-PET', name: 'PET包装', nameEn: 'PET Packaging', nameBm: 'Pembungkusan PET', slug: 'pet-packaging', icon: '🥡', sort: 1,
+    aliases: ['pet-pack', 'pet-packaging', 'pet包装', 'pet packaging'] },
+  { id: 'CAT-L1-COLOUR', name: '精品彩盒', nameEn: 'Colour Boxes', nameBm: 'Kotak Warna', slug: 'colour-boxes', icon: '🎁', sort: 2,
+    aliases: ['color-print-pack', 'colour-boxes', '彩盒彩卡', '精品彩盒'] },
+  { id: 'CAT-L1-CARTON', name: '瓦楞外箱', nameEn: 'Corrugated Cartons', nameBm: 'Kadbod Berombak', slug: 'corrugated-cartons', icon: '📦', sort: 3,
+    aliases: ['corrugated-pack', 'corrugated-cartons', '瓦楞包装', '瓦楞外箱'] }
+];
+const catKey = v => String(v || '').trim().toLowerCase();
+// 这条分类是不是"产品线"那一层。空着没有下级的产品线也不算叶子，不能拿来挂商品。
+function isLineRow(l, c) {
+  return catKey(l.id) === catKey(c.id) || l.aliases.some(a => a === catKey(c.slug) || a === catKey(c.name));
+}
+// 原来这 13 种盒型是平的一层，按盒子本身的材料/工艺归到产品线下面。
+// 识别顺序：先按 id，再按 slug，最后按中文名，兼容后台手工建过/改过名的分类。
+const CAT_LINE_OF = {
+  'CAT-01': 'CAT-L1-CARTON', 'CAT-02': 'CAT-L1-COLOUR', 'CAT-03': 'CAT-L1-COLOUR',
+  'CAT-04': 'CAT-L1-PET', 'CAT-05': 'CAT-L1-CARTON', 'CAT-06': 'CAT-L1-PET',
+  'CAT-07': 'CAT-L1-PET', 'CAT-08': 'CAT-L1-COLOUR', 'CAT-09': 'CAT-L1-COLOUR',
+  'CAT-10': 'CAT-L1-COLOUR', 'CAT-11': 'CAT-L1-COLOUR', 'CAT-12': 'CAT-L1-COLOUR',
+  'CAT-13': 'CAT-L1-CARTON'
+};
+// slug 这一层比中文名稳（名字被他改过也还认得出来）
+const CAT_LINE_BY_SLUG = {
+  'mailer-box': 'CAT-L1-CARTON', 'shipping-box': 'CAT-L1-CARTON', 'pos-display': 'CAT-L1-CARTON',
+  'handle-box': 'CAT-L1-PET', 'cake-box': 'CAT-L1-PET', 'food-box': 'CAT-L1-PET',
+  'sleeve-box': 'CAT-L1-COLOUR', 'lid-base-box': 'CAT-L1-COLOUR', 'paper-bag': 'CAT-L1-COLOUR',
+  'date-box': 'CAT-L1-COLOUR', 'wine-box': 'CAT-L1-COLOUR', 'tuck-end-box': 'CAT-L1-COLOUR', 'rigid-box': 'CAT-L1-COLOUR'
+};
+const CAT_LINE_BY_NAME = {
+  '飞机盒': 'CAT-L1-CARTON', '彩色运输盒': 'CAT-L1-CARTON', 'POS展示架': 'CAT-L1-CARTON',
+  '手提盒': 'CAT-L1-PET', '蛋糕盒': 'CAT-L1-PET', '食品盒': 'CAT-L1-PET',
+  '套筒盒': 'CAT-L1-COLOUR', '天地盖': 'CAT-L1-COLOUR', '纸袋': 'CAT-L1-COLOUR',
+  '椰枣盒': 'CAT-L1-COLOUR', '酒盒': 'CAT-L1-COLOUR', '插边盒': 'CAT-L1-COLOUR', '精装盒': 'CAT-L1-COLOUR'
+};
+function lineForCat(c) {
+  return CAT_LINE_OF[String(c.id)]
+    || CAT_LINE_BY_SLUG[catKey(c.slug)]
+    || CAT_LINE_BY_NAME[String(c.name || '').trim()] || '';
+}
+
+// 旧数据的英文名一并补上：英文/马来文页那一栏空着就会退回显示中文，分类标签会出现中英混排。
+// 只认得这 13 个盒型，认不出的不乱填。
+const CAT_EN = {
+  'CAT-01': 'Mailer Box', 'CAT-02': 'Sleeve Box', 'CAT-03': 'Lid and Base Box',
+  'CAT-04': 'Handle Box', 'CAT-05': 'Colour Shipping Box', 'CAT-06': 'Cake Box',
+  'CAT-07': 'Food Box', 'CAT-08': 'Paper Bag', 'CAT-09': 'Date Box',
+  'CAT-10': 'Wine Box', 'CAT-11': 'Tuck End Box', 'CAT-12': 'Rigid Box', 'CAT-13': 'POS Display'
+};
+const CAT_EN_BY_NAME = {
+  '飞机盒': 'Mailer Box', '套筒盒': 'Sleeve Box', '天地盖': 'Lid and Base Box', '手提盒': 'Handle Box',
+  '彩色运输盒': 'Colour Shipping Box', '蛋糕盒': 'Cake Box', '食品盒': 'Food Box', '纸袋': 'Paper Bag',
+  '椰枣盒': 'Date Box', '酒盒': 'Wine Box', '插边盒': 'Tuck End Box', '精装盒': 'Rigid Box', 'POS展示架': 'POS Display'
+};
+
+// 把已经存在于数据库/本机里的旧盒型挂到产品线下面。新建的种子自带 parent，所以这里只会动老数据。
+// 产品线那一级优先用数据里已有的那一行（他自己建过的 pet-pack / color-print-pack / corrugated-pack），
+// 实在没有才插一条 CAT_LINES 里的默认行，避免分类页凭空多出两组同名一级。
+// 必须等 Sync.muted=false 之后调用，否则改动不会同步上云。
+function migrateCategoriesToTwoLevels() {
+  const cats = DM.get('categories');
+  if (!cats.length) return 0;
+  let changed = 0;
+  const lineIdOf = {};          // 规范产品线 id -> 数据里实际那一行的 id
+  CAT_LINES.forEach(l => {
+    const hit = cats.find(c => !c.parent && isLineRow(l, c));
+    if (hit) { lineIdOf[l.id] = String(hit.id); return; }
+    cats.push({ id: l.id, name: l.name, nameEn: l.nameEn, nameBm: l.nameBm, parent: '', slug: l.slug, icon: l.icon, sort: l.sort, active: true });
+    lineIdOf[l.id] = l.id;
+    changed++;
+  });
+  const lineIds = new Set(Object.values(lineIdOf));
+  cats.forEach(c => {
+    if (lineIds.has(String(c.id))) return;
+    if (!c.nameEn) {
+      const en = CAT_EN[String(c.id)] || CAT_EN_BY_NAME[String(c.name || '').trim()];
+      if (en) { c.nameEn = en; changed++; }
+    }
+    if (c.parent || catChildren(c.id, cats).length) return;
+    const canon = lineForCat(c);
+    if (!canon || !lineIdOf[canon]) return;   // 认不出产品线的新分类不乱挂，留给他自己选
+    c.parent = lineIdOf[canon];
+    changed++;
+  });
+  if (changed) DM.set('categories', cats);
+  return changed;
+}
+
 function renderCategories(c) {
   const cats = DM.get('categories');
+  const products = DM.get('products');
+  const nProducts = id => products.filter(p => String(p.categoryId || '') === String(id)).length;
+  const tops = cats.filter(x => !x.parent).sort(byCatSort);
+  const orphans = cats.filter(x => x.parent && !cats.some(t => String(t.id) === String(x.parent))).sort(byCatSort);
+  const loose = tops.filter(t => !catChildren(t.id, cats).length && !isCatLine(t));
+  const rowsOf = (cat, depth) => {
+    const kids = catChildren(cat.id, cats);
+    const count = depth ? nProducts(cat.id) : kids.reduce((s, k) => s + nProducts(k.id), 0) + nProducts(cat.id);
+    return `<tr>
+      <td>${esc(cat.sort)}</td>
+      <td>${esc(cat.icon)}</td>
+      <td class="td-name" style="${depth ? 'padding-left:26px' : ''}">${depth ? '<span style="color:var(--gray-400)">└ </span>' : '<b>'}${esc(cat.name)}${depth ? '' : '</b>'}${!depth && kids.length ? ` <span class="badge badge-blue">一级 · ${kids.length} 个二级</span>` : ''}${!depth && !kids.length ? ' <span class="badge badge-yellow">一级 · 还没有二级</span>' : ''}${depth ? ` <span class="text-sm text-gray">（${esc((cats.find(t => String(t.id) === String(cat.parent)) || {}).name || '')}）</span>` : ''}</td>
+      <td>${esc(cat.nameEn || '')}</td>
+      <td>${esc(cat.nameBm || '')}</td>
+      <td>${esc(cat.slug)}</td>
+      <td>${count ? count + ' 个商品' : '<span class="text-gray">—</span>'}</td>
+      <td>${cat.active !== false ? '<span class="badge badge-green">上架</span>' : '<span class="badge badge-gray">下架</span>'}</td>
+      <td><button class="btn btn-sm btn-secondary" onclick="openCategoryModal('${cat.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat.id}')">删除</button></td>
+    </tr>` + kids.sort(byCatSort).map(k => rowsOf(k, 1)).join('');
+  };
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">盒型分类</h1><p class="page-desc">管理产品分类</p></div><button class="btn btn-primary" onclick="openCategoryModal()">+ 新建分类</button></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>排序</th><th>图标</th><th>名称</th><th>Slug</th><th>状态</th><th>操作</th></tr></thead>
-    <tbody>${cats.map(cat=>`<tr><td>${esc(cat.sort)}</td><td>${esc(cat.icon)}</td><td class="td-name">${esc(cat.name)}</td><td>${esc(cat.slug)}</td><td>${cat.active?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openCategoryModal('${cat.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">商品分类</h1><p class="page-desc">两级：一级只做分组，商品挂在二级下面</p></div><button class="btn btn-primary" onclick="openCategoryModal()">+ 新建分类</button></div>
+    <div class="card"><div class="card-body" style="padding:14px 16px;font-size:13px;color:var(--gray-600);line-height:1.7">
+      前台读的是这里的<b>二级</b>：访客点开某个商品的详情弹窗，中间那排分类标签就是<b>这个商品所属产品线</b>下面的二级，点标签会切换下面展示的相关产品。<b>只有挂了在售商品的二级才会出现</b>；同一条线里凑不出两个标签，这一排就不显示。<br>
+      这张表同时是报价单 / 线索 / 刀模里那个「盒型」下拉的选项库。<b>English 一栏留空的话，英文页和马来文页会显示中文分类名</b>，所以每个分类都建议填上英文。
+      ${loose.length ? `<br><span style="color:var(--orange-600)">现在还有 ${loose.length} 个分类既没有上级、下面也没有二级（${loose.map(x => x.name).join('、')}）：它们目前仍然可以直接挂商品，也仍然出现在盒型下拉里。要归到某条产品线下面，点它的「编辑」选上级。</span>` : ''}
+    </div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>排序</th><th>图标</th><th>分类名称（中文）</th><th>English</th><th>Bahasa Malaysia</th><th>Slug</th><th>商品</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>${tops.map(t => rowsOf(t, 0)).join('')}${orphans.length ? `<tr><td colspan="9" style="padding:10px 16px;color:var(--gray-500);background:var(--gray-50)">下面这些分类的上级已经被删掉了，请重新选一个上级</td></tr>` + orphans.map(x => rowsOf(x, 1)).join('') : ''}</tbody></table></div></div>`;
 }
 
 function openCategoryModal(id) {
   const cats = DM.get('categories');
   const cat = id ? cats.find(x => x.id === id) : null;
   const title = cat ? '编辑分类' : '新建分类';
+  // 一级才能当上级；编辑自己时不能把自己选成上级
+  const tops = cats.filter(x => !x.parent && (!cat || String(x.id) !== String(cat.id))).sort(byCatSort);
   showModal(title, `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="f_name" value="${esc(cat?.name||'')}"></div>
-      <div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="f_slug" value="${esc(cat?.slug||'')}"></div>
-      <div class="form-group"><label class="form-label">图标</label><input class="form-input" id="f_icon" value="${esc(cat?.icon||'📦')}"></div>
-      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="${esc(cat?.sort||1)}"></div>
+      <div class="form-group"><label class="form-label">上级分类</label><select class="form-select" id="f_parent">
+        <option value="">（不选 = 作为一级，只用来分组）</option>
+        ${tops.map(t => `<option value="${esc(t.id)}"${String(cat?.parent || '') === String(t.id) ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}
+      </select></div>
+      <div class="form-group"><label class="form-label">名称（中文）*</label><input class="form-input" id="f_name" value="${esc(cat?.name || '')}" placeholder="例如 水果生鲜"></div>
+      <div class="form-group"><label class="form-label">名称（English）</label><input class="form-input" id="f_nameEn" value="${esc(cat?.nameEn || '')}" placeholder="e.g. Fruit & Fresh Produce"></div>
+      <div class="form-group"><label class="form-label">名称（Bahasa Malaysia）</label><input class="form-input" id="f_nameBm" value="${esc(cat?.nameBm || '')}" placeholder="选填，留空则马来文页显示英文"></div>
+      <div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="f_slug" value="${esc(cat?.slug || '')}"></div>
+      <div class="form-group"><label class="form-label">图标</label><input class="form-input" id="f_icon" value="${esc(cat?.icon || '📦')}"></div>
+      <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="${esc(cat?.sort || 1)}"></div>
+      <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_active">
+        <option value="1"${cat && cat.active === false ? '' : ' selected'}>上架（前台可见）</option>
+        <option value="0"${cat && cat.active === false ? ' selected' : ''}>下架</option>
+      </select></div>
     </div>
   `, () => {
     const name = val('f_name');
     if (!name) { toast('请填写分类名称'); return; }
+    const parent = val('f_parent');
+    const data = {
+      name,
+      nameEn: val('f_nameEn'),
+      nameBm: val('f_nameBm'),
+      parent,
+      slug: val('f_slug') || name.toLowerCase().replace(/\s+/g, '-'),
+      icon: val('f_icon'),
+      sort: parseInt(val('f_sort')) || 1,
+      active: val('f_active') === '1'
+    };
     if (cat) {
-      cat.name = name;
-      cat.slug = val('f_slug') || name.toLowerCase().replace(/\s+/g,'-');
-      cat.icon = val('f_icon');
-      cat.sort = parseInt(val('f_sort')) || 1;
+      // 一个分类不能既当一级又当二级：它下面已经有二级时再给它认上级，会变成三级
+      if (parent && catChildren(cat.id, cats).length) { toast(`「${cat.name}」下面还有 ${catChildren(cat.id, cats).length} 个二级分类，不能再把它挂到别的一级下面（先处理它下面的二级）`); return; }
+      Object.assign(cat, data);
     } else {
-      cats.push({id:DM.genId('CAT'),name,slug:val('f_slug')||name.toLowerCase().replace(/\s+/g,'-'),icon:val('f_icon'),sort:parseInt(val('f_sort'))||1,active:true});
+      cats.push(Object.assign({ id: DM.genId('CAT') }, data));
     }
     DM.set('categories', cats);
     toast(cat ? '分类已更新' : '分类已创建'); renderPage(currentPageId);
@@ -2381,9 +2581,14 @@ function openCategoryModal(id) {
 }
 
 function deleteCategory(id) {
-  if (!confirm('确定删除此分类？')) return;
-  const cats = DM.get('categories').filter(c => c.id !== id);
-  DM.set('categories', cats);
+  const cats = DM.get('categories');
+  const cat = cats.find(x => String(x.id) === String(id));
+  if (!cat) return;
+  const kids = catChildren(id, cats);
+  if (kids.length) { toast(`「${cat.name}」下面还有 ${kids.length} 个二级分类（${kids.map(k => k.name).join('、')}），先删掉它们或给它们改走上级`); return; }
+  const used = DM.get('products').filter(p => String(p.categoryId || '') === String(id)).length;
+  if (!confirm(used ? `「${cat.name}」下面挂着 ${used} 个商品。删除后这些商品会变成未分类（前台商品弹窗的分类标签里就不再出现这一类），需要重新编辑商品改分类。确定删除？` : `确定删除分类「${cat.name}」？`)) return;
+  DM.set('categories', cats.filter(x => String(x.id) !== String(id)));
   toast('分类已删除'); renderPage(currentPageId);
 }
 
@@ -2425,8 +2630,10 @@ function importShowcaseProducts() {
   const cats = DM.get('categories');
   const hasId = new Set(list.map(p => String(p && p.id)));
   const hasName = new Set(list.map(p => String(p && p.name || '').trim().toLowerCase()));
-  const pickCat = keys => cats.find(c => keys.some(k => String(c.slug || '').toLowerCase() === k || String(c.name || '') === k))
-                        || cats.find(c => c.active !== false) || cats[0] || null;
+  // 只在"能挂商品的那一层"里找（有二级子分类的一级、以及三条产品线都排除），否则导入会把商品挂到产品线上
+  const leafCats = cats.filter(c => !catChildren(c.id, cats).length && !isCatLine(c));
+  const pickCat = keys => leafCats.find(c => keys.some(k => String(c.slug || '').toLowerCase() === k || String(c.name || '') === k))
+                        || leafCats.find(c => c.active !== false) || leafCats[0] || null;
   const added = [];
   SHOWCASE_PRODUCTS.forEach(s => {
     if (hasId.has(s.id) || hasName.has(s.name.toLowerCase())) return;
@@ -2453,8 +2660,7 @@ function openProductModal(id) {
       <div class="form-group"><label class="form-label">商品名称 (英文) *</label><input class="form-input" id="f_name" value="${esc(p?.name)}" placeholder="e.g. Mailer Box"></div>
       <div class="form-group"><label class="form-label">商品名称 (中文)</label><input class="form-input" id="f_nameZh" value="${esc(p?.nameZh)}" placeholder="e.g. 飞机盒"></div>
       <div class="form-group"><label class="form-label">分类 *</label><select class="form-select" id="f_category">
-        <option value="">-- 选择分类 --</option>
-        ${categories.map(cat=>`<option value="${esc(cat.id)}" ${p?.categoryId===cat.id?'selected':''}>${esc(cat.name)}</option>`).join('')}
+        ${catOptions(categories, p?.categoryId, '选择分类（一级不能挂商品）', c => c.id)}
       </select></div>
       <div class="form-group"><label class="form-label">起步价 (RM) *</label><input class="form-input" type="number" step="0.01" id="f_price" value="${esc(p?.price||'')}" placeholder="0.00"></div>
       <div class="form-group"><label class="form-label">MOQ 数量 *</label><input class="form-input" type="number" id="f_moq" value="${esc(p?.moq||'')}" placeholder="100"></div>
@@ -2476,9 +2682,10 @@ function openProductModal(id) {
     const name = val('f_name');
     const categorySelect = document.getElementById('f_category');
     const categoryId = categorySelect.value;
-    const categoryName = categorySelect.options[categorySelect.selectedIndex]?.text || '';
+    // 名称从分类表里反查，不读 option 的显示文字（那里可能带「（原分类已删除）」这种提示后缀）
+    const categoryName = (categories.find(c => String(c.id) === String(categoryId)) || {}).name || (p ? p.category : '') || '';
     if (!name) { toast('请填写商品名称'); return; }
-    if (!categoryId) { toast('请选择分类'); return; }
+    if (!categoryId) { toast('请选择分类。一级只用来分组，请选它下面的二级'); return; }
 
     let image = p ? (p.image || '') : '';
     let imagePath = p ? (p.imagePath || '') : '';
@@ -4031,6 +4238,9 @@ async function bootAdmin() {
   }
   seedData();
   Sync.muted = false;
+  // 老数据里的 13 种盒型还是平的一层，开机时按产品线补成两级（种子自带 parent，这里只会动老数据）
+  const catFixed = migrateCategoriesToTwoLevels();
+  if (catFixed) toast(`商品分类已整理成两级：补了 ${catFixed} 处归属`);
   // 云端还没人建过的字典（盒型/材质/印刷/工艺…）刚被 seedData 补上默认值，
   // 现在静音已解除，把它们推上服务器，同事登录后拿到的就是同一份选项。
   if (ok && DICT_HEALED.length) {

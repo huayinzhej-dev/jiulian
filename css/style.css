@@ -577,28 +577,74 @@ ul { list-style: none; }
   /* 商品名/描述现在来自后台录入，长单词会顶开 1fr 轨道造成整页横向拖动，
      所以轨道下限必须是 0 */
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 28px;
+  gap: 24px;
 }
 
+/* 卡片结构照设计稿：米色瓷片里放【标题 + 细分隔线 + 两行描述 + 产品图】，白底价格行留在下面 */
 .product-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   background: var(--white);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition), box-shadow var(--transition);
-  min-width: 0;
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
 }
 .product-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-6px);
   box-shadow: var(--shadow-lg);
+  border-color: var(--orange-100);
+}
+
+.product-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 26px 22px 0;
+  background: linear-gradient(180deg, #FFF8F0 0%, #FFF1E4 100%);
+  text-align: center;
+}
+
+.tile-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--gray-900);
+  overflow-wrap: break-word;
+}
+
+.tile-rule {
+  flex: 0 0 auto;
+  width: 62%;
+  height: 1px;
+  margin: 12px 0 10px;
+  background: #F2DDC7;
+}
+
+.tile-desc {
+  font-size: 13px;
+  color: var(--gray-500);
+  line-height: 1.7;
+  min-height: 44px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: break-word;
 }
 
 .product-image {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 220px;
-  background: var(--orange-50);
+  width: 100%;
+  height: 190px;
+  margin-top: auto;
   overflow: hidden;
 }
 .product-photo {
@@ -608,32 +654,15 @@ ul { list-style: none; }
   display: block;
 }
 
-.product-info {
-  padding: 24px;
-}
-
-.product-info h3 {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--gray-800);
-  margin-bottom: 8px;
-  overflow-wrap: break-word;
-}
-
-.product-info p {
-  font-size: 14px;
-  color: var(--gray-500);
-  line-height: 1.6;
-  margin-bottom: 16px;
-  overflow-wrap: break-word;
-}
-
 .product-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding-top: 16px;
-  border-top: 1px solid var(--gray-200);
+  gap: 8px 12px;
+  padding: 16px 22px;
+  background: var(--white);
+  border-top: 1px solid var(--gray-100);
 }
 
 .product-price {
@@ -643,140 +672,13 @@ ul { list-style: none; }
 }
 
 .product-moq {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--gray-400);
-  background: var(--gray-100);
-  padding: 4px 12px;
-  border-radius: 20px;
-}
-
-/* ===== Why Us ===== */
-.why-us {
-  padding: 96px 0;
-}
-
-.why-us-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 64px;
-  align-items: center;
-}
-
-.why-us-text {
-  min-width: 0;
-}
-.why-us-text p {
-  font-size: 16px;
-  color: var(--gray-600);
-  margin-bottom: 16px;
-  line-height: 1.7;
-}
-
-.why-us-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.stat-card {
-  background: var(--orange-50);
-  border: 1px solid var(--orange-100);
-  border-radius: var(--radius-md);
-  padding: 28px 24px;
-  text-align: center;
-  transition: transform var(--transition);
-  min-width: 0;
-}
-.stat-card:hover { transform: translateY(-2px); }
-
-.stat-number {
-  display: block;
-  font-family: var(--font-heading);
-  font-size: 36px;
-  font-weight: 700;
-  color: var(--orange-600);
-  margin-bottom: 6px;
-}
-
-.stat-label {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--gray-500);
-}
-
-/* ===== Testimonials ===== */
-.testimonials {
-  padding: 96px 0;
-  background: var(--gray-50);
-}
-
-.testimonials-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 28px;
-}
-
-.testimonial-card {
-  background: var(--white);
-  padding: 32px;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.testimonial-stars {
-  color: #f5a623;
-  font-size: 18px;
-  letter-spacing: 2px;
-  margin-bottom: 16px;
-}
-
-.testimonial-card blockquote {
-  font-size: 15px;
-  line-height: 1.7;
-  color: var(--gray-600);
-  flex: 1;
-  margin-bottom: 24px;
-  font-style: italic;
-  overflow-wrap: break-word;
-}
-
-.testimonial-author {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-.testimonial-author > div { min-width: 0; }
-
-.author-avatar {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  background: var(--orange-600);
-  color: var(--white);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 16px;
-}
-
-.testimonial-author strong {
-  display: block;
-  font-size: 15px;
-  color: var(--gray-800);
-  overflow-wrap: break-word;
-}
-
-.testimonial-author span {
-  font-size: 13px;
-  color: var(--gray-400);
-  overflow-wrap: break-word;
+  background: var(--gray-100);
+  padding: 5px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
 }
 
 /* ===== Process ===== */
@@ -1018,16 +920,33 @@ ul { list-style: none; }
 .footer-brand .nav-logo {
   margin-bottom: 16px;
 }
+/* 这张已经是反白版，再叠 brightness(0) invert(1) 会把灰色那半压成纯白 */
 .footer-brand .logo-image {
   height: 56px;
-  filter: brightness(0) invert(1);
 }
 .footer-brand .logo-text { color: var(--white); }
-.footer-brand p {
+.footer-info {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
   font-size: 14px;
   line-height: 1.7;
-  margin-bottom: 20px;
 }
+.footer-info li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.footer-info-key {
+  color: var(--orange-400);
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+.footer-info-val { min-width: 0; }
+a.footer-info-val { transition: color var(--transition); }
+a.footer-info-val:hover { color: var(--white); }
 
 .footer-social {
   display: flex;
@@ -1345,7 +1264,8 @@ ul { list-style: none; }
 
 /* ===== About Us Section ===== */
 .about-us {
-  padding: 96px 0;
+  /* 上边距单独比下方窄：认证带下面已有 48px，两边都留 96 会空出一屏 */
+  padding: 26px 0 96px;
   background: var(--gray-50);
 }
 .about-grid {
@@ -1441,6 +1361,48 @@ ul { list-style: none; }
   color: var(--gray-500);
 }
 
+/* ===== About Facilities ===== */
+.about-facilities {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 64px;
+}
+.facility-card {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  background: var(--gray-200);
+}
+.facility-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+.facility-card:hover .facility-img {
+  transform: scale(1.04);
+}
+.facility-cap {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 40px 24px 20px;
+  background: linear-gradient(to top, rgba(26,26,26,0.82) 0%, rgba(26,26,26,0.45) 45%, rgba(26,26,26,0) 100%);
+}
+.facility-name {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--white);
+}
+
 /* ===== Product Card Clickable ===== */
 .product-card {
   cursor: pointer;
@@ -1469,9 +1431,9 @@ ul { list-style: none; }
 }
 .modal-content {
   background: var(--white);
-  border-radius: var(--radius-lg);
-  max-width: 900px;
-  width: 90%;
+  border-radius: 24px;
+  max-width: 1100px;
+  width: 92%;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
@@ -1483,14 +1445,14 @@ ul { list-style: none; }
 }
 .modal-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 36px;
-  height: 36px;
+  top: 24px;
+  right: 24px;
+  width: 40px;
+  height: 40px;
   border: none;
   background: var(--gray-100);
   border-radius: 50%;
-  font-size: 20px;
+  font-size: 22px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1507,107 +1469,114 @@ ul { list-style: none; }
   padding: 40px;
 }
 .modal-product-info {
-  margin-bottom: 32px;
+  margin-bottom: 30px;
+  padding-right: 48px;
 }
 .modal-product-info h2 {
-  font-family: var(--font-heading);
-  font-size: 28px;
-  color: var(--gray-800);
+  font-family: var(--font-body);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--gray-900);
   margin-bottom: 8px;
 }
 .modal-product-info > p {
   font-size: 15px;
   color: var(--gray-500);
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .modal-price-info {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
 }
 .modal-price {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--orange-600);
 }
 .modal-moq {
   font-size: 14px;
-  color: var(--gray-500);
+  color: var(--gray-600);
   background: var(--gray-100);
-  padding: 4px 12px;
+  padding: 6px 14px;
   border-radius: 20px;
 }
-.modal-pricing-table {
-  margin-bottom: 32px;
-}
-.modal-pricing-table h3 {
-  font-size: 18px;
+.modal-showcase h3 {
+  font-size: 19px;
   font-weight: 700;
-  color: var(--gray-800);
-  margin-bottom: 20px;
+  color: var(--gray-900);
+  margin-bottom: 18px;
 }
-.pricing-tabs {
+/* 相关商品沿用首页那张卡的皮肤，只是尺寸收紧 */
+.modal-showcase {
+  margin-bottom: 30px;
+}
+/* 弹窗里的二级分类标签：只出「同一条产品线下面、真的有在售商品」的那几类。
+   样式照设计稿——白底细描边方角，选中那项描边和文字转橙。 */
+.modal-cat-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 22px;
 }
-.pricing-tab {
-  padding: 10px 20px;
-  border: 2px solid var(--gray-200);
+.cat-tab {
+  padding: 12px 26px;
+  border: 1.5px solid var(--gray-200);
   background: var(--white);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 15px;
   font-weight: 600;
-  color: var(--gray-600);
+  color: var(--gray-700);
   cursor: pointer;
   transition: all var(--transition);
 }
-.pricing-tab.active {
+.cat-tab:hover {
+  border-color: var(--orange-500);
+  color: var(--orange-600);
+}
+.cat-tab.is-active {
   border-color: var(--orange-600);
   background: var(--orange-50);
   color: var(--orange-600);
 }
-.pricing-tab:hover {
-  border-color: var(--orange-500);
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
 }
-.pricing-table-wrapper {
-  border: 1px solid var(--gray-200);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+.showcase-grid .product-card.is-current {
+  border-color: var(--orange-600);
 }
-.pricing-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
+.showcase-grid .product-tile {
+  padding: 20px 16px 0;
 }
-.pricing-table th {
-  background: var(--gray-800);
-  color: var(--white);
+.showcase-grid .tile-title {
+  font-size: 17px;
+}
+.showcase-grid .tile-desc {
+  font-size: 12px;
+  min-height: 40px;
+}
+.showcase-grid .product-image {
+  height: 150px;
+}
+.showcase-grid .product-meta {
   padding: 12px 16px;
-  font-weight: 600;
-  text-align: left;
-  white-space: nowrap;
-}
-.pricing-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--gray-100);
-  color: var(--gray-700);
-}
-.pricing-table tr:last-child td {
-  border-bottom: none;
-}
-.pricing-table tr:hover td {
-  background: var(--orange-50);
 }
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  justify-content: center;
+  gap: 14px;
 }
 .modal-actions .btn {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
+  padding: 14px 30px;
+  font-size: 15px;
+  border-radius: 10px;
 }
 
 /* ===== WhatsApp Floating Button ===== */
@@ -1647,81 +1616,6 @@ ul { list-style: none; }
   border-color: #1da851;
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
-}
-
-/* ===== Guide Sections ===== */
-.guide-section {
-  padding: 80px 0;
-}
-.guide-section:nth-child(even) {
-  background: var(--gray-50);
-}
-.guide-content {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 32px;
-  max-width: 900px;
-  margin: 0 auto;
-}
-.guide-step {
-  text-align: center;
-  min-width: 0;
-}
-.guide-step-num {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  margin: 0 auto 16px;
-  background: var(--orange-600);
-  color: var(--white);
-  font-family: var(--font-heading);
-  font-size: 20px;
-  font-weight: 700;
-  border-radius: 50%;
-}
-.guide-step h4 {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--gray-800);
-  margin-bottom: 8px;
-}
-.guide-step p {
-  font-size: 14px;
-  color: var(--gray-500);
-  line-height: 1.6;
-}
-.guide-cards {
-  display: grid;
-  /* 必须用 minmax(0,1fr)：写成 1fr 时列宽下限是内容宽度，
-     "Matte Lamination" 这类长词会把三列撑到 507px，超出 453px 容器，整页出现横向拖动 */
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
-}
-.guide-card {
-  background: var(--white);
-  padding: 28px 24px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--gray-200);
-  transition: all var(--transition);
-  min-width: 0;
-}
-.guide-card:hover {
-  border-color: var(--orange-500);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-.guide-card h4 {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--orange-600);
-  margin-bottom: 10px;
-}
-.guide-card p {
-  font-size: 14px;
-  color: var(--gray-500);
-  line-height: 1.6;
 }
 
 /* ===== Guide Modal ===== */
@@ -1903,31 +1797,6 @@ ul { list-style: none; }
   line-height: 1.5;
 }
 
-/* ===== Policy Sections ===== */
-.policy-section {
-  padding: 80px 0;
-}
-.policy-section:nth-child(even) {
-  background: var(--gray-50);
-}
-.policy-content {
-  max-width: 800px;
-  margin: 0 auto;
-}
-.policy-content p {
-  font-size: 16px;
-  color: var(--gray-600);
-  line-height: 1.7;
-  margin-bottom: 24px;
-}
-.policy-content h3 {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--gray-800);
-  margin-bottom: 12px;
-  margin-top: 32px;
-}
-
 /* ===== Redesigned Contact Form ===== */
 .contact {
   padding: 96px 0;
@@ -2011,10 +1880,9 @@ ul { list-style: none; }
   .advantages-grid { grid-template-columns: repeat(2, 1fr); }
   .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cert-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .why-us-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
-  .testimonials-grid { grid-template-columns: minmax(0, 1fr); }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .about-grid { grid-template-columns: 1fr; gap: 40px; }
+  .about-facilities { gap: 16px; margin-top: 40px; }
   /* 1024 以下左右两栏都变窄，收窄间距并把轮播压矮，免得把文案挤出视线 */
   .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, .85fr); gap: 28px; }
   .hero-carousel { height: 260px; }
@@ -2030,15 +1898,10 @@ ul { list-style: none; }
   .cert-text h3 { font-size: 14px; }
   .cert-text p { font-size: 12px; }
 
-  /* 手机上一列只有 135px，装不下 20px 标题，所以减到两列并收窄内边距 */
-  .guide-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .guide-card { padding: 20px 18px; }
-  .guide-card h4 { font-size: 18px; margin-bottom: 8px; }
-
-  /* 36px 的 "99.2%" 在 320px 屏上会顶破两列统计卡 */
-  .stat-card { padding: 20px 14px; }
-  .stat-number { font-size: 28px; }
-  .stat-label { font-size: 13px; }
+  /* 手机上一排两张全景图各只剩约 190px 宽，压不住 20px 的标题，改成一列通栏 */
+  .about-facilities { grid-template-columns: 1fr; }
+  .facility-card { aspect-ratio: 16 / 10; }
+  .facility-name { font-size: 18px; }
 
   .nav-menu {
     position: fixed;
@@ -2124,9 +1987,15 @@ ul { list-style: none; }
 
   .footer-grid { grid-template-columns: 1fr; gap: 32px; }
 
-  .modal-content { margin: 16px; max-height: calc(100vh - 32px); }
-  .pricing-table-wrapper { overflow-x: auto; }
-  .pricing-table { min-width: 600px; }
+  .modal-content { width: auto; margin: 16px; max-height: calc(100vh - 32px); }
+  .modal-body { padding: 28px 22px; }
+  .modal-product-info { padding-right: 44px; }
+  .modal-product-info h2 { font-size: 24px; }
+  .modal-price { font-size: 22px; }
+  .showcase-grid { grid-template-columns: minmax(0, 1fr); }
+  .modal-cat-tabs { gap: 8px; margin-bottom: 18px; }
+  .cat-tab { padding: 9px 18px; font-size: 14px; }
+  .modal-actions .btn { flex: 1 1 100%; }
 
   .cert-modal-body { grid-template-columns: 1fr; }
   .cert-modal-image { border-radius: 20px 20px 0 0; padding: 24px; }
@@ -2143,7 +2012,6 @@ ul { list-style: none; }
   .cert-icon { width: 32px; height: 32px; }
   .cert-text h3 { font-size: 13px; }
   .cert-text p { font-size: 11px; }
-  .guide-content { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .about-stat-number { font-size: 26px; }
 }
 
@@ -2151,8 +2019,6 @@ ul { list-style: none; }
 @media (prefers-reduced-motion: no-preference) {
   .advantage-card,
   .product-card,
-  .stat-card,
-  .testimonial-card,
   .process-step {
     opacity: 0;
     transform: translateY(24px);

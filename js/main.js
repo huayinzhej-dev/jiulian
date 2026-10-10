@@ -14,32 +14,6 @@
     ? window.supabase.createClient(CFG.url, CFG.key)
     : null;
 
-  const pricingData = {
-    M1: [
-      { sku: 'M1-1', size: '24×22×4', prices: ['1.67', '2.38', '2.49', '1.25', '1.93', '1.36', '1.80'] },
-      { sku: 'M1-2', size: '15×14×4.3', prices: ['1.32', '1.85', '2.08', '0.95', '1.48', '1.10', '1.54'] },
-      { sku: 'M1-4', size: '18.5×18.5×5', prices: ['1.63', '2.32', '2.55', '1.18', '1.85', '1.30', '1.74'] },
-      { sku: 'M1-5', size: '33×21.6×5', prices: ['2.65', '3.77', '4.13', '1.95', '3.15', '1.60', '2.04'] },
-      { sku: 'M1-6', size: '22×11.5×5.5', prices: ['1.53', '2.10', '2.39', '1.08', '1.70', '1.20', '1.64'] },
-      { sku: 'M1-7', size: '27×10×5.5', prices: ['1.43', '1.97', '2.23', '1.08', '1.71', '1.20', '1.64'] },
-      { sku: 'M1-8', size: '28×10×6', prices: ['2.65', '3.67', '4.03', '1.72', '2.83', '1.51', '1.95'] },
-      { sku: 'M1-10', size: '30.4×16.5×6.2', prices: ['2.40', '3.34', '3.70', '1.73', '2.40', '1.53', '1.96'] },
-      { sku: 'M1-11', size: '28×35.4×6.3', prices: ['3.13', '4.44', '4.80', '2.22', '3.60', '2.08', '2.51'] },
-      { sku: 'M1-12', size: '27×27×6.5', prices: ['2.90', '4.10', '4.37', '2.10', '3.46', '1.80', '2.24'] },
-      { sku: 'M1-13', size: '30×21×6.5', prices: ['2.80', '3.90', '4.23', '1.99', '3.30', '1.68', '2.11'] }
-    ],
-    M2: [
-      { sku: 'M2-1', size: '24×22×7', prices: ['1.85', '2.60', '2.75', '1.40', '2.10', '1.50', '1.95'] },
-      { sku: 'M2-2', size: '15×14×8', prices: ['1.50', '2.05', '2.30', '1.10', '1.65', '1.25', '1.70'] },
-      { sku: 'M2-3', size: '20×20×9', prices: ['1.80', '2.55', '2.80', '1.30', '2.00', '1.45', '1.90'] }
-    ],
-    M3: [
-      { sku: 'M3-1', size: '24×22×10', prices: ['2.10', '2.90', '3.10', '1.60', '2.40', '1.70', '2.20'] },
-      { sku: 'M3-2', size: '30×25×12', prices: ['2.80', '3.80', '4.10', '2.00', '3.00', '2.10', '2.70'] },
-      { sku: 'M3-3', size: '35×30×15', prices: ['3.50', '4.70', '5.10', '2.50', '3.70', '2.60', '3.30'] }
-    ]
-  };
-
   function switchLanguage(lang) {
     currentLang = lang;
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang === 'bm' ? 'ms' : 'en';
@@ -113,6 +87,14 @@
   }
 
   // Product Modal
+  const modalShowcase = document.getElementById('modalShowcase');
+  const showcaseGrid = document.getElementById('modalShowcaseGrid');
+  const catTabsHost = document.getElementById('modalCatTabs');
+  let catRows = [];            // 后台那张两级分类表，弹窗里那排标签要用
+  let modalOrigin = null;      // 弹窗当前对应的首页原卡片
+  let modalCat = '';           // 弹窗里选中的二级分类 id
+  let modalLine = new Set();   // 该二级所在产品线下的所有二级 id，用来给展示条补位
+
   function openProductModalFromCard(card) {
     const nameEn = card.dataset.nameEn;
     const nameZh = card.dataset.nameZh;
@@ -122,20 +104,121 @@
     const moq = card.dataset.moq;
 
     const zh = currentLang === 'zh';
-    document.getElementById('modalProductName').textContent = zh ? nameZh : nameEn;
-    document.getElementById('modalProductDesc').textContent = zh ? descZh : descEn;
-    // 后台没填价格/起订量时整行藏掉，别显示「起价 RM 0.00」这种假数字
-    const showLine = (id, txt) => {
+    // 标题/描述/价格这几行同时带 data-*：只写 textContent 的话，弹窗开着切语言
+    // 会被 switchLanguage 拿页面里那两个占位属性刷回「Product Name」。
+    const setLangText = (id, latin, chinese) => {
       const el = document.getElementById(id);
-      el.textContent = txt;
-      el.style.display = txt ? '' : 'none';
+      const l = latin || '';
+      const c = chinese || l;
+      el.setAttribute('data-en', l);
+      el.setAttribute('data-bm', l);
+      el.setAttribute('data-zh', c);
+      el.textContent = zh ? c : l;
     };
-    showLine('modalPrice', price ? (zh ? `起价 RM ${price}` : `from RM ${price}`) : '');
-    showLine('modalMOQ', moq ? (zh ? `起订量: ${moq}件` : `MOQ: ${moq} pcs`) : '');
+    setLangText('modalProductName', nameEn, nameZh);
+    setLangText('modalProductDesc', descEn, descZh);
+    // 后台没填价格/起订量时整行藏掉，别显示「起价 RM 0.00」这种假数字
+    const showLine = (id, latin, chinese) => {
+      setLangText(id, latin, chinese);
+      const el = document.getElementById(id);
+      el.style.display = latin || chinese ? '' : 'none';
+    };
+    showLine('modalPrice', price ? `from RM ${price}` : '', price ? `起价 RM ${price}` : '');
+    showLine('modalMOQ', moq ? `MOQ: ${moq} pcs` : '', moq ? `起订量: ${moq}件` : '');
 
-    renderPricingTable('M1');
+    modalOrigin = gridOriginOf(card);
+    modalCat = catIdOf(modalOrigin);
+    renderModalTabs();
+    renderModalStrip();
     productModal.classList.add('active');
     document.body.style.overflow = 'hidden';
+  }
+
+  const catIdOf = card => String(card.dataset.catId || '');
+  const gridCards = () => Array.from(document.querySelectorAll('.products-grid .product-card'));
+
+  // 弹窗里点进来的卡片是克隆体，跟网格里的原卡片不是同一个节点，
+  // 所以按建块时记下的下标找回原位置，否则切换商品后展示顺序不动。
+  function gridOriginOf(card) {
+    const all = gridCards();
+    const at = Number(card.dataset.showcaseIdx);
+    return Number.isInteger(at) && at >= 0 && at < all.length ? all[at] : card;
+  }
+
+  // 一条产品线下面的所有二级。商品直接挂在一行上、它自己就是那条产品线的情况也算，
+  // 但带下级的行永远不当标签（那是一级，点它等于点整条线）。
+  function lineLeaves(catId) {
+    const live = catRows.filter(c => c.active !== false);
+    const hasKids = c => live.some(x => String(x.parent || '') === String(c.id));
+    const self = live.find(c => String(c.id) === catId);
+    if (!self) return [];
+    const line = self.parent ? String(self.parent) : (hasKids(self) ? String(self.id) : '');
+    if (!line) return [];
+    return live.filter(c => String(c.parent || '') === line && !hasKids(c)).sort(catSort);
+  }
+
+  // 标签只出「这一类下面真的有在售商品」的二级，而且少于两个就不摆——
+  // 一个标签点了没任何变化，等于假控件。
+  function renderModalTabs() {
+    if (!catTabsHost) return;
+    catTabsHost.textContent = '';
+    const counts = {};
+    gridCards().forEach(el => {
+      const id = catIdOf(el);
+      if (id) counts[id] = (counts[id] || 0) + 1;
+    });
+    const leaves = lineLeaves(modalCat);
+    modalLine = new Set(leaves.map(c => String(c.id)));
+    const shown = leaves.filter(c => counts[String(c.id)]);
+    if (shown.length < 2) { catTabsHost.hidden = true; return; }
+    shown.forEach(c => {
+      const b = make('button', 'cat-tab', c.nameEn || c.name, c.name, c.nameBm || c.nameEn || c.name);
+      // make() 只写英文，而标签是点开弹窗时才建的（比页面首次翻译晚），
+      // 所以中文/马来文页要按当前语种补一次，否则整排标签会是英文。
+      if (currentLang !== 'en') b.textContent = b.dataset[currentLang] || b.textContent;
+      b.type = 'button';
+      b.dataset.cat = String(c.id);
+      catTabsHost.appendChild(b);
+    });
+    catTabsHost.hidden = false;
+    syncModalTabs();
+  }
+
+  function syncModalTabs() {
+    if (!catTabsHost) return;
+    catTabsHost.querySelectorAll('.cat-tab').forEach(btn => {
+      const on = String(btn.dataset.cat) === modalCat;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  // 三联展示：直接复用首页那批卡片（数据库渲染或页面写死的都算），
+  // 只有当前商品一个卡片时整块藏掉，不摆空架子。
+  function renderModalStrip() {
+    if (!modalShowcase || !showcaseGrid) return;
+    showcaseGrid.textContent = '';
+    const all = gridCards();
+    if (all.length < 2) { modalShowcase.hidden = true; return; }
+    // 选中的那一类排最前，同产品线的其次，凑不满三张再拿其余的补。
+    // 三档之间不互换（否则"把当前商品挪到最前"会把访客刚选的那一类挤出三格外），
+    // 只在各自档内轮转。
+    const groupOf = card => {
+      const id = catIdOf(card);
+      return id === modalCat ? 0 : (modalLine.has(id) ? 1 : 2);
+    };
+    const list = [0, 1, 2].reduce((acc, g) => {
+      const part = all.filter(c => groupOf(c) === g);
+      const at = part.indexOf(modalOrigin);
+      return acc.concat(at > 0 ? part.slice(at).concat(part.slice(0, at)) : part);
+    }, []);
+    list.slice(0, 3).forEach(src => {
+      const mini = src.cloneNode(true);
+      if (src === modalOrigin) mini.classList.add('is-current');
+      mini.dataset.showcaseIdx = String(all.indexOf(src));
+      showcaseGrid.appendChild(mini);
+    });
+    modalShowcase.hidden = false;
   }
 
   const productsGrid = document.querySelector('.products-grid');
@@ -146,26 +229,25 @@
     });
   }
 
-  function renderPricingTable(tab) {
-    const tbody = document.getElementById('pricingTableBody');
-    const data = pricingData[tab];
-    tbody.innerHTML = data.map(row => `
-      <tr>
-        <td><strong>${row.sku}</strong></td>
-        <td>${row.size}</td>
-        ${row.prices.map(p => `<td>RM ${p}</td>`).join('')}
-      </tr>
-    `).join('');
+  if (showcaseGrid) {
+    showcaseGrid.addEventListener('click', (e) => {
+      const mini = e.target.closest('.product-card');
+      if (!mini) return;
+      openProductModalFromCard(mini);
+      const box = productModal.querySelector('.modal-content');
+      if (box) box.scrollTop = 0;
+    });
   }
 
-  document.querySelectorAll('.pricing-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.pricing-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const tabName = tab.textContent.trim().split(' ')[0];
-      renderPricingTable(tabName);
+  if (catTabsHost) {
+    catTabsHost.addEventListener('click', e => {
+      const btn = e.target.closest('.cat-tab');
+      if (!btn || btn.dataset.cat === modalCat) return;
+      modalCat = btn.dataset.cat;
+      syncModalTabs();
+      renderModalStrip();
     });
-  });
+  }
 
   modalClose.addEventListener('click', closeModal);
   productModal.addEventListener('click', (e) => {
@@ -455,8 +537,8 @@
   // ===== 前台公开内容：从后端读取，读不到就保留页面里写死的兜底 =====
   // 白名单必须与 supabase/schema.sql 的 jl_public_read_content 一致。
   // 多列一个集合 = 对全网访客多暴露一类数据，所以这里绝不写「读全部」。
-  const PUBLIC_COLS = ['clients', 'products', 'testimonials', 'faqs'];
-  const ROW_COLS = new Set(['clients', 'products', 'testimonials', 'faqs']);
+  const PUBLIC_COLS = ['clients', 'products', 'faqs', 'categories'];
+  const ROW_COLS = new Set(['clients', 'products', 'faqs', 'categories']);
   // 首页文案类：整块存成一条文档，后台「内容管理」改了前台就跟着变
   const DOC_COLS = ['settings_banner', 'settings_advantages', 'settings_stats', 'settings_about', 'settings_process'];
 
@@ -490,15 +572,15 @@
     return s.replace(/ /g, '%20');
   }
 
-  // 商品没传图时按顺序用这套配色+线框图标（取自 index.html 里那 6 张写死的卡片）。
+  // 商品没传图时按顺序用这套线框图标（与 index.html 里那 6 张写死的卡片一一对应）。
   // 只放固定字面量，后台填什么都不会进到这里，所以 innerHTML 是安全的。
   const PRODUCT_ART = [
-    { bg:'#e8f5e9', stroke:'#1a5632', svg:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>' },
-    { bg:'#fff3e0', stroke:'#e65100', svg:'<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>' },
-    { bg:'#fce4ec', stroke:'#c62828', svg:'<rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/>' },
-    { bg:'#e3f2fd', stroke:'#1565c0', svg:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>' },
-    { bg:'#f3e5f5', stroke:'#7b1fa2', svg:'<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>' },
-    { bg:'#e0f2f1', stroke:'#00695c', svg:'<rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/>' }
+    '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+    '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+    '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/>',
+    '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
+    '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+    '<rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/>'
   ];
   const FAQ_CHEVRON = '<svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
 
@@ -533,12 +615,22 @@
     rows.forEach((p, i) => {
       const card = make('div', 'product-card');
       card.dataset.product = p.id || '';
+      card.dataset.catId = p.categoryId == null ? '' : String(p.categoryId);
       card.dataset.nameEn = p.name;
       card.dataset.nameZh = p.nameZh || p.name;
       card.dataset.descEn = p.desc || '';
       card.dataset.descZh = p.descZh || p.desc || '';
       card.dataset.price = Number(p.price) > 0 ? Number(p.price).toFixed(2) : '';
       card.dataset.moq = Number(p.moq) > 0 ? String(p.moq) : '';
+
+      const tile = make('div', 'product-tile');
+      tile.appendChild(make('h3', 'tile-title', p.name, p.nameZh));
+      const rule = document.createElement('span');
+      rule.className = 'tile-rule';
+      rule.setAttribute('aria-hidden', 'true');
+      tile.appendChild(rule);
+      // 没有描述也留一个空占位，否则各卡图片起始高度不齐
+      tile.appendChild(p.desc ? make('p', 'tile-desc', p.desc, p.descZh) : make('p', 'tile-desc'));
 
       const pic = make('div', 'product-image');
       const url = safeUrl(p.image);
@@ -550,15 +642,10 @@
         img.loading = 'lazy';
         pic.appendChild(img);
       } else {
-        const art = PRODUCT_ART[i % PRODUCT_ART.length];
-        pic.style.backgroundColor = art.bg;
-        pic.innerHTML = '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="' + art.stroke + '" stroke-width="1" aria-hidden="true">' + art.svg + '</svg>';
+        pic.innerHTML = '<svg width="76" height="76" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="0.85" aria-hidden="true">' + PRODUCT_ART[i % PRODUCT_ART.length] + '</svg>';
       }
-      card.appendChild(pic);
-
-      const info = make('div', 'product-info');
-      info.appendChild(make('h3', null, p.name, p.nameZh));
-      if (p.desc) info.appendChild(make('p', null, p.desc, p.descZh));
+      tile.appendChild(pic);
+      card.appendChild(tile);
 
       const meta = make('div', 'product-meta');
       if (card.dataset.price) {
@@ -568,36 +655,20 @@
         const unit = p.moqUnit || 'pcs';
         meta.appendChild(make('span', 'product-moq', `MOQ: ${card.dataset.moq} ${unit}`, `起订量: ${card.dataset.moq}件`));
       }
-      if (meta.childElementCount) info.appendChild(meta);
-      card.appendChild(info);
+      if (meta.childElementCount) card.appendChild(meta);
       host.appendChild(card);
     });
     return true;
   }
 
-  function renderTestimonials(list) {
-    const host = document.querySelector('.testimonials-grid');
-    const rows = (list || []).filter(t => t && t.content && t.active !== false);
-    if (!host || !rows.length) return false;
-    host.textContent = '';
-    rows.forEach(t => {
-      const card = make('div', 'testimonial-card');
-      const stars = Math.max(1, Math.min(5, parseInt(t.rating, 10) || 5));
-      card.appendChild(make('div', 'testimonial-stars', '★'.repeat(stars)));
-      card.appendChild(make('blockquote', null, `“${t.content}”`, t.contentZh ? `“${t.contentZh}”` : ''));
-
-      const author = make('div', 'testimonial-author');
-      author.appendChild(make('div', 'author-avatar', (t.avatar || (t.name || '?').charAt(0)).toUpperCase()));
-      const who = make('div');
-      if (t.name) who.appendChild(make('strong', null, t.name));
-      const role = [t.position, t.company].filter(Boolean).join(', ');
-      if (role) who.appendChild(make('span', null, role));
-      author.appendChild(who);
-      card.appendChild(author);
-      host.appendChild(card);
-    });
-    return true;
+  // ===== 商品分类 =====
+  // 分类表只交给弹窗里那排二级标签用（见 renderModalTabs），首页网格不再按分类筛。
+  function setProductCategories(cats) {
+    catRows = (cats || []).filter(c => c && (c.name || c.nameEn));
+    return false;
   }
+
+  function catSort(a, b) { return (Number(a.sort) || 0) - (Number(b.sort) || 0); }
 
   function renderFaqs(list) {
     const host = document.querySelector('.faq-list');
@@ -992,8 +1063,8 @@
     const parts = [
       [renderClients, bag.clients],
       [renderProducts, bag.products],
+      [setProductCategories, bag.categories],
       [applyHeroShowcase, bag.products],
-      [renderTestimonials, bag.testimonials],
       [renderFaqs, bag.faqs],
       [applyBanner, docs.settings_banner],
       [applyAdvantages, docs.settings_advantages],
