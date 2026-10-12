@@ -6,6 +6,7 @@
   <title>管理后台 - 玖联包装</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="js/sb-config.js"></script>
+  <script src="js/field-model.js"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -239,6 +240,9 @@ const MENU = [
   { id:'leads', icon:'📥', label:'线索管理', children:[
     {id:'leads-pool',label:'线索池'},{id:'leads-detail',label:'线索详情'},{id:'leads-customers',label:'客户库'},{id:'leads-followup',label:'跟进记录'}
   ]},
+  { id:'field', icon:'🧭', label:'外勤管理', children:[
+    {id:'field-trips',label:'外出报备'},{id:'field-checkins',label:'拜访打卡'},{id:'field-customers',label:'外勤客户库'},{id:'field-followups',label:'跟单总表'},{id:'field-config',label:'基础配置'}
+  ]},
   { id:'quotes', icon:'💰', label:'报价管理', children:[
     {id:'quotes-list',label:'报价单'},{id:'quotes-new',label:'新建报价'},{id:'quotes-pricebook',label:'价格簿'},{id:'quotes-template',label:'模板'}
   ]},
@@ -297,7 +301,7 @@ function docVal(key, def) {
 const CLOUD = {
   row: ['leads','customers','quotes','orders','payments','dielines','categories','faqs','testimonials',
         'policies','users','logs','products','materials','articles','clients','mediaFiles','cases',
-        'shippingZones','roles','proofs'],
+        'shippingZones','roles','proofs'].concat(FIELD_COLS),
   doc: ['printingOptions','finishingOptions','caseCategories','settings_site','settings_seo',
         'settings_notifications','settings_finance','settings_about','settings_process',
         'settings_printing_guide','settings_advantages','settings_stats','settings_banner',
@@ -799,6 +803,9 @@ function seedData() {
   seedDict('caseCategories', ['F&B','Retail','FMCG','Luxury','E-commerce']);
   seedDict('shippingZones', [{id:'SZ-01',region:'Penang',rate:'1.5x',active:true},{id:'SZ-02',region:'Johor',rate:'1.5x',active:true},{id:'SZ-03',region:'Melaka',rate:'1.5x',active:true},{id:'SZ-04',region:'Ipoh',rate:'1.3x',active:true},{id:'SZ-05',region:'East Malaysia',rate:'2.5x',active:true}]);
   seedDict('roles', [{id:'R-01',name:'超级管理员',perms:['全部权限']},{id:'R-02',name:'销售',perms:['线索管理','报价管理','订单管理']},{id:'R-03',name:'设计',perms:['商品管理','内容管理','媒体库']},{id:'R-04',name:'财务',perms:['订单管理(付款)','数据看板']},{id:'R-05',name:'运营',perms:['内容管理','表单管理','案例','政策']}]);
+  // 外勤字典（拜访类型/区域/出行方式/意向等级/跟进方式）：手机端下拉读这一份，
+  // 默认值在 js/field-model.js 里，主管在「外勤管理 → 基础配置」改完整公司共享。
+  seedDict('field_dicts', FIELD_DICT_SEED.map(function (d, i) { return { id: 'FD-' + (i + 1), kind: d.kind, name: d.name, sort: d.sort, active: true } }));
   if (!DM.has('proofs')) {
     DM.set('proofs', [{id:'PF-001',orderId:'OD-2026-001',customer:"L'Oréal Malaysia",type:'数字打样 (颜色确认)',status:'pending_confirm',uploaded:'2026-10-04',fileUrl:''}]);
   }
@@ -931,6 +938,11 @@ function renderPage(id) {
     'leads-detail': renderLeadsDetail,
     'leads-customers': renderCustomers,
     'leads-followup': renderFollowUp,
+    'field-trips': renderFieldTrips,
+    'field-checkins': renderFieldCheckins,
+    'field-customers': renderFieldCustomers,
+    'field-followups': renderFieldFollowups,
+    'field-config': renderFieldConfig,
     'quotes-list': renderQuotesList,
     'quotes-new': renderQuoteNew,
     'quotes-pricebook': renderPricebook,
@@ -983,6 +995,400 @@ function renderPlaceholder(c, id) {
   c.innerHTML = `<div class="page-header"><h1 class="page-title">${esc(id)}</h1></div><div class="empty"><div class="icon">🚧</div><p>此模块正在建设中</p></div>`;
 }
 
+// ========== 外勤管理（PC 后台） ==========
+// 数据由手机端 field.html 写入，这里负责查看、筛选、导出和配置选项。
+// 四个业务集合都是行集合（id 形如 field_trips:FT-xxx），基础配置是 field_dicts 字典集合，
+// 手机端下拉框读的就是这一份，所以这里改完整公司生效。
+const FIELD_KIND_LABEL = { visit_type:'拜访类型', area:'拜访区域', transport:'出行方式', level:'客户意向等级', method:'跟进方式' };
+let fTripQ = '', fTripRange = 'month';
+let fCkQ = '', fCkWho = '', fCkRange = 'month';
+let fCuQ = '', fCuLevel = '', fCuSource = '';
+let fFuQ = '', fFuWho = '', fFuView = '';
+let fPhotos = [];
+
+function fieldInRange(str, range) {
+  const d = String(str || '').slice(0, 10);
+  if (range === 'all' || !range) return true;
+  if (!d) return false;
+  const today = localDate();
+  if (range === 'today') return d === today;
+  if (range === 'month') return d.slice(0, 7) === today.slice(0, 7);
+  if (range === 'week') { const b = new Date(); b.setHours(0, 0, 0, 0); return d >= localDate(new Date(b.getTime() - 6 * 864e5)) && d <= today }
+  return true;
+}
+function fieldRangeOptions(cur) {
+  return [['today', '今天'], ['week', '近 7 天'], ['month', '本月'], ['all', '全部']]
+    .map(x => `<option value="${x[0]}"${x[0] === cur ? ' selected' : ''}>${x[1]}</option>`).join('');
+}
+function fieldPeople(rows) {
+  const m = new Map();
+  rows.forEach(r => { if (r.ownerId) m.set(String(r.ownerId), r.ownerName || '未署名') });
+  return [...m.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+}
+function fieldWhoOptions(rows, cur) {
+  return `<option value="">全部人员</option>` + fieldPeople(rows)
+    .map(p => `<option value="${esc(p.id)}"${p.id === cur ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+}
+function fieldLevelBadge(l) {
+  return l ? `<span class="badge badge-purple">${esc(l)}</span>` : '<span style="color:var(--gray-400)">未定级</span>';
+}
+// 逾期口径与手机端首页一致：下次跟进日期已过，且那天之后没有新的跟单记录
+function fieldOverdueMap() {
+  const cus = DM.get('field_customers'), fus = DM.get('field_followups'), today = localDate();
+  const out = {};
+  cus.forEach(c => {
+    let next = '', last = '';
+    fus.forEach(f => {
+      if (String(f.custId) !== String(c.id)) return;
+      if (String(f.nextDate || '') > next) next = String(f.nextDate);
+      if (String(f.at || '') > last) last = String(f.at);
+    });
+    if (next && next < today && last < next) out[String(c.id)] = next;
+  });
+  return out;
+}
+function fieldCSV(name, headers, rows) {
+  if (!rows.length) { toast('当前筛选条件下没有记录可导出'); return }
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = [headers.map(q).join(','), ...rows.map(r => r.map(q).join(','))].join('\r\n');
+  const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = name + '_' + localDate() + '.csv'; a.click();
+  URL.revokeObjectURL(url);
+  toast('已导出 ' + rows.length + ' 条，Excel 直接双击打开');
+}
+function fieldPhotoThumb(url, cls) {
+  if (!url) return '<span style="color:var(--gray-400)">无照片</span>';
+  const i = fPhotos.push(url) - 1;
+  return `<img src="${safeHref(url)}" alt="门头照片" title="点开看大图" onclick="viewFieldPhoto(${i})" style="width:64px;height:48px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid var(--gray-200);display:block">`;
+}
+function viewFieldPhoto(i) {
+  const url = fPhotos[i];
+  if (!url) return;
+  showModal('企业门头照片', `<img src="${safeHref(url)}" alt="门头照片" style="width:100%;height:auto;border-radius:8px">`,
+    null, [{ label: '关闭', cls: 'btn-secondary', fn: closeModal }]);
+}
+function fieldEmpty(cols, what) {
+  return `<tr><td colspan="${cols}" style="text-align:center;padding:36px;color:var(--gray-400)">这个筛选条件下${what}</td></tr>`;
+}
+
+// ---------- 外出报备 ----------
+function filteredFieldTrips() {
+  let rows = DM.get('field_trips').filter(t => fieldInRange(t.date, fTripRange));
+  if (fTripQ) rows = rows.filter(t => `${t.ownerName} ${t.area} ${t.visitType} ${t.transport} ${t.backTime}`.toLowerCase().includes(fTripQ));
+  return rows.sort((a, b) => String(b.date + (b.createdAt || '')).localeCompare(String(a.date + (a.createdAt || ''))));
+}
+function renderFieldTrips(c) {
+  fPhotos = [];
+  const ck = DM.get('field_checkins');
+  const rows = filteredFieldTrips();
+  const cell = (v, extra) => `<td style="white-space:nowrap${extra ? ';' + extra : ''}">${esc(v || '') || '<span style="color:var(--gray-400)">—</span>'}</td>`;
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">外出报备</h1><p class="page-desc">手机端提交的外出报备（报备制，不走审批），按下表留档</p></div></div>
+    <div class="toolbar"><div class="search"><input placeholder="搜索姓名/区域/类型/出行方式..." oninput="setFieldTripSearch(this.value)" value="${esc(fTripQ)}"></div>
+      <select onchange="setFieldTripRange(this.value)">${fieldRangeOptions(fTripRange)}</select>
+      <button class="btn btn-secondary btn-sm" onclick="exportFieldTrips()">📥 导出CSV</button>
+    </div>
+    <div class="card"><div class="table-wrap"><table style="min-width:1080px"><thead><tr><th>申请日期</th><th>报备人</th><th>拜访类型</th><th>拜访区域</th><th>出行方式</th><th>计划/实际</th><th>预计回公司</th><th>提交时间</th><th>操作</th></tr></thead>
+      <tbody>${rows.length ? rows.map(t => {
+        const n = ck.filter(x => String(x.tripId) === String(t.id)).length;
+        const plan = Number(t.planCustomers) || 0;
+        return `<tr><td class="td-name">${esc(t.date)}</td><td>${esc(t.ownerName || '')}</td><td>${esc(t.visitType || '')}</td><td>${esc(t.area || '')}</td><td>${esc(t.transport || '')}</td>
+          <td>${plan ? `<span class="badge ${n >= plan ? 'badge-green' : 'badge-gray'}">${n}/${plan} 家</span>` : `<span class="badge badge-gray">${n} 家</span>`}</td>${cell((t.backTime || '').replace('T', ' '))}${cell(t.createdAt)}
+          <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="viewFieldTrip('${esc(t.id)}')">详情</button></td></tr>`;
+      }).join('') : fieldEmpty(9, '还没有报备记录')}</tbody></table></div>
+      <div class="pagination"><span>共 ${rows.length} 条${(fTripQ || fTripRange !== 'month') ? `（已筛选，总计 ${DM.get('field_trips').length} 条）` : ''}</span></div></div>`;
+}
+function setFieldTripSearch(v) { fTripQ = String(v || '').trim().toLowerCase(); refreshFieldTable('field-trips') }
+function setFieldTripRange(v) { fTripRange = v; refreshFieldTable('field-trips') }
+function exportFieldTrips() {
+  const ck = DM.get('field_checkins');
+  fieldCSV('外出报备', ['申请日期', '报备人', '拜访类型', '拜访区域', '出行方式', '计划拜访客户数', '实际打卡数', '预计回公司时间', '提交时间'],
+    filteredFieldTrips().map(t => [t.date, t.ownerName, t.visitType, t.area, t.transport, t.planCustomers,
+      ck.filter(x => String(x.tripId) === String(t.id)).length, (t.backTime || '').replace('T', ' '), t.createdAt]));
+}
+function viewFieldTrip(id) {
+  const t = DM.get('field_trips').find(x => String(x.id) === String(id));
+  if (!t) { toast('找不到这条报备'); return }
+  fPhotos = [];
+  const ck = DM.get('field_checkins').filter(x => String(x.tripId) === String(id)).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  const kv = (k, v) => `<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:14px"><b style="color:var(--gray-500);font-weight:500;width:96px;flex:none">${k}</b><span style="flex:1;word-break:break-word">${esc(v || '') || '—'}</span></div>`;
+  showModal(t.date + ' 外出详情', `
+    ${kv('报备人', t.ownerName)}${kv('拜访类型', t.visitType)}${kv('拜访区域', t.area)}${kv('出行方式', t.transport)}
+    ${kv('计划拜访', (Number(t.planCustomers) || 0) + ' 家')}${kv('预计回公司', (t.backTime || '').replace('T', ' '))}${kv('提交时间', t.createdAt)}
+    <div style="margin-top:16px"><b>打卡明细（${ck.length} 家）</b></div>
+    ${ck.length ? `<div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>打卡时间</th><th>客户</th><th>门头照片</th></tr></thead><tbody>${ck.map(x => `<tr><td style="white-space:nowrap">${esc(x.at)}</td><td>${esc(x.custName || '')}</td><td>${fieldPhotoThumb(x.photoUrl)}</td></tr>`).join('')}</tbody></table></div>`
+      : '<p style="color:var(--gray-400);font-size:13px;margin-top:8px">这次外出还没有打卡记录</p>'}`,
+    null, [{ label: '关闭', cls: 'btn-secondary', fn: closeModal }]);
+}
+
+// ---------- 拜访打卡 ----------
+function filteredFieldCheckins() {
+  let rows = DM.get('field_checkins').filter(x => fieldInRange(x.at, fCkRange));
+  if (fCkWho) rows = rows.filter(x => String(x.ownerId) === String(fCkWho));
+  if (fCkQ) rows = rows.filter(x => `${x.custName} ${x.tripArea} ${x.at}`.toLowerCase().includes(fCkQ));
+  return rows.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+function renderFieldCheckins(c) {
+  fPhotos = [];
+  const all = DM.get('field_checkins');
+  const rows = filteredFieldCheckins();
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">拜访打卡</h1><p class="page-desc">现场拍的企业门头照。第 1 期只记设备时间，不采集 GPS 定位</p></div></div>
+    <div class="toolbar"><div class="search"><input placeholder="搜索客户名/区域..." oninput="setFieldCkSearch(this.value)" value="${esc(fCkQ)}"></div>
+      <select onchange="setFieldCkWho(this.value)">${fieldWhoOptions(all, fCkWho)}</select>
+      <select onchange="setFieldCkRange(this.value)">${fieldRangeOptions(fCkRange)}</select>
+      <button class="btn btn-secondary btn-sm" onclick="exportFieldCheckins()">📥 导出CSV</button>
+    </div>
+    <div class="card"><div class="table-wrap"><table style="min-width:900px"><thead><tr><th>打卡时间</th><th>人员</th><th>客户</th><th>所属报备（日期 / 区域）</th><th>门头照片</th></tr></thead>
+      <tbody>${rows.length ? rows.map(x => `<tr><td style="white-space:nowrap">${esc(x.at)}</td><td>${esc(x.ownerName || '')}</td><td class="td-name">${esc(x.custName || '未命名客户')}</td>
+        <td style="white-space:nowrap">${esc(x.tripDate || '')} / ${esc(x.tripArea || '')}</td><td>${fieldPhotoThumb(x.photoUrl)}</td></tr>`).join('') : fieldEmpty(5, '还没有打卡记录')}</tbody></table></div>
+      <div class="pagination"><span>共 ${rows.length} 次打卡${rows.length !== all.length ? `（已筛选，总计 ${all.length} 次）` : ''} · 其中 ${rows.filter(x => x.photoUrl).length} 次带门头照</span></div></div>`;
+}
+function setFieldCkSearch(v) { fCkQ = String(v || '').trim().toLowerCase(); refreshFieldTable('field-checkins') }
+function setFieldCkWho(v) { fCkWho = v; refreshFieldTable('field-checkins') }
+function setFieldCkRange(v) { fCkRange = v; refreshFieldTable('field-checkins') }
+function exportFieldCheckins() {
+  fieldCSV('拜访打卡', ['打卡时间(设备)', '人员', '客户', '报备日期', '拜访区域', '门头照片链接', '照片存储路径'],
+    filteredFieldCheckins().map(x => [x.at, x.ownerName, x.custName, x.tripDate, x.tripArea, x.photoUrl, x.photoPath]));
+}
+
+// ---------- 外勤客户库 ----------
+function filteredFieldCustomers() {
+  let rows = DM.get('field_customers');
+  if (fCuLevel) rows = rows.filter(c => (c.level || '') === fCuLevel);
+  if (fCuSource) rows = rows.filter(c => (c.source || '手动录入') === fCuSource);
+  if (fCuQ) rows = rows.filter(c => `${c.company} ${c.addr} ${c.business} ${c.contact} ${c.phone} ${c.need}`.toLowerCase().includes(fCuQ));
+  return rows.sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
+}
+function renderFieldCustomers(c) {
+  fPhotos = [];
+  const all = DM.get('field_customers'), fus = DM.get('field_followups'), over = fieldOverdueMap();
+  const rows = filteredFieldCustomers();
+  const sources = [...new Set(all.map(x => x.source || '手动录入'))];
+  const levels = fieldDictNames('level');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">外勤客户库</h1><p class="page-desc">销售在外勤跑动中新建的潜在客户档案（与「线索管理 → 客户库」的成交客户分开）</p></div>
+      <button class="btn btn-primary" onclick="editFieldCustomer('')">+ 新增客户</button></div>
+    <div class="toolbar"><div class="search"><input placeholder="搜索企业名/地址/联系人/电话/需求..." oninput="setFieldCuSearch(this.value)" value="${esc(fCuQ)}"></div>
+      <select onchange="setFieldCuLevel(this.value)"><option value="">全部等级</option>${levels.map(l => `<option${l === fCuLevel ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>
+      <select onchange="setFieldCuSource(this.value)"><option value="">全部来源</option>${sources.map(s => `<option${s === fCuSource ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>
+      <button class="btn btn-secondary btn-sm" onclick="exportFieldCustomers()">📥 导出CSV</button>
+    </div>
+    <div class="card"><div class="table-wrap"><table style="min-width:1240px"><thead><tr><th>企业名称</th><th>地址</th><th>经营范围</th><th>联系人</th><th>联系方式</th><th>意向等级</th><th>跟单</th><th>来源</th><th>建档人 / 时间</th><th>操作</th></tr></thead>
+      <tbody>${rows.length ? rows.map(x => {
+        const n = fus.filter(f => String(f.custId) === String(x.id)).length;
+        return `<tr><td class="td-name">${esc(x.company)}${over[String(x.id)] ? ` <span class="badge badge-red">逾期 ${esc(over[String(x.id)]).slice(5)}</span>` : ''}</td>
+          <td>${esc(x.addr || '') || '<span style="color:var(--gray-400)">—</span>'}</td><td>${esc(x.business || '') || '—'}</td><td>${esc(x.contact || '') || '—'}</td><td style="white-space:nowrap">${esc(x.phone || '') || '—'}</td>
+          <td>${fieldLevelBadge(x.level)}</td><td><span class="badge badge-gray">${n} 条</span></td><td>${esc(x.source || '手动录入')}</td>
+          <td style="white-space:nowrap">${esc(x.ownerName || '')} · ${esc((x.createdAt || '').slice(0, 10))}</td>
+          <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="viewFieldCustomer('${esc(x.id)}')">详情</button> <button class="btn btn-sm btn-secondary" onclick="editFieldCustomer('${esc(x.id)}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteFieldCustomer('${esc(x.id)}')">删除</button></td></tr>`;
+      }).join('') : fieldEmpty(10, '还没有客户档案')}</tbody></table></div>
+      <div class="pagination"><span>共 ${rows.length} 家${rows.length !== all.length ? `（已筛选，总计 ${all.length} 家）` : ''} · 逾期未跟 ${Object.keys(over).length} 家</span></div></div>`;
+}
+function setFieldCuSearch(v) { fCuQ = String(v || '').trim().toLowerCase(); refreshFieldTable('field-customers') }
+function setFieldCuLevel(v) { fCuLevel = v; refreshFieldTable('field-customers') }
+function setFieldCuSource(v) { fCuSource = v; refreshFieldTable('field-customers') }
+function exportFieldCustomers() {
+  const fus = DM.get('field_followups');
+  fieldCSV('外勤客户库', ['企业名称', '地址', '经营范围', '联系人', '联系方式', '意向等级', '客户需求', '来源', '建档人', '建档时间', '最后更新', '跟单条数', '最近跟进'],
+    filteredFieldCustomers().map(x => {
+      const f = fus.filter(y => String(y.custId) === String(x.id)).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+      return [x.company, x.addr, x.business, x.contact, x.phone, x.level, x.need, x.source || '手动录入', x.ownerName, x.createdAt, x.updatedAt, f.length, f[0] ? f[0].at : ''];
+    }));
+}
+function viewFieldCustomer(id) {
+  const x = DM.get('field_customers').find(v => String(v.id) === String(id));
+  if (!x) { toast('找不到这家客户'); return }
+  fPhotos = [];
+  const fus = DM.get('field_followups').filter(f => String(f.custId) === String(id)).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const cks = DM.get('field_checkins').filter(k => String(k.custId) === String(id));
+  const kv = (k, v) => `<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:14px"><b style="color:var(--gray-500);font-weight:500;width:96px;flex:none">${k}</b><span style="flex:1;word-break:break-word">${esc(v || '') || '—'}</span></div>`;
+  showModal('客户档案 · ' + x.company, `
+    ${kv('地址', x.addr)}${kv('经营范围', x.business)}${kv('联系人', x.contact)}${kv('联系方式', x.phone)}
+    ${kv('意向等级', x.level)}${kv('客户需求', x.need)}${kv('来源', x.source || '手动录入')}${kv('建档人 / 时间', (x.ownerName || '') + ' · ' + (x.createdAt || ''))}
+    <div style="margin-top:16px"><b>门头照片（${cks.filter(k => k.photoUrl).length} 张）</b></div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">${cks.filter(k => k.photoUrl).length ? cks.filter(k => k.photoUrl).map(k => fieldPhotoThumb(k.photoUrl)).join('') : '<span style="color:var(--gray-400);font-size:13px">还没有门头照片</span>'}</div>
+    <div style="margin-top:16px"><b>跟单记录（${fus.length} 条）</b></div>
+    ${fus.length ? `<div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>跟进时间</th><th>方式</th><th>等级</th><th>沟通内容</th><th>下次跟进</th><th>跟进人</th></tr></thead><tbody>${fus.map(f => `<tr><td style="white-space:nowrap">${esc(f.at)}</td><td>${esc(f.method)}</td><td>${fieldLevelBadge(f.level)}</td><td style="min-width:240px;white-space:pre-wrap">${esc(f.content)}</td><td style="white-space:nowrap">${esc(f.nextDate || '') || '—'}</td><td>${esc(f.ownerName || '')}</td></tr>`).join('')}</tbody></table></div>`
+      : '<p style="color:var(--gray-400);font-size:13px;margin-top:8px">还没有跟单</p>'}`,
+    null, [{ label: '关闭', cls: 'btn-secondary', fn: closeModal }]);
+}
+function editFieldCustomer(id) {
+  const rows = DM.get('field_customers');
+  const x = id ? rows.find(v => String(v.id) === String(id)) : null;
+  if (id && !x) { toast('找不到这家客户'); return }
+  const levels = fieldDictNames('level');
+  const fg = (label, key, ph, wide) => `<div class="form-group${wide ? ' full' : ''}"><label class="form-label">${label}</label><input class="form-input" id="fc_${key}" value="${esc(x ? x[key] : '')}" placeholder="${esc(ph || '')}"></div>`;
+  showModal(x ? '编辑客户档案 · ' + x.company : '新增外勤客户', `
+    ${fg('企业名称 *', 'company', '门头招牌上的公司全名', true)}
+    ${fg('地址', 'addr', '', true)}
+    ${fg('经营范围', 'business', '如：纸箱 / 彩盒 / 贴标加工', true)}
+    ${fg('联系人', 'contact', '')}${fg('联系方式', 'phone', '电话 / WhatsApp')}
+    <div class="form-group"><label class="form-label">意向等级</label><select class="form-input" id="fc_level"><option value="">未定级</option>${levels.map(l => `<option${x && l === x.level ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+    ${fg('来源', 'source', x ? '' : '手动录入')}
+    <div class="form-group full"><label class="form-label">客户需求</label><textarea class="form-input" id="fc_need" rows="3" placeholder="要什么包装、规格尺寸、月用量、现在痛点">${esc(x ? x.need : '')}</textarea></div>`,
+    () => {
+      const g = k => document.getElementById('fc_' + k).value.trim();
+      if (!g('company')) { toast('企业名称必填'); return false }
+      const o = fieldOwner(), now = fieldNow();
+      const row = {
+        id: x ? x.id : DM.genId('FC'), ownerId: (x && x.ownerId) || o.id, ownerName: (x && x.ownerName) || o.name || '后台录入',
+        company: g('company'), addr: g('addr'), business: g('business'), contact: g('contact'), phone: g('phone'),
+        need: g('need'), level: g('level'), source: g('source') || '手动录入', tripId: (x && x.tripId) || '',
+        createdAt: (x && x.createdAt) || now, updatedAt: now
+      };
+      const next = x ? rows.map(v => String(v.id) === String(x.id) ? row : v) : [row, ...rows];
+      DM.set('field_customers', next);
+      toast(x ? '客户档案已更新' : '客户已建档');
+      renderPage(currentPageId);
+    });
+}
+function deleteFieldCustomer(id) {
+  const rows = DM.get('field_customers');
+  const x = rows.find(v => String(v.id) === String(id));
+  if (!x) return;
+  const n = DM.get('field_followups').filter(f => String(f.custId) === String(id)).length;
+  if (!confirm(`确定删除客户「${x.company}」？` + (n ? `它的 ${n} 条跟单记录会留在跟单总表里（变成找不到档案的流水），建议先去手机端/跟单总表核对。` : ''))) return;
+  DM.set('field_customers', rows.filter(v => String(v.id) !== String(id)));
+  toast('客户档案已删除'); renderPage(currentPageId);
+}
+
+// ---------- 跟单总表 ----------
+function filteredFieldFollowups() {
+  const over = fieldOverdueMap();
+  let rows = DM.get('field_followups');
+  if (fFuWho) rows = rows.filter(f => String(f.ownerId) === String(fFuWho));
+  if (fFuView === 'overdue') rows = rows.filter(f => over[String(f.custId)] && String(f.nextDate) === over[String(f.custId)]);
+  else if (fFuView === 'month') rows = rows.filter(f => fieldInRange(f.at, 'month'));
+  if (fFuQ) rows = rows.filter(f => `${f.custCompany} ${f.content} ${f.method} ${f.level}`.toLowerCase().includes(fFuQ));
+  return rows.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+function renderFieldFollowups(c) {
+  const all = DM.get('field_followups'), over = fieldOverdueMap();
+  const rows = filteredFieldFollowups();
+  const noArchive = rows.filter(f => !DM.get('field_customers').some(x => String(x.id) === String(f.custId))).length;
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">跟单总表</h1><p class="page-desc">每一次跟进一条流水，主管看全部；手机端保存客户档案时会自动落第一条</p></div></div>
+    <div class="toolbar"><div class="search"><input placeholder="搜索客户/沟通内容/方式..." oninput="setFieldFuSearch(this.value)" value="${esc(fFuQ)}"></div>
+      <select onchange="setFieldFuWho(this.value)">${fieldWhoOptions(all, fFuWho)}</select>
+      <select onchange="setFieldFuView(this.value)">
+        <option value=""${!fFuView ? ' selected' : ''}>全部时间</option>
+        <option value="month"${fFuView === 'month' ? ' selected' : ''}>本月跟单</option>
+        <option value="overdue"${fFuView === 'overdue' ? ' selected' : ''}>逾期待跟</option></select>
+      <button class="btn btn-secondary btn-sm" onclick="exportFieldFollowups()">📥 导出CSV</button>
+    </div>
+    <div class="card"><div class="table-wrap"><table style="min-width:1120px"><thead><tr><th>跟进时间</th><th>跟进人</th><th>客户</th><th>方式</th><th>等级</th><th>沟通内容</th><th>下次跟进</th><th>状态</th></tr></thead>
+      <tbody>${rows.length ? rows.map(f => {
+        const od = over[String(f.custId)] && String(f.nextDate) === over[String(f.custId)];
+        const archived = DM.get('field_customers').some(x => String(x.id) === String(f.custId));
+        return `<tr><td style="white-space:nowrap">${esc(f.at)}</td><td>${esc(f.ownerName || '')}</td>
+          <td class="td-name">${archived ? `<a href="javascript:void(0)" onclick="viewFieldCustomer('${esc(f.custId)}')">${esc(f.custCompany || '')}</a>` : `${esc(f.custCompany || '')} <span class="badge badge-gray">档案已删</span>`}</td>
+          <td>${esc(f.method || '')}</td><td>${fieldLevelBadge(f.level)}</td><td style="min-width:260px;white-space:pre-wrap">${esc(f.content || '')}</td>
+          <td style="white-space:nowrap">${esc(f.nextDate || '') || '—'}</td>
+          <td>${od ? '<span class="badge badge-red">已逾期</span>' : (f.nextDate && f.nextDate === localDate() ? '<span class="badge badge-yellow">今天到期</span>' : '<span class="badge badge-green">正常</span>')}</td></tr>`;
+      }).join('') : fieldEmpty(8, '没有跟单记录')}</tbody></table></div>
+      <div class="pagination"><span>共 ${rows.length} 条${rows.length !== all.length ? `（已筛选，总计 ${all.length} 条）` : ''} · 逾期未跟客户 ${Object.keys(over).length} 家${noArchive ? ` · ${noArchive} 条的档案已被删` : ''}</span></div></div>`;
+}
+function setFieldFuSearch(v) { fFuQ = String(v || '').trim().toLowerCase(); refreshFieldTable('field-followups') }
+function setFieldFuWho(v) { fFuWho = v; refreshFieldTable('field-followups') }
+function setFieldFuView(v) { fFuView = v; refreshFieldTable('field-followups') }
+function exportFieldFollowups() {
+  fieldCSV('跟单总表', ['跟进时间', '跟进人', '客户', '跟进方式', '意向等级', '沟通内容', '下次跟进时间', '客户ID'],
+    filteredFieldFollowups().map(f => [f.at, f.ownerName, f.custCompany, f.method, f.level, f.content, f.nextDate, f.custId]));
+}
+
+// ---------- 基础配置（下拉选项） ----------
+function renderFieldConfig(c) {
+  const dicts = DM.get('field_dicts');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">外勤基础配置</h1><p class="page-desc">手机端各下拉框的选项，全公司共享这一份；改完手机端下次拉取即生效</p></div></div>
+    <div class="card" style="padding:12px 16px;background:var(--orange-50);border:1px solid #fed7aa">
+      <p style="font-size:13px;color:var(--gray-700);margin:0">⚠️ 改名或停用只影响<b>之后</b>的填报。已经提交过的报备、打卡、跟单里存的是当时选中的文字，不会被改写——这正是台账能追溯的原因。</p></div>
+    ${FIELD_DICT_KINDS.map(k => {
+      const rows = dicts.filter(d => d.kind === k.kind).sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0));
+      return `<div class="card"><div class="card-header"><span class="card-title">${esc(k.label)}</span>
+          <button class="btn btn-sm btn-primary" onclick="addFieldDict('${k.kind}')">+ 新增</button></div>
+        <div class="table-wrap"><table style="min-width:640px"><thead><tr><th>选项名称</th><th>排序</th><th>状态</th><th>已被使用</th><th>操作</th></tr></thead>
+        <tbody>${rows.length ? rows.map(d => `<tr><td class="td-name">${esc(d.name)}</td><td>${Number(d.sort) || 0}</td>
+          <td>${d.active === false ? '<span class="badge badge-gray">已停用</span>' : '<span class="badge badge-green">启用中</span>'}</td>
+          <td style="font-size:13px;color:var(--gray-500)">${esc(fieldDictUsage(k.kind, d.name))}</td>
+          <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="renameFieldDict('${d.id}')">改名</button>
+            <button class="btn btn-sm btn-secondary" onclick="toggleFieldDict('${d.id}')">${d.active === false ? '启用' : '停用'}</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteFieldDict('${d.id}')">删除</button></td></tr>`).join('')
+          : `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray-400)">这一类还没建选项，手机端会用系统内置的默认项；点右上角「新增」就改用你自己的一套</td></tr>`}</tbody></table></div></div>`;
+    }).join('')}`;
+}
+// 这个选项在历史数据里被用过几次，删之前得看得见
+function fieldDictUsage(kind, name) {
+  const col = { visit_type: ['field_trips', 'visitType'], area: ['field_trips', 'area'], transport: ['field_trips', 'transport'], level: [['field_customers', 'level'], ['field_followups', 'level']], method: ['field_followups', 'method'] }[kind];
+  if (!col) return '';
+  const pairs = Array.isArray(col[0]) ? col : [col];
+  const parts = pairs.map(p => {
+    const n = DM.get(p[0]).filter(r => String(r[p[1]] || '') === String(name)).length;
+    return n ? `${p[0] === 'field_trips' ? '报备' : p[0] === 'field_customers' ? '客户' : '跟单'} ${n} 条` : '';
+  }).filter(Boolean);
+  return parts.join(' · ');
+}
+function addFieldDict(kind) {
+  showModal('新增' + (FIELD_KIND_LABEL[kind] || '选项'), `
+    <div class="form-group full"><label class="form-label">选项名称 *</label><input class="form-input" id="fd_name" placeholder="如：柔佛·士姑来"></div>`,
+    () => {
+      const name = document.getElementById('fd_name').value.trim();
+      if (!name) { toast('名称必填'); return false }
+      const rows = DM.get('field_dicts');
+      if (rows.some(d => d.kind === kind && d.name === name)) { toast('这一类里已经有同名选项了'); return false }
+      const sort = Math.max(0, ...rows.filter(d => d.kind === kind).map(d => Number(d.sort) || 0)) + 1;
+      rows.push({ id: DM.genId('FD'), kind, name, sort, active: true });
+      DM.set('field_dicts', rows);
+      toast('选项已新增'); renderPage(currentPageId);
+    });
+}
+function renameFieldDict(id) {
+  const rows = DM.get('field_dicts');
+  const d = rows.find(x => String(x.id) === String(id));
+  if (!d) return;
+  showModal('改名 · ' + d.name, `
+    <div class="form-group full"><label class="form-label">选项名称 *</label><input class="form-input" id="fd_name" value="${esc(d.name)}"></div>
+    <div class="form-group full"><label class="form-label">排序（小的在前面）</label><input class="form-input" id="fd_sort" type="number" value="${Number(d.sort) || 0}"></div>`,
+    () => {
+      const name = document.getElementById('fd_name').value.trim();
+      if (!name) { toast('名称必填'); return false }
+      if (rows.some(x => x.kind === d.kind && x.name === name && String(x.id) !== String(id))) { toast('这一类里已经有同名选项了'); return false }
+      d.name = name; d.sort = Number(document.getElementById('fd_sort').value) || 0;
+      DM.set('field_dicts', rows);
+      toast('已改名（历史记录里的旧名字保持不变）'); renderPage(currentPageId);
+    });
+}
+function toggleFieldDict(id) {
+  const rows = DM.get('field_dicts');
+  const d = rows.find(x => String(x.id) === String(id));
+  if (!d) return;
+  d.active = d.active === false;
+  DM.set('field_dicts', rows);
+  toast(d.active ? '已启用' : '已停用，手机端下拉框里不再出现'); renderPage(currentPageId);
+}
+function deleteFieldDict(id) {
+  const rows = DM.get('field_dicts');
+  const d = rows.find(x => String(x.id) === String(id));
+  if (!d) return;
+  const used = fieldDictUsage(d.kind, d.name);
+  if (!confirm(`确定删除选项「${d.name}」？` + (used ? `\n\n它在历史数据里已被用过：${used}。删除只影响以后的下拉框，历史记录里的文字不变；若只是不想让人再选，用「停用」更合适。` : ''))) return;
+  DM.set('field_dicts', rows.filter(x => String(x.id) !== String(id)));
+  toast('选项已删除'); renderPage(currentPageId);
+}
+
+// 筛选类操作只重画表格所在的那块内容，保留输入框焦点
+function refreshFieldTable(id) {
+  const active = document.activeElement;
+  const keep = active && active.tagName === 'INPUT' ? { v: active.value, s: active.selectionStart } : null;
+  renderPage(id);
+  if (keep) {
+    const box = document.querySelector('#content .toolbar .search input');
+    if (box) { box.value = keep.v; box.focus(); try { box.setSelectionRange(keep.s, keep.s) } catch (e) {} }
+  }
+}
+
 // ========== DASHBOARD ==========
 function localDate(d) {
   const x = d || new Date();
@@ -1027,6 +1433,10 @@ function renderDashboard(c) {
   const receivedMonth = payments.filter(p => p.status === 'confirmed' && String(p.date || '').slice(0, 7) === month).reduce((s, p) => s + (Number(p.amount) || 0), 0);
   const uncollected = payments.filter(p => p.status !== 'confirmed').reduce((s, p) => s + (Number(p.amount) || 0), 0);
   const toShip = orders.filter(o => !o.shipDate && o.productionStatus !== 'done').length;
+  const fTrips = DM.get('field_trips').filter(t => String(t.date || '').slice(0, 7) === month);
+  const fCks = DM.get('field_checkins').filter(x => String(x.at || '').slice(0, 7) === month);
+  const fCus = DM.get('field_customers').filter(x => String(x.createdAt || '').slice(0, 7) === month);
+  const fOver = Object.keys(fieldOverdueMap()).length;
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">数据看板</h1><p class="page-desc">以下数字全部来自当前共享库，无估算</p></div><div style="display:flex;gap:8px"><button class="btn btn-secondary btn-sm" onclick="syncOnChipClick()">↻ 拉取服务器数据</button></div></div>
     <div class="stats-row">
@@ -1036,6 +1446,13 @@ function renderDashboard(c) {
       <div class="stat-card"><div class="icon-box icon-purple">💵</div><div class="label">本月订单金额</div><div class="value">RM ${money2(monthSales)}</div><div class="change">本月已到账 RM ${money2(receivedMonth)}</div></div>
       <div class="stat-card"><div class="icon-box icon-red">🧾</div><div class="label">待收款</div><div class="value">RM ${money2(uncollected)}</div><div class="change">含定金与尾款</div></div>
       <div class="stat-card"><div class="icon-box icon-blue">🚚</div><div class="label">待发货</div><div class="value">${toShip}</div><div class="change">发货页处理</div></div>
+    </div>
+    <div class="card-header" style="padding:0 0 8px"><span class="card-title">外勤（本月 ${month}）</span><a href="javascript:void(0)" style="font-size:13px" onclick="navigateTo('field-trips','外勤管理','外出报备')">去外勤管理 →</a></div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="icon-box icon-blue">📋</div><div class="label">外出报备</div><div class="value">${fTrips.length}</div><div class="change">${new Set(fTrips.map(t => t.ownerName)).size} 人提交</div></div>
+      <div class="stat-card"><div class="icon-box icon-purple">📍</div><div class="label">拜访打卡</div><div class="value">${fCks.length}</div><div class="change">带门头照 ${fCks.filter(x => x.photoUrl).length} 次</div></div>
+      <div class="stat-card"><div class="icon-box icon-green">🏢</div><div class="label">新增外勤客户</div><div class="value">${fCus.length}</div><div class="change">库内共 ${DM.get('field_customers').length} 家</div></div>
+      <div class="stat-card"><div class="icon-box icon-red">⏰</div><div class="label">逾期未跟单</div><div class="value">${fOver}</div><div class="change">到约定日期没再跟进</div></div>
     </div>
     <div class="card"><div class="card-header"><span class="card-title">最近 10 条线索</span></div>
       <div class="table-wrap"><table><thead><tr><th>编号</th><th>客户</th><th>公司</th><th>盒型</th><th>数量</th><th>状态</th><th>时间</th></tr></thead>
@@ -3880,7 +4297,7 @@ function editRole(id) {
   const roles = DM.get('roles');
   const r = roles.find(x => x.id === id);
   if (!r) return;
-  const allPerms = ['线索管理','报价管理','订单管理','商品管理','内容管理','媒体库','表单管理','案例','政策','数据看板','系统设置','管理员管理'];
+  const allPerms = ['线索管理','外勤管理','报价管理','订单管理','商品管理','内容管理','媒体库','表单管理','案例','政策','数据看板','系统设置','管理员管理'];
   showModal('编辑权限 - ' + r.name, `
     <div class="form-group"><label class="form-label">角色名称</label><input class="form-input" id="f_role_name" value="${esc(r.name)}"></div>
     <div class="form-group full"><label class="form-label">权限范围</label>
