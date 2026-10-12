@@ -809,7 +809,7 @@ function seedData() {
   }
   seedDict('caseCategories', ['F&B','Retail','FMCG','Luxury','E-commerce']);
   seedDict('shippingZones', [{id:'SZ-01',region:'Penang',rate:'1.5x',active:true},{id:'SZ-02',region:'Johor',rate:'1.5x',active:true},{id:'SZ-03',region:'Melaka',rate:'1.5x',active:true},{id:'SZ-04',region:'Ipoh',rate:'1.3x',active:true},{id:'SZ-05',region:'East Malaysia',rate:'2.5x',active:true}]);
-  seedDict('roles', [{id:'R-01',name:'超级管理员',perms:['全部权限']},{id:'R-02',name:'销售',perms:['线索管理','报价管理','订单管理']},{id:'R-03',name:'设计',perms:['商品管理','内容管理','媒体库']},{id:'R-04',name:'财务',perms:['订单管理(付款)','数据看板']},{id:'R-05',name:'运营',perms:['内容管理','表单管理','案例','政策']}]);
+  seedDict('roles', [{id:'R-01',name:'超级管理员',perms:['全部权限']},{id:'R-02',name:'销售',perms:['线索管理','报价管理','订单管理']},{id:'R-03',name:'主管',perms:['外勤管理(全部)','商品管理','内容管理','媒体库']},{id:'R-04',name:'财务',perms:['订单管理(付款)','数据看板']},{id:'R-05',name:'运营',perms:['内容管理','表单管理','案例','政策']}]);
   // 外勤字典（拜访类型/区域/出行方式/意向等级/跟进方式）：手机端下拉读这一份，
   // 默认值在 js/field-model.js 里，主管在「外勤管理 → 基础配置」改完整公司共享。
   seedDict('field_dicts', FIELD_DICT_SEED.map(function (d, i) { return { id: 'FD-' + (i + 1), kind: d.kind, name: d.name, sort: d.sort, active: true } }));
@@ -4198,6 +4198,26 @@ function markSelfConfirmed() {
   DM.set('users', users);
 }
 
+// 「设计」这一档已改成「主管」（外勤那一摊归主管管），老数据里叫「设计」的角色和账号开机时统一换名。
+// 只认精确等于「设计」的行，他自己改过名的不动。
+function migrateRoleDesignerToSupervisor() {
+  let changed = 0;
+  const roles = DM.get('roles');
+  roles.forEach(r => {
+    if (String(r.name || '').trim() === '设计') {
+      r.name = '主管';
+      r.perms = ['外勤管理(全部)', '商品管理', '内容管理', '媒体库'];
+      changed++;
+    }
+  });
+  if (changed) DM.set('roles', roles);
+  const users = DM.get('users');
+  let uChanged = 0;
+  users.forEach(u => { if (String(u.role || '').trim() === '设计') { u.role = '主管'; uChanged++ } });
+  if (uChanged) DM.set('users', users);
+  return changed + uChanged;
+}
+
 function renderUsers(c) {
   const users = DM.get('users');
   const rows = users.map(u=>`<tr><td class="td-name">${esc(u.name)}</td><td>${esc(u.email||'—')}</td><td><span class="badge badge-blue">${esc(u.role)}</span></td><td>${u.needsConfirm?'<span class="badge badge-red">待验证邮箱</span>':(u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">已禁用</span>')}</td><td>${esc(u.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button>${u.email ? ` <button class="btn btn-sm btn-secondary" onclick="sendPasswordReset('${u.email}')">重发密码</button>` : ''}${u.needsConfirm && u.email ? ` <button class="btn btn-sm btn-secondary" onclick="resendConfirmEmail('${esc(u.email)}')">重发验证邮件</button>` : ''} <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">删除</button></td></tr>`).join('');
@@ -4225,7 +4245,7 @@ function openUserModal(id) {
   const users = DM.get('users');
   const user = id ? users.find(x => x.id === id) : null;
   const roles = DM.get('roles').map(r => r.name);
-  const roleList = roles.length ? roles : ['超级管理员','销售','设计','财务','运营'];
+  const roleList = roles.length ? roles : ['超级管理员','销售','主管','财务','运营'];
   showModal(user ? '编辑账号' : '新建账号', `
     <div class="form-grid">
       <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${esc(user ? user.name : '')}"></div>
@@ -4237,6 +4257,18 @@ function openUserModal(id) {
            <div class="form-group"><label class="form-label">初始密码 *</label><input class="form-input" type="password" id="f_password" placeholder="至少 6 位"></div>`}
     </div>
     ${user ? '' : `<div style="margin-top:12px;padding:10px;border-radius:6px;font-size:12px;${Sync.ready ? 'background:var(--gray-50);color:var(--gray-500)">创建成功后，把邮箱和密码一起发给同事，登录页填这两项。' : 'background:#fff1f0;color:#820014">当前未连接后端，新建的账号只存在于本机，同事用不了。'}</div>`}
+    ${user || !Sync.ready ? '' : `
+    <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--gray-200)">
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--gray-700);cursor:pointer">
+        <input type="checkbox" id="f_hasuid" style="margin-top:3px" onchange="document.getElementById('f_uid_wrap').hidden = !this.checked">
+        <span>这个邮箱的登录账号<strong>已经在 Supabase 控制台建好了</strong>，只把它补进名单（不用再设密码）</span>
+      </label>
+      <div id="f_uid_wrap" hidden style="margin-top:10px">
+        <label class="form-label">Supabase 用户 UID *</label>
+        <input class="form-input" id="f_uid" placeholder="36 位，形如 2f1a8c34-1b2c-4d3e-8f70-a1b2c3d4e5f6">
+        <div style="margin-top:6px;font-size:12px;color:var(--gray-500);line-height:1.7">在 Supabase 控制台 认证 → 用户 那一行末尾的 ⋮ → Copy UUID 可以拿到。填了它，名单就对准那个已经能登录的账号，姓名和角色按你这边显示。</div>
+      </div>
+    </div>`}
   `, async () => {
     const name = val('f_name');
     if (!name) { toast('请填写姓名'); return false }
@@ -4254,6 +4286,18 @@ function openUserModal(id) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('请填写正确的邮箱，它是登录账号'); return false }
     const dup = users.find(u => (u.email || '').toLowerCase() === email);
     if (dup) { toast(dup.needsConfirm ? email + ' 上次建了一半（卡在邮箱验证）。在名单里点这一行的「重发验证邮件」，让对方点链接激活；实在不行再去 Supabase 控制台 认证 → 用户 里删掉重建。' : '这个邮箱已经建过了'); return false }
+    const hasUid = document.getElementById('f_hasuid');
+    if (hasUid && hasUid.checked) {
+      const uid = (val('f_uid') || '').trim().toLowerCase();
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(uid)) { toast('UID 要粘控制台里那串 36 位用户 ID（认证 → 用户 → 该行 ⋮ → Copy UUID）'); return false }
+      if (users.some(u => String(u.id).toLowerCase() === uid)) { toast('名单里已经有这个 UID 了'); return false }
+      users.push({id:uid, name, email, role:val('f_role'), active:true, created:DM.now()});
+      DM.set('users', users);
+      writeLog('补录账号', `${name} <${email}> UID ${uid.slice(0,8)}…`);
+      renderPage(currentPageId);
+      toast(name + ' 已进名单，用控制台里设的那个密码就能登录');
+      return;
+    }
     if (!password || password.length < 6) { toast('密码至少 6 位'); return false }
     if (!Sync.ready) {
       users.push({id:DM.genId('U'), name, email, role:val('f_role'), active:true, created:DM.now()});
@@ -4277,7 +4321,14 @@ function openUserModal(id) {
         toast('账号已建好，差对方点一下邮件里的验证链接 · ' + sent);
         showBanner('warn', `<strong>${esc(email)}</strong> 已经建好，但 Supabase 要求先验证邮箱，<strong>现在这个密码还登不进去</strong>。让对方用这个邮箱收一封「确认邮箱」邮件、点里面的链接，之后就能拿你刚设的密码登录后台和手机端。收不到（记得翻垃圾箱）就回这一页点该行右侧的<strong>重发验证邮件</strong>。`);
       }
-    } catch (e) { toast('创建失败：' + e.message); return false }
+    } catch (e) {
+      if (/already registered|already exists|already been registered/i.test(e && e.message || '')) {
+        toast('这个邮箱在 Supabase 里已经有账号了');
+        showBanner('warn', `<strong>${esc(email)}</strong> 在 Supabase 里已经存在登录账号（多半是你在控制台 认证 → 用户 里建过），不用再建一遍。勾上这个弹窗里那行<strong>「这个邮箱的登录账号已经在 Supabase 控制台建好了」</strong>，把控制台 认证 → 用户 里该行末尾 ⋮ → Copy UUID 拿到的 UID 粘进去，点确定就能把它补进名单。`);
+        return false
+      }
+      toast('创建失败：' + (e && e.message ? e.message : e)); return false
+    }
   });
 }
 
@@ -4692,6 +4743,9 @@ async function bootAdmin() {
   // 老数据里的 13 种盒型还是平的一层，开机时按产品线补成两级（种子自带 parent，这里只会动老数据）
   const catFixed = migrateCategoriesToTwoLevels();
   if (catFixed) toast(`商品分类已整理成两级：补了 ${catFixed} 处归属`);
+  // 「设计」这一档已并入「主管」，老数据里的名字开机时统一换掉（改过就是空转）
+  const roleFixed = migrateRoleDesignerToSupervisor();
+  if (roleFixed) toast(`角色「设计」已改名为「主管」，动了 ${roleFixed} 处`);
   // 云端还没人建过的字典（盒型/材质/印刷/工艺…）刚被 seedData 补上默认值，
   // 现在静音已解除，把它们推上服务器，同事登录后拿到的就是同一份选项。
   if (ok && DICT_HEALED.length) {
