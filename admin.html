@@ -375,6 +375,13 @@ const Sync = {
     return { user: data.user, loginable: !!(data.session && data.session.access_token) };
   },
 
+  // 用 anon key 建出来的号一定要对方点验证邮件才能登录，这里替他把那封邮件重发一次。
+  // 想彻底跳过验证只能靠 service_role 密钥，本项目禁止使用，所以不做尝试。
+  async resendSignupConfirm(email) {
+    const { error } = await this.client.auth.resend({ type: 'signup', email });
+    if (error) throw new Error(error.message);
+  },
+
   // ---------- 写：差异上传 ----------
   track(key, prev, next) {
     if (!CLOUD.row.includes(key) && !CLOUD.doc.includes(key)) return;
@@ -4178,15 +4185,28 @@ function saveSettingsFinance() {
   toast('已保存');
 }
 
+// 名单里的「待验证邮箱」由 Supabase 那边决定，本地看不到；但对方能登录成功就说明已经验证过了，
+// 所以在本次登录时把这个标记翻掉，免得主管一直以为账号还没激活。
+function markSelfConfirmed() {
+  const me = Sync.user;
+  if (!me || !me.email) return;
+  const users = DM.get('users');
+  const row = users.find(u => (u.email || '').toLowerCase() === String(me.email).toLowerCase());
+  if (!row || !row.needsConfirm) return;
+  row.needsConfirm = false;
+  if (!row.active) row.active = true;
+  DM.set('users', users);
+}
+
 function renderUsers(c) {
   const users = DM.get('users');
-  const rows = users.map(u=>`<tr><td class="td-name">${esc(u.name)}</td><td>${esc(u.email||'—')}</td><td><span class="badge badge-blue">${esc(u.role)}</span></td><td>${u.needsConfirm?'<span class="badge badge-red">待验证邮箱</span>':(u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">已禁用</span>')}</td><td>${esc(u.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button>${u.email ? ` <button class="btn btn-sm btn-secondary" onclick="sendPasswordReset('${u.email}')">重发密码</button>` : ''} <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">删除</button></td></tr>`).join('');
+  const rows = users.map(u=>`<tr><td class="td-name">${esc(u.name)}</td><td>${esc(u.email||'—')}</td><td><span class="badge badge-blue">${esc(u.role)}</span></td><td>${u.needsConfirm?'<span class="badge badge-red">待验证邮箱</span>':(u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">已禁用</span>')}</td><td>${esc(u.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button>${u.email ? ` <button class="btn btn-sm btn-secondary" onclick="sendPasswordReset('${u.email}')">重发密码</button>` : ''}${u.needsConfirm && u.email ? ` <button class="btn btn-sm btn-secondary" onclick="resendConfirmEmail('${esc(u.email)}')">重发验证邮件</button>` : ''} <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">删除</button></td></tr>`).join('');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">管理员列表</h1><p class="page-desc">${Sync.ready ? '登录账号由 Supabase 托管，密码不写在这份代码里' : '未连接后端，当前只是本机演示名单'}</p></div><button class="btn btn-primary" onclick="openUserModal()">+ 新建账号</button></div>
     ${users.length
       ? `<div class="card"><div class="table-wrap"><table><thead><tr><th>姓名</th><th>登录邮箱</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div>`
       : `<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-500);padding:32px">还没有任何账号。点右上角「新建账号」给同事开一个。</div></div>`}
-    ${Sync.ready ? `<div style="margin-top:16px;font-size:12px;color:var(--gray-500);line-height:1.8">「重发密码」会给对方邮箱发一封重置邮件。「删除」只把这一行从名单里移除；让对方彻底登不进来，还需到 Supabase 控制台 Authentication → Users 里删掉同名邮箱。</div>` : ''}`;
+    ${Sync.ready ? `<div style="margin-top:16px;font-size:12px;color:var(--gray-500);line-height:1.8">「重发密码」会给对方邮箱发一封重置邮件。标着<strong>待验证邮箱</strong>的号，对方必须先点邮件里的确认链接才登得进去，收不到就点该行的「重发验证邮件」；他一旦登录成功，这一行会自动变成「启用」。「删除」只把这一行从名单里移除；让对方彻底登不进来，还需到 Supabase 控制台 Authentication → Users 里删掉同名邮箱。</div>` : ''}`;
 }
 
 function deleteUser(id) {
@@ -4233,7 +4253,7 @@ function openUserModal(id) {
     const password = val('f_password');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('请填写正确的邮箱，它是登录账号'); return false }
     const dup = users.find(u => (u.email || '').toLowerCase() === email);
-    if (dup) { toast(dup.needsConfirm ? email + ' 上次建了一半（卡在邮箱验证）。请到 Supabase 控制台 认证 → 用户 里把它删掉，再改用「添加用户」重建。' : '这个邮箱已经建过了'); return false }
+    if (dup) { toast(dup.needsConfirm ? email + ' 上次建了一半（卡在邮箱验证）。在名单里点这一行的「重发验证邮件」，让对方点链接激活；实在不行再去 Supabase 控制台 认证 → 用户 里删掉重建。' : '这个邮箱已经建过了'); return false }
     if (!password || password.length < 6) { toast('密码至少 6 位'); return false }
     if (!Sync.ready) {
       users.push({id:DM.genId('U'), name, email, role:val('f_role'), active:true, created:DM.now()});
@@ -4250,11 +4270,24 @@ function openUserModal(id) {
       renderPage(currentPageId);
       if (r.loginable) { toast(email + ' 已可登录'); }
       else {
-        toast('账号已建，但 Supabase 要求先验证邮箱，对方现在还登不进去。去控制台 认证 → 用户 → 添加用户 重建一个最省事（那边建出来直接可用）。');
-        showBanner('warn', `<strong>${esc(email)}</strong> 还差一步：Supabase 要求验证邮箱，目前无法登录。最快的解法是在 Supabase 控制台 <strong>认证 → 用户 → 添加用户</strong> 直接建号（建完即可登录，不需要验证邮件），然后把这台机器上的这条记录删掉重来。`);
+        // 当场把验证邮件发出去，别让主管以为号建好了、同事却在手机端登不进去
+        let sent;
+        try { await Sync.resendSignupConfirm(email); sent = '验证邮件已发到 ' + email; }
+        catch (e) { sent = '验证邮件没发出去（' + e.message + '），回名单点「重发验证邮件」'; }
+        toast('账号已建好，差对方点一下邮件里的验证链接 · ' + sent);
+        showBanner('warn', `<strong>${esc(email)}</strong> 已经建好，但 Supabase 要求先验证邮箱，<strong>现在这个密码还登不进去</strong>。让对方用这个邮箱收一封「确认邮箱」邮件、点里面的链接，之后就能拿你刚设的密码登录后台和手机端。收不到（记得翻垃圾箱）就回这一页点该行右侧的<strong>重发验证邮件</strong>。`);
       }
     } catch (e) { toast('创建失败：' + e.message); return false }
   });
+}
+
+// 建号时 Supabase 会要求对方点验证邮件；收不到就从这里补发一封
+async function resendConfirmEmail(email) {
+  if (!Sync.ready) { toast('未连接后端'); return }
+  try {
+    await Sync.resendSignupConfirm(email);
+    toast('验证邮件已发出，请让对方查收（含垃圾箱）');
+  } catch (e) { toast('发送失败：' + e.message) }
 }
 
 async function sendPasswordReset(email) {
@@ -4655,6 +4688,7 @@ async function bootAdmin() {
   }
   seedData();
   Sync.muted = false;
+  if (ok) markSelfConfirmed();
   // 老数据里的 13 种盒型还是平的一层，开机时按产品线补成两级（种子自带 parent，这里只会动老数据）
   const catFixed = migrateCategoriesToTwoLevels();
   if (catFixed) toast(`商品分类已整理成两级：补了 ${catFixed} 处归属`);
