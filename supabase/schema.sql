@@ -360,11 +360,14 @@ create policy "jl_uploads_delete" on storage.objects
 -- 执行完跑下面这句，返回 0 行属正常（表刚建好是空的）。
 -- select collection, count(*) from public.jl_records group by collection order by 2 desc;
 --
--- 想确认外勤隔离这版策略真的建上了（比看控制台靠谱），跑这两句：
---   1) 把每条策略的实际条件打印出来，重点看 jl_staff_full_access 那行
---      是不是带 not starts_with(collection, 'field_')，以及三条 jl_field_* 在不在：
+-- 想确认这版策略真的建上了（比看控制台靠谱），跑这两句：
+--   1) 把每条策略的实际条件打印出来。2026-10-12 之后应该看到 4 条 jl_staff_* 分开的
+--      （read / write / update / delete，都带 not starts_with(collection, 'field_')）
+--      加 3 条 jl_field_*，并且 jl_staff_full_access 这一行**已经不在了**：
 --      select polname, pg_get_expr(polqual, polrelid) as using_条件,
 --             pg_get_expr(polwithcheck, polrelid) as check_条件
 --      from pg_policy where polrelid = 'public.jl_records'::regclass order by polname;
+--      再顺手确认开关建出来了、默认是关的（false = 行为和以前一样）：
+--      select key, value from public.jl_flags;
 --   2) 确认主管名单里有没有你（空表 = 你只能看到自己的外勤记录）：
 --      select user_id, email, note from public.jl_field_supervisors order by created_at;
