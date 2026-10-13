@@ -581,7 +581,9 @@ ul { list-style: none; }
 }
 
 /* 卡片结构照设计稿：米色瓷片里放【标题 + 细分隔线 + 两行描述 + 产品图】，白底价格行留在下面 */
-.product-card {
+/* 首页默认那排行业卡（一级分类）用的是同一套版式，只是内容换成图标 + 行业名 + 类目图 + 商品数 */
+.product-card,
+.industry-card {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -593,6 +595,11 @@ ul { list-style: none; }
   transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
 }
 .product-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--orange-100);
+}
+.industry-card:hover {
   transform: translateY(-6px);
   box-shadow: var(--shadow-lg);
   border-color: var(--orange-100);
@@ -679,6 +686,57 @@ ul { list-style: none; }
   padding: 5px 12px;
   border-radius: 20px;
   white-space: nowrap;
+}
+
+/* 行业卡（首页产品区默认那一排）：图标在标题上方，白底那行是「商品数 + 查看产品」 */
+.tile-icon {
+  font-size: 30px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.product-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-500);
+  background: var(--gray-100);
+  padding: 5px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.industry-go {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orange-600);
+  white-space: nowrap;
+}
+
+/* 点开某个行业后，网格上方那条：返回 + 当前行业名 */
+.grid-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 20px;
+}
+.grid-toolbar[hidden] { display: none; }
+.grid-back {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 20px;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+}
+.grid-back:hover { color: var(--orange-600); border-color: var(--orange-100); }
+.grid-crumb {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-900);
 }
 
 /* ===== Process ===== */
@@ -1404,10 +1462,12 @@ a.footer-info-val:hover { color: var(--white); }
 }
 
 /* ===== Product Card Clickable ===== */
-.product-card {
+.product-card,
+.industry-card {
   cursor: pointer;
 }
-.product-card:hover .product-image {
+.product-card:hover .product-image,
+.industry-card:hover .product-image {
   transform: scale(1.02);
 }
 
@@ -2019,6 +2079,7 @@ a.footer-info-val:hover { color: var(--white); }
 @media (prefers-reduced-motion: no-preference) {
   .advantage-card,
   .product-card,
+  .industry-card,
   .process-step {
     opacity: 0;
     transform: translateY(24px);

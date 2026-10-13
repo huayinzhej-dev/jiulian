@@ -43,6 +43,10 @@
       const placeholder = textarea.getAttribute(`data-${lang}-placeholder`);
       if (placeholder) textarea.placeholder = placeholder;
     }
+
+    // 弹窗里的标题/描述是 JS 直接塞进 textContent 的，上面那圈 data-* 刷不到它：
+    // 后台只填中文时，英文页会留着刚才那段中文。重开一次同一张卡片就按新语言重取文案。
+    if (modalCard && productModal.classList.contains('active')) openProductModalFromCard(modalCard);
   }
 
   document.querySelectorAll('.lang-btn').forEach(btn => {
@@ -90,33 +94,43 @@
   const modalShowcase = document.getElementById('modalShowcase');
   const showcaseGrid = document.getElementById('modalShowcaseGrid');
   const catTabsHost = document.getElementById('modalCatTabs');
-  let catRows = [];            // 后台那张两级分类表，弹窗里那排标签要用
-  let modalOrigin = null;      // 弹窗当前对应的首页原卡片
-  let modalCat = '';           // 弹窗里选中的二级分类 id
-  let modalLine = new Set();   // 该二级所在产品线下的所有二级 id，用来给展示条补位
+  let catRows = [];            // 后台那张三级分类表，首页的行业卡和弹窗里那排标签都要用
+  let allProducts = [];        // 在售商品，行业卡点开时按分类筛这一份
+  let openIndustry = '';       // 首页产品区当前展开的一级分类 id，空 = 显示行业列表
+  let modalCat = '';           // 当前商品挂在那个末级分类上
+  let modalGroup = '';         // 弹窗里当前选中的分组 id（三级表=材质工艺，两级表=产品线）
+  let modalGroups = [];        // 和它同一级的其他分组，用来出那排标签
+  let modalCard = null;        // 当前弹窗对应的那张卡片，切语言时按原样重渲染一次
 
   function openProductModalFromCard(card) {
+    modalCard = card;
     const nameEn = card.dataset.nameEn;
     const nameZh = card.dataset.nameZh;
+    const nameBm = card.dataset.nameBm;
     const descEn = card.dataset.descEn;
     const descZh = card.dataset.descZh;
+    const descBm = card.dataset.descBm;
     const price = card.dataset.price;
     const moq = card.dataset.moq;
 
-    const zh = currentLang === 'zh';
     // 标题/描述/价格这几行同时带 data-*：只写 textContent 的话，弹窗开着切语言
     // 会被 switchLanguage 拿页面里那两个占位属性刷回「Product Name」。
-    const setLangText = (id, latin, chinese) => {
+    // 马来文单独一路：后台没填 descBm 时沿用英文（和卡片上的规则一致），别把英文写死进 data-bm。
+    const setLangText = (id, latin, chinese, malay) => {
       const el = document.getElementById(id);
       const l = latin || '';
       const c = chinese || l;
+      const b = malay || l;
       el.setAttribute('data-en', l);
-      el.setAttribute('data-bm', l);
+      el.setAttribute('data-bm', b);
       el.setAttribute('data-zh', c);
-      el.textContent = zh ? c : l;
+      el.textContent = currentLang === 'zh' ? c : currentLang === 'bm' ? b : l;
     };
-    setLangText('modalProductName', nameEn, nameZh);
-    setLangText('modalProductDesc', descEn, descZh);
+    setLangText('modalProductName', nameEn, nameZh, nameBm);
+    setLangText('modalProductDesc', descEn, descZh, descBm);
+    // 说明常常只有中文（分类表过来就是这样）：当前语言拿不到文案就整行藏掉，别留一个空paragraph
+    const descEl = document.getElementById('modalProductDesc');
+    if (descEl) descEl.style.display = descEl.textContent.trim() ? '' : 'none';
     // 后台没填价格/起订量时整行藏掉，别显示「起价 RM 0.00」这种假数字
     const showLine = (id, latin, chinese) => {
       setLangText(id, latin, chinese);
@@ -126,8 +140,10 @@
     showLine('modalPrice', price ? `from RM ${price}` : '', price ? `起价 RM ${price}` : '');
     showLine('modalMOQ', moq ? `MOQ: ${moq} pcs` : '', moq ? `起订量: ${moq}件` : '');
 
-    modalOrigin = gridOriginOf(card);
-    modalCat = catIdOf(modalOrigin);
+    modalCat = catIdOf(card);
+    const group = groupOfCat(modalCat);
+    modalGroup = group ? String(group.id) : '';
+    modalGroups = group ? siblingGroups(group) : [];
     renderModalTabs();
     renderModalStrip();
     productModal.classList.add('active');
@@ -135,49 +151,62 @@
   }
 
   const catIdOf = card => String(card.dataset.catId || '');
-  const gridCards = () => Array.from(document.querySelectorAll('.products-grid .product-card'));
 
-  // 弹窗里点进来的卡片是克隆体，跟网格里的原卡片不是同一个节点，
-  // 所以按建块时记下的下标找回原位置，否则切换商品后展示顺序不动。
-  function gridOriginOf(card) {
-    const all = gridCards();
-    const at = Number(card.dataset.showcaseIdx);
-    return Number.isInteger(at) && at >= 0 && at < all.length ? all[at] : card;
+  // 弹窗「相关产品」拿哪批商品：库里有商品就用库里那份；库里空着（首页显示的是页面
+  // 写死的那 6 张示例卡）就在开机时把那 6 张卡读成记录存下来。
+  // 以前这块是克隆首页 DOM 卡片，改成按数据重建后写死那批不在数据里，所以要有这一份。
+  const staticPool = Array.from(document.querySelectorAll('.products-grid .product-card')).map(el => ({
+    id: el.dataset.product || '',
+    categoryId: el.dataset.catId || '',
+    name: el.dataset.nameEn || '',
+    nameZh: el.dataset.nameZh || '',
+    nameBm: el.dataset.nameBm || '',
+    desc: el.dataset.descEn || '',
+    descZh: el.dataset.descZh || '',
+    descBm: el.dataset.descBm || '',
+    price: el.dataset.price || '',
+    moq: el.dataset.moq || '',
+    moqUnit: el.dataset.moqUnit || 'pcs',
+    image: (el.querySelector('.product-photo') || {}).src || '',
+  }));
+  const modalPool = () => (allProducts.length ? allProducts : staticPool);
+
+  // 弹窗里那排标签 = 商品所属分类的「上一级分组」：三级表里就是同一条行业下面那些
+  // 材质工艺（PET包装 / 彩印包装 / 瓦楞包装），两级表里就是那几条产品线。
+  // 商品直接挂在带下级的行上时，那一行自己就是分组。
+  function groupOfCat(catId) {
+    const live = liveCats();
+    const find = id => live.find(c => String(c.id) === id);
+    const self = find(catId);
+    if (!self) return null;
+    if (self.parent) {
+      const up = find(String(self.parent));
+      if (up) return up;
+    }
+    return live.some(k => String(k.parent) === String(self.id)) ? self : null;
   }
 
-  // 一条产品线下面的所有二级。商品直接挂在一行上、它自己就是那条产品线的情况也算，
-  // 但带下级的行永远不当标签（那是一级，点它等于点整条线）。
-  function lineLeaves(catId) {
-    const live = catRows.filter(c => c.active !== false);
-    const hasKids = c => live.some(x => String(x.parent || '') === String(c.id));
-    const self = live.find(c => String(c.id) === catId);
-    if (!self) return [];
-    const line = self.parent ? String(self.parent) : (hasKids(self) ? String(self.id) : '');
-    if (!line) return [];
-    return live.filter(c => String(c.parent || '') === line && !hasKids(c)).sort(catSort);
+  // 和这个分组同一级的其他分组（同一个上级下面；分组自己就是行业顶级时拿全部行业），
+  // 只留下面真的有在售商品的。
+  function siblingGroups(group) {
+    const live = liveCats();
+    const parentId = String(group.parent || '');
+    return live.filter(c => String(c.parent || '') === parentId && productsUnder(modalPool(), String(c.id), live).length)
+      .sort(catSort);
   }
 
-  // 标签只出「这一类下面真的有在售商品」的二级，而且少于两个就不摆——
-  // 一个标签点了没任何变化，等于假控件。
+  // 少于两个分组就不摆标签——一个标签点了没任何变化，等于假控件。
   function renderModalTabs() {
     if (!catTabsHost) return;
     catTabsHost.textContent = '';
-    const counts = {};
-    gridCards().forEach(el => {
-      const id = catIdOf(el);
-      if (id) counts[id] = (counts[id] || 0) + 1;
-    });
-    const leaves = lineLeaves(modalCat);
-    modalLine = new Set(leaves.map(c => String(c.id)));
-    const shown = leaves.filter(c => counts[String(c.id)]);
-    if (shown.length < 2) { catTabsHost.hidden = true; return; }
-    shown.forEach(c => {
+    if (modalGroups.length < 2) { catTabsHost.hidden = true; return; }
+    modalGroups.forEach(c => {
       const b = make('button', 'cat-tab', c.nameEn || c.name, c.name, c.nameBm || c.nameEn || c.name);
       // make() 只写英文，而标签是点开弹窗时才建的（比页面首次翻译晚），
       // 所以中文/马来文页要按当前语种补一次，否则整排标签会是英文。
       if (currentLang !== 'en') b.textContent = b.dataset[currentLang] || b.textContent;
       b.type = 'button';
-      b.dataset.cat = String(c.id);
+      b.dataset.group = String(c.id);
       catTabsHost.appendChild(b);
     });
     catTabsHost.hidden = false;
@@ -187,36 +216,23 @@
   function syncModalTabs() {
     if (!catTabsHost) return;
     catTabsHost.querySelectorAll('.cat-tab').forEach(btn => {
-      const on = String(btn.dataset.cat) === modalCat;
+      const on = String(btn.dataset.group) === modalGroup;
       btn.classList.toggle('is-active', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
   }
 
-  // 三联展示：直接复用首页那批卡片（数据库渲染或页面写死的都算），
-  // 只有当前商品一个卡片时整块藏掉，不摆空架子。
+  // 标签下面就是这一组的全部商品（卡片沿用首页那套皮肤，只是尺寸收紧）。
+  // 认不出分组的商品（没挂分类、或挂的分类不在这棵树里）就把在售商品整份列出来，不摆标签。
   function renderModalStrip() {
     if (!modalShowcase || !showcaseGrid) return;
     showcaseGrid.textContent = '';
-    const all = gridCards();
-    if (all.length < 2) { modalShowcase.hidden = true; return; }
-    // 选中的那一类排最前，同产品线的其次，凑不满三张再拿其余的补。
-    // 三档之间不互换（否则"把当前商品挪到最前"会把访客刚选的那一类挤出三格外），
-    // 只在各自档内轮转。
-    const groupOf = card => {
-      const id = catIdOf(card);
-      return id === modalCat ? 0 : (modalLine.has(id) ? 1 : 2);
-    };
-    const list = [0, 1, 2].reduce((acc, g) => {
-      const part = all.filter(c => groupOf(c) === g);
-      const at = part.indexOf(modalOrigin);
-      return acc.concat(at > 0 ? part.slice(at).concat(part.slice(0, at)) : part);
-    }, []);
-    list.slice(0, 3).forEach(src => {
-      const mini = src.cloneNode(true);
-      if (src === modalOrigin) mini.classList.add('is-current');
-      mini.dataset.showcaseIdx = String(all.indexOf(src));
-      showcaseGrid.appendChild(mini);
+    const list = modalGroup ? productsUnder(modalPool(), modalGroup) : modalPool();
+    if (list.length < 2) { modalShowcase.hidden = true; return; }
+    buildProductCards(showcaseGrid, list);
+    const current = String((modalCard && modalCard.dataset.product) || '');
+    showcaseGrid.querySelectorAll('.product-card').forEach(el => {
+      if (current && el.dataset.product === current) el.classList.add('is-current');
     });
     modalShowcase.hidden = false;
   }
@@ -224,6 +240,8 @@
   const productsGrid = document.querySelector('.products-grid');
   if (productsGrid) {
     productsGrid.addEventListener('click', (e) => {
+      const ind = e.target.closest('.industry-card');
+      if (ind) { openIndustry = String(ind.dataset.ind || ''); renderProductSection(); return; }
       const card = e.target.closest('.product-card');
       if (card) openProductModalFromCard(card);
     });
@@ -242,8 +260,8 @@
   if (catTabsHost) {
     catTabsHost.addEventListener('click', e => {
       const btn = e.target.closest('.cat-tab');
-      if (!btn || btn.dataset.cat === modalCat) return;
-      modalCat = btn.dataset.cat;
+      if (!btn || btn.dataset.group === modalGroup) return;
+      modalGroup = String(btn.dataset.group);
       syncModalTabs();
       renderModalStrip();
     });
@@ -607,10 +625,8 @@
     return true;
   }
 
-  function renderProducts(list) {
-    const host = document.querySelector('.products-grid');
-    const rows = (list || []).filter(p => p && p.name && p.status !== 'inactive');
-    if (!host || !rows.length) return false;
+  // 商品网格的建块（行业点开后的商品、以及没有一级分类时的整批商品都走这里）
+  function buildProductCards(host, rows) {
     host.textContent = '';
     rows.forEach((p, i) => {
       const card = make('div', 'product-card');
@@ -618,19 +634,24 @@
       card.dataset.catId = p.categoryId == null ? '' : String(p.categoryId);
       card.dataset.nameEn = p.name;
       card.dataset.nameZh = p.nameZh || p.name;
+      card.dataset.nameBm = p.nameBm || '';
       card.dataset.descEn = p.desc || '';
       card.dataset.descZh = p.descZh || p.desc || '';
+      card.dataset.descBm = p.descBm || '';
       card.dataset.price = Number(p.price) > 0 ? Number(p.price).toFixed(2) : '';
       card.dataset.moq = Number(p.moq) > 0 ? String(p.moq) : '';
 
       const tile = make('div', 'product-tile');
-      tile.appendChild(make('h3', 'tile-title', p.name, p.nameZh));
+      // 点开行业才建的这批卡片比页面首次翻译晚，所以每段文案建完都按当前语种补一次（见 painted）
+      tile.appendChild(painted(make('h3', 'tile-title', p.name, p.nameZh, p.nameBm)));
       const rule = document.createElement('span');
       rule.className = 'tile-rule';
       rule.setAttribute('aria-hidden', 'true');
       tile.appendChild(rule);
       // 没有描述也留一个空占位，否则各卡图片起始高度不齐
-      tile.appendChild(p.desc ? make('p', 'tile-desc', p.desc, p.descZh) : make('p', 'tile-desc'));
+      tile.appendChild(p.desc || p.descBm || p.descZh
+        ? painted(make('p', 'tile-desc', p.desc, p.descZh, p.descBm))
+        : make('p', 'tile-desc'));
 
       const pic = make('div', 'product-image');
       const url = safeUrl(p.image);
@@ -649,11 +670,11 @@
 
       const meta = make('div', 'product-meta');
       if (card.dataset.price) {
-        meta.appendChild(make('span', 'product-price', `from RM ${card.dataset.price}`, `起价 RM ${card.dataset.price}`));
+        meta.appendChild(painted(make('span', 'product-price', `from RM ${card.dataset.price}`, `起价 RM ${card.dataset.price}`)));
       }
       if (card.dataset.moq) {
         const unit = p.moqUnit || 'pcs';
-        meta.appendChild(make('span', 'product-moq', `MOQ: ${card.dataset.moq} ${unit}`, `起订量: ${card.dataset.moq}件`));
+        meta.appendChild(painted(make('span', 'product-moq', `MOQ: ${card.dataset.moq} ${unit}`, `起订量: ${card.dataset.moq}件`)));
       }
       if (meta.childElementCount) card.appendChild(meta);
       host.appendChild(card);
@@ -661,11 +682,178 @@
     return true;
   }
 
+  // ===== 首页产品区：默认列一级分类（行业卡），点开才看该行业下的商品 =====
+  function renderProducts(list) {
+    allProducts = (list || []).filter(p => p && p.name && p.status !== 'inactive');
+    return renderProductSection();
+  }
+
+  // 分类表/商品表任一到位都要重算，所以两个入口都汇到这里
+  function renderProductSection() {
+    const host = document.querySelector('.products-grid');
+    if (!host || !allProducts.length) return false;
+    const entries = industryEntries();
+    // 只有一个行业时，「点开看商品」点了等于没点，不如直接把商品铺开
+    if (entries.length < 2) { openIndustry = ''; hideGridToolbar(); return buildProductCards(host, allProducts); }
+    if (!openIndustry) return renderIndustryGrid(host, entries);
+    const entry = entries.find(x => x.key === openIndustry);
+    if (!entry) { openIndustry = ''; return renderIndustryGrid(host, entries); }
+    buildProductCards(host, entry.list);
+    showGridToolbar(entry.cat);
+    return true;
+  }
+
+  const liveCats = () => catRows.filter(c => c.active !== false);
+  const OTHER_KEY = '__other__';
+  const OTHER_CAT = { id: OTHER_KEY, name: '其他产品', nameEn: 'Other Products', nameBm: 'Produk Lain', icon: '📦' };
+
+  // 一级（行业）= 没有上级、下面又挂着子分类的那几行。商品永远挂在最末一级，
+  // 所以一个行业有多少商品要顺着整棵树往下数；下面没有在售商品的行业不出卡。
+  // 没挂进任何行业的商品（未分类、上级被删的孤儿）再补一张「其他产品」卡，
+  // 否则首页换成行业卡以后，这些商品在首页就再也翻不到了。
+  function industryEntries() {
+    const live = liveCats();
+    const kidsOf = id => live.filter(c => String(c.parent || '') === String(id));
+    const covered = new Set();
+    const out = live.filter(c => !c.parent && kidsOf(String(c.id)).length)
+      .sort(catSort)
+      .map(c => {
+        const list = productsUnder(allProducts, String(c.id), live);
+        list.forEach(p => covered.add(p));
+        return { key: String(c.id), cat: c, list };
+      })
+      .filter(x => x.list.length);
+    const rest = allProducts.filter(p => !covered.has(p));
+    if (rest.length) out.push({ key: OTHER_KEY, cat: OTHER_CAT, list: rest });
+    return out;
+  }
+
+  function leavesUnder(rootId, live) {
+    const ids = new Set([String(rootId)]);
+    (function walk(pid) {
+      live.filter(c => String(c.parent || '') === pid).forEach(k => {
+        const kid = String(k.id);
+        if (live.some(c => String(c.parent || '') === kid)) walk(kid);
+        else ids.add(kid);
+      });
+    })(String(rootId));
+    return ids;
+  }
+
+  function productsUnder(list, rootId, live) {
+    const ids = leavesUnder(rootId, live || liveCats());
+    return list.filter(p => ids.has(String(p.categoryId || '')));
+  }
+
+  // 行业卡上那张图：优先用他在这一级分类的「封面图」里传的，没传就拿这个行业下
+  // 第一个配了图的商品顶上，卡片不会出现空洞。
+  function industryCoverImage(entry) {
+    const hit = entry.list.find(p => safeUrl(p.image));
+    return hit ? safeUrl(hit.image) : '';
+  }
+
+  function productCountLabel(n) {
+    return make('span', 'product-count', n === 1 ? '1 product' : n + ' products', n + ' 款产品', n + ' produk');
+  }
+
+  function renderIndustryGrid(host, entries) {
+    hideGridToolbar();
+    host.textContent = '';
+    entries.forEach(({ cat, list }, i) => {
+      const count = list.length;
+      const card = make('div', 'industry-card');
+      card.dataset.ind = String(cat.id);
+
+      const tile = make('div', 'product-tile');
+      // 图标必须是标题的兄弟节点：switchLanguage 只替换「第一个节点是文本」的元素，
+      // 把 emoji 塞进 h3 里，中文/马来文页就会一直顶着英文标题。
+      if (cat.icon) {
+        const ic = document.createElement('span');
+        ic.className = 'tile-icon';
+        ic.setAttribute('aria-hidden', 'true');
+        ic.textContent = String(cat.icon);
+        tile.appendChild(ic);
+      }
+      tile.appendChild(painted(make('h3', 'tile-title', cat.nameEn || cat.name, cat.name, cat.nameBm || cat.nameEn || cat.name)));
+      const rule = document.createElement('span');
+      rule.className = 'tile-rule';
+      rule.setAttribute('aria-hidden', 'true');
+      tile.appendChild(rule);
+      tile.appendChild(cat.desc || cat.descEn || cat.descBm
+        ? painted(make('p', 'tile-desc', cat.descEn || cat.desc, cat.desc, cat.descBm || cat.descEn || cat.desc))
+        : make('p', 'tile-desc'));
+
+      const pic = make('div', 'product-image');
+      const url = safeUrl(cat.image) || industryCoverImage({ list });
+      if (url) {
+        const img = document.createElement('img');
+        img.className = 'product-photo';
+        img.src = url;
+        img.alt = cat.nameEn || cat.name;
+        img.loading = 'lazy';
+        pic.appendChild(img);
+      } else {
+        pic.innerHTML = '<svg width="76" height="76" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="0.85" aria-hidden="true">' + PRODUCT_ART[i % PRODUCT_ART.length] + '</svg>';
+      }
+      tile.appendChild(pic);
+      card.appendChild(tile);
+
+      const meta = make('div', 'product-meta');
+      meta.appendChild(painted(productCountLabel(count)));
+      meta.appendChild(painted(make('span', 'industry-go', 'View products', '查看产品', 'Lihat produk')));
+      card.appendChild(meta);
+      host.appendChild(card);
+    });
+    return true;
+  }
+
+  // 点开行业后网格上方那条：返回按钮 + 当前行业名
+  function gridToolbar() {
+    const host = document.querySelector('.products-grid');
+    if (!host || !host.parentNode) return null;
+    let bar = document.getElementById('gridToolbar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'gridToolbar';
+      bar.className = 'grid-toolbar';
+      bar.addEventListener('click', e => {
+        if (!e.target.closest('.grid-back')) return;
+        openIndustry = '';
+        renderProductSection();
+      });
+      host.parentNode.insertBefore(bar, host);
+    }
+    return bar;
+  }
+
+  function hideGridToolbar() {
+    const bar = document.getElementById('gridToolbar');
+    if (bar) bar.hidden = true;
+  }
+
+  function showGridToolbar(cat) {
+    const bar = gridToolbar();
+    if (!bar) return;
+    bar.textContent = '';
+    const back = make('button', 'grid-back', '← All industries', '← 返回全部行业', '← Semua industri');
+    back.type = 'button';
+    bar.appendChild(painted(back));
+    bar.appendChild(painted(make('span', 'grid-crumb', cat.nameEn || cat.name, cat.name, cat.nameBm || cat.nameEn || cat.name)));
+    bar.hidden = false;
+  }
+
+  // make() 永远只把英文写进 textContent，而这些卡片是点开行业时才新建的（比页面首次翻译晚），
+  // 所以中文/马来文页要按当前语种补一次，否则整排卡片会是英文。
+  function painted(el) {
+    if (currentLang !== 'en') el.textContent = el.dataset[currentLang] || el.textContent;
+    return el;
+  }
+
   // ===== 商品分类 =====
-  // 分类表只交给弹窗里那排二级标签用（见 renderModalTabs），首页网格不再按分类筛。
+  // 分类表喂首页的行业卡和弹窗里那排末级标签。
   function setProductCategories(cats) {
     catRows = (cats || []).filter(c => c && (c.name || c.nameEn));
-    return false;
+    return renderProductSection();
   }
 
   function catSort(a, b) { return (Number(a.sort) || 0) - (Number(b.sort) || 0); }
@@ -1062,8 +1250,9 @@
     let changed = false;
     const parts = [
       [renderClients, bag.clients],
-      [renderProducts, bag.products],
+      // 分类要先存下来：行业卡要按分类树数商品，顺序反了就会先铺商品再补分类
       [setProductCategories, bag.categories],
+      [renderProducts, bag.products],
       [applyHeroShowcase, bag.products],
       [renderFaqs, bag.faqs],
       [applyBanner, docs.settings_banner],

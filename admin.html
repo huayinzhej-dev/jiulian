@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="js/sb-config.js"></script>
   <script src="js/field-model.js"></script>
+  <script src="js/categories-seed.js"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -606,21 +607,36 @@ function catChildren(id, cats) {
 function isCatLine(c) { return CAT_LINES.some(l => isLineRow(l, c)); }
 const byCatSort = (a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0) || String(a.name).localeCompare(String(b.name), 'zh');
 // 返回 [{top:一级对象|null, items:[可选分类]}]，items 已按 sort 排好
+// 三级：一级=行业、二级=材质工艺、三级=品名。能挂商品的永远是"没有下级的那一行"，
+// 所以这里一路往下找到叶子，二级即使本身有名字也不能进下拉。
 function catGroups(cats) {
   const s = arr => arr.slice().sort(byCatSort);
+  const leavesUnder = root => {
+    const found = [];
+    (function walk(c, path) {
+      const kids = catChildren(c.id, cats);
+      if (!kids.length) found.push({ c, path });
+      else kids.forEach(k => walk(k, path.concat([k.name])));
+    })(root, []);
+    return found;
+  };
   const out = [];
   const listed = new Set();
   s(cats.filter(c => !c.parent)).forEach(t => {
-    const kids = s(catChildren(t.id, cats));
     listed.add(String(t.id));
+    const kids = catChildren(t.id, cats);
     if (kids.length) {
-      out.push({ top: t, items: kids });
-      kids.forEach(k => listed.add(String(k.id)));
+      const leaves = s(leavesUnder(t).map(x => x.c));
+      const labelOf = {};
+      leavesUnder(t).forEach(x => { if (x.path.length > 1) labelOf[String(x.c.id)] = x.path.slice(0, -1).join(' › '); });
+      out.push({ top: t, items: leaves, groupLabel: labelOf });
+      // 整棵子树都算已归组：只标记叶子的话，中间那级材质工艺会掉进"未归级"，等于允许商品挂在分组上
+      (function mark(pid) { catChildren(pid, cats).forEach(k => { listed.add(String(k.id)); mark(k.id); }); })(t.id);
     } else if (!isCatLine(t)) {
       out.push({ top: null, items: [t] });
     }
   });
-  // 上级被删掉的二级、以及万一混进来的三级（挂在二级下面），都得出现在"未归级"里；
+  // 上级被删掉的孤儿、以及万一混进来的深层行，都得出现在"未归级"里；
   // 否则编辑旧商品时下拉里找不到它，一保存就把分类悄悄刷没了
   const rest = cats.filter(c => !listed.has(String(c.id)));
   if (rest.length) out.push({ top: null, items: s(rest) });
@@ -632,15 +648,18 @@ function catOptions(cats, cur, ph, valueOf) {
   const loose = [];
   catGroups(cats).forEach(g => (g.top ? groups : loose).push(g));
   let html = ph === null ? '' : `<option value="">-- ${esc(ph || '选择分类')} --</option>`;
-  const opts = arr => arr.map(c => `<option value="${esc(valueOf(c))}"${String(cur) === String(valueOf(c)) ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
-  groups.forEach(g => { html += `<optgroup label="${esc(g.top.name)}">${opts(g.items)}</optgroup>`; });
+  const opts = (arr, labels) => arr.map(c => {
+    const up = labels && labels[String(c.id)];
+    return `<option value="${esc(valueOf(c))}"${String(cur) === String(valueOf(c)) ? ' selected' : ''}>${esc(up ? up + ' › ' + c.name : c.name)}</option>`;
+  }).join('');
+  groups.forEach(g => { html += `<optgroup label="${esc(g.top.name)}">${opts(g.items, g.groupLabel)}</optgroup>`; });
   const flat = loose.reduce((a, g) => a.concat(g.items), []);
   if (flat.length) html += `<optgroup label="未归级（可直接挂商品）">${opts(flat)}</optgroup>`;
   const all = groups.reduce((a, g) => a.concat(g.items), []).concat(flat);
   if (cur && !all.some(c => String(valueOf(c)) === String(cur))) {
-    // 两种情况：分类被删了；或者它现在升级成一级了（他把二级挂到了它下面），旧商品得改挂到二级
+    // 两种情况：分类被删了；或者它下面挂了下级（升级成了分组），旧商品得改挂到最末一级
     const dead = cats.find(c => String(valueOf(c)) === String(cur));
-    const label = dead ? `${dead.name}（现在是分组，请改选它下面的二级）` : `${cur}（原分类已删除）`;
+    const label = dead ? `${dead.name}（现在是分组，请改选它下面的分类）` : `${cur}（原分类已删除）`;
     html += `<option value="${esc(cur)}" selected>${esc(label)}</option>`;
   }
   return html;
@@ -719,27 +738,10 @@ function seedData() {
     seedOne('dielines', dielines);
   }
 
-  // 两级：3 条产品线做一级（只分组、不挂商品），原来的 13 种盒型全部挂到对应产品线下当二级。
-  // 一级名称沿用首页「产品中心」那句副标题的三条线：PET包装盒 / 精品彩盒 / 瓦楞外箱。
-  const categories = [
-    {id:'CAT-L1-PET',name:'PET包装',nameEn:'PET Packaging',nameBm:'Pembungkusan PET',parent:'',slug:'pet-packaging',icon:'🥡',sort:1,active:true},
-    {id:'CAT-L1-COLOUR',name:'精品彩盒',nameEn:'Colour Boxes',nameBm:'Kotak Warna',parent:'',slug:'colour-boxes',icon:'🎁',sort:2,active:true},
-    {id:'CAT-L1-CARTON',name:'瓦楞外箱',nameEn:'Corrugated Cartons',nameBm:'Kadbod Berombak',parent:'',slug:'corrugated-cartons',icon:'📦',sort:3,active:true},
-    {id:'CAT-01',name:'飞机盒',nameEn:'Mailer Box',nameBm:'',parent:'CAT-L1-CARTON',slug:'mailer-box',icon:'📦',sort:1,active:true},
-    {id:'CAT-02',name:'套筒盒',nameEn:'Sleeve Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'sleeve-box',icon:'🎁',sort:1,active:true},
-    {id:'CAT-03',name:'天地盖',nameEn:'Lid and Base Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'lid-base-box',icon:'📦',sort:2,active:true},
-    {id:'CAT-04',name:'手提盒',nameEn:'Handle Box',nameBm:'',parent:'CAT-L1-PET',slug:'handle-box',icon:'🛍️',sort:1,active:true},
-    {id:'CAT-05',name:'彩色运输盒',nameEn:'Colour Shipping Box',nameBm:'',parent:'CAT-L1-CARTON',slug:'shipping-box',icon:'🚚',sort:2,active:true},
-    {id:'CAT-06',name:'蛋糕盒',nameEn:'Cake Box',nameBm:'',parent:'CAT-L1-PET',slug:'cake-box',icon:'🎂',sort:2,active:true},
-    {id:'CAT-07',name:'食品盒',nameEn:'Food Box',nameBm:'',parent:'CAT-L1-PET',slug:'food-box',icon:'🍱',sort:3,active:true},
-    {id:'CAT-08',name:'纸袋',nameEn:'Paper Bag',nameBm:'',parent:'CAT-L1-COLOUR',slug:'paper-bag',icon:'🛍️',sort:3,active:true},
-    {id:'CAT-09',name:'椰枣盒',nameEn:'Date Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'date-box',icon:'🌴',sort:4,active:true},
-    {id:'CAT-10',name:'酒盒',nameEn:'Wine Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'wine-box',icon:'🍷',sort:5,active:true},
-    {id:'CAT-11',name:'插边盒',nameEn:'Tuck End Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'tuck-end-box',icon:'📦',sort:6,active:true},
-    {id:'CAT-12',name:'精装盒',nameEn:'Rigid Box',nameBm:'',parent:'CAT-L1-COLOUR',slug:'rigid-box',icon:'💎',sort:7,active:true},
-    {id:'CAT-13',name:'POS展示架',nameEn:'POS Display',nameBm:'',parent:'CAT-L1-CARTON',slug:'pos-display',icon:'🏪',sort:3,active:true}
-  ];
-  seedDict('categories', categories);
+  // 三级分类：一级=行业（9）、二级=材质工艺（30）、三级=品名（86）。
+  // 整张表在 js/categories-seed.js 里（和 supabase/seed-categories.sql 同一套 id），
+  // 云端有数据时 pullAll 会直接盖掉本机这份，所以两边不会同时存在两份。
+  seedDict('categories', (window.JL_CAT_SEED || []).map(x => Object.assign({}, x)));
 
   const faqs = [
     {id:'FAQ-01',category:'MOQ',question:'What is the minimum order quantity?',answer:'Our MOQ starts from 100 pieces for standard products and 500 pieces for custom printed items.',sort:1},
@@ -783,14 +785,10 @@ function seedData() {
   seedOne('logs', logs);
 
 
+  // 商品种子 = 每个末级分类一条（名字 / 说明 / 图片全部来自他的分类方案表，价格和起订量故意留空，
+  // 前台会自动藏掉那两行，不会出现「起价 RM 0.00」这种假数字）。
   if (!DM.get('products') || DM.get('products').length === 0) {
-    const products = [
-      {id:'PRD-01',name:'飞机盒 Mailer Box',nameZh:'飞机盒',categoryId:'CAT-01',category:'飞机盒',price:1.67,moq:100,moqUnit:'pcs',status:'active',image:'',desc:'Corrugated mailer box, eco-friendly and sturdy'},
-      {id:'PRD-02',name:'食品盒 Food Box',nameZh:'食品盒',categoryId:'CAT-07',category:'食品盒',price:0.15,moq:500,moqUnit:'pcs',status:'active',image:'',desc:'Food-grade paper box, safe for direct contact'},
-      {id:'PRD-03',name:'精装盒 Rigid Box',nameZh:'精装盒',categoryId:'CAT-12',category:'精装盒',price:0.25,moq:200,moqUnit:'pcs',status:'active',image:'',desc:'Premium rigid box with luxury finishing'},
-      {id:'PRD-04',name:'纸袋 Paper Bag',nameZh:'纸袋',categoryId:'CAT-08',category:'纸袋',price:0.10,moq:500,moqUnit:'pcs',status:'active',image:'',desc:'Custom printed paper bag with handles'}
-    ];
-    seedOne('products', products);
+    seedOne('products', (window.JL_PRODUCT_SEED || []).map(x => Object.assign({}, x)));
   }
   seedDict('printingOptions', ['0C (无印刷)','1C 单色','4C 四色','4C+0C','4C+1C','4C+4C','1C+0C','1C+1C','Flexo 1C','Flexo 2C','Brown Base','White Base','Laserfoil']);
   seedDict('finishingOptions', ['哑光覆膜','光面覆膜','柔触感 Soft Touch','无覆膜','Spot UV','Emboss','Deboss','Hot-stamp Foil']);
@@ -2896,6 +2894,9 @@ const CAT_EN_BY_NAME = {
 function migrateCategoriesToTwoLevels() {
   const cats = DM.get('categories');
   if (!cats.length) return 0;
+  // 现在是三级表（行业 → 材质工艺 → 品名），层级由分类数据自己带着。
+  // 这套两级时代的归级逻辑一旦跑起来会往表里插三条老产品线当一级，所以见到三级行就直接退出。
+  if (cats.some(c => c.parent && cats.some(p => String(p.id) === String(c.parent) && p.parent))) return 0;
   let changed = 0;
   const lineIdOf = {};          // 规范产品线 id -> 数据里实际那一行的 id
   CAT_LINES.forEach(l => {
@@ -2930,58 +2931,92 @@ function renderCategories(c) {
   const orphans = cats.filter(x => x.parent && !cats.some(t => String(t.id) === String(x.parent))).sort(byCatSort);
   const loose = tops.filter(t => !catChildren(t.id, cats).length && !isCatLine(t));
   const rowsOf = (cat, depth) => {
-    const kids = catChildren(cat.id, cats);
-    const count = depth ? nProducts(cat.id) : kids.reduce((s, k) => s + nProducts(k.id), 0) + nProducts(cat.id);
+    const kids = catChildren(cat.id, cats).sort(byCatSort);
+    const leafCount = () => { let n = 0; (function walk(x) { const ks = catChildren(x.id, cats); ks.length ? ks.forEach(walk) : n++; })(cat); return n; };
+    const count = kids.length ? (() => { let n = 0; (function walk(x) { n += nProducts(x.id); catChildren(x.id, cats).forEach(walk); })(cat); return n; })() : nProducts(cat.id);
+    const lv = ['一级 · 行业', '二级 · 材质工艺', '三级 · 品名'][Math.min(depth, 2)];
     return `<tr>
       <td>${esc(cat.sort)}</td>
       <td>${esc(cat.icon)}</td>
-      <td class="td-name" style="${depth ? 'padding-left:26px' : ''}">${depth ? '<span style="color:var(--gray-400)">└ </span>' : '<b>'}${esc(cat.name)}${depth ? '' : '</b>'}${!depth && kids.length ? ` <span class="badge badge-blue">一级 · ${kids.length} 个二级</span>` : ''}${!depth && !kids.length ? ' <span class="badge badge-yellow">一级 · 还没有二级</span>' : ''}${depth ? ` <span class="text-sm text-gray">（${esc((cats.find(t => String(t.id) === String(cat.parent)) || {}).name || '')}）</span>` : ''}</td>
+      <td class="td-name" style="padding-left:${16 + depth * 24}px">${depth ? `<span style="color:var(--gray-400)">${depth > 1 ? '└─' : '└'}</span> ` : '<b>'}${esc(cat.name)}${depth ? '' : '</b>'} <span class="badge ${['badge-blue', 'badge-purple', 'badge-green'][Math.min(depth, 2)]}">${lv}</span>${kids.length ? ` <span class="text-sm text-gray">下面 ${leafCount()} 个末级</span>` : ''}${cat.active === false ? ' <span class="text-sm" style="color:var(--orange-600)">（未开放）</span>' : ''}</td>
       <td>${esc(cat.nameEn || '')}</td>
       <td>${esc(cat.nameBm || '')}</td>
-      <td>${esc(cat.slug)}</td>
+      <td>${cat.image ? `<img src="${esc(cat.image)}" style="width:52px;height:38px;object-fit:cover;border-radius:4px;background:var(--gray-100)" alt="">` : '<span class="text-gray">—</span>'}</td>
       <td>${count ? count + ' 个商品' : '<span class="text-gray">—</span>'}</td>
       <td>${cat.active !== false ? '<span class="badge badge-green">上架</span>' : '<span class="badge badge-gray">下架</span>'}</td>
-      <td><button class="btn btn-sm btn-secondary" onclick="openCategoryModal('${cat.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat.id}')">删除</button></td>
-    </tr>` + kids.sort(byCatSort).map(k => rowsOf(k, 1)).join('');
+      <td><button class="btn btn-sm btn-secondary" onclick="openCategoryModal('${cat.id}')">编辑</button> ${depth <= 1 ? `<button class="btn btn-sm btn-secondary" onclick="openCategoryModal(null,'${cat.id}')">+子级</button>` : ''} <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat.id}')">删除</button></td>
+    </tr>` + kids.map(k => rowsOf(k, depth + 1)).join('');
   };
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">商品分类</h1><p class="page-desc">两级：一级只做分组，商品挂在二级下面</p></div><button class="btn btn-primary" onclick="openCategoryModal()">+ 新建分类</button></div>
+    <div class="page-header"><div><h1 class="page-title">商品分类</h1><p class="page-desc">三级：一级行业 → 二级材质工艺 → 三级品名，商品挂在最末一级</p></div><button class="btn btn-primary" onclick="openCategoryModal()">+ 新建分类</button></div>
     <div class="card"><div class="card-body" style="padding:14px 16px;font-size:13px;color:var(--gray-600);line-height:1.7">
-      前台读的是这里的<b>二级</b>：访客点开某个商品的详情弹窗，中间那排分类标签就是<b>这个商品所属产品线</b>下面的二级，点标签会切换下面展示的相关产品。<b>只有挂了在售商品的二级才会出现</b>；同一条线里凑不出两个标签，这一排就不显示。<br>
-      这张表同时是报价单 / 线索 / 刀模里那个「盒型」下拉的选项库。<b>English 一栏留空的话，英文页和马来文页会显示中文分类名</b>，所以每个分类都建议填上英文。
-      ${loose.length ? `<br><span style="color:var(--orange-600)">现在还有 ${loose.length} 个分类既没有上级、下面也没有二级（${loose.map(x => x.name).join('、')}）：它们目前仍然可以直接挂商品，也仍然出现在盒型下拉里。要归到某条产品线下面，点它的「编辑」选上级。</span>` : ''}
+      前台读的是这里的<b>最末一级</b>：访客点开某个商品的详情弹窗，中间那排分类标签就是<b>和它同一个上级</b>的那些末级分类，点标签会切换下面展示的相关产品。<b>只有挂了在售商品的末级才会出现</b>；同一组里凑不出两个标签，这一排就不显示。<br>
+      这张表同时是报价单 / 线索 / 刀模里那个「盒型」下拉的选项库。<b>English 一栏留空的话，英文页和马来文页会显示中文分类名</b>，所以每个分类都建议填上英文。<br>
+      「说明」分中 / 英 / 马来三栏，是这一类的介绍文案：前台访客在当前语言下看到的那段商品说明就是这里对应的那一栏（这次导入是按每个末级分类各建一条商品，把这三栏分别写进那条商品的中 / 英 / 马来描述）。想单独改某个商品在前台显示的文字，去「商品列表」编辑那条商品；「代表性产品」只有后台看得到；「封面图」点编辑上传，走云存储 jl-uploads 桶。
+      ${loose.length ? `<br><span style="color:var(--orange-600)">现在还有 ${loose.length} 个分类既没有上级、下面也没有子分类（${loose.map(x => x.name).join('、')}）：它们目前仍然可以直接挂商品，也仍然出现在盒型下拉里。要归到某个行业下面，点它的「编辑」选上级。</span>` : ''}
     </div></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>排序</th><th>图标</th><th>分类名称（中文）</th><th>English</th><th>Bahasa Malaysia</th><th>Slug</th><th>商品</th><th>状态</th><th>操作</th></tr></thead>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>排序</th><th>图标</th><th>分类名称（中文）</th><th>English</th><th>Bahasa Malaysia</th><th>封面</th><th>商品</th><th>状态</th><th>操作</th></tr></thead>
     <tbody>${tops.map(t => rowsOf(t, 0)).join('')}${orphans.length ? `<tr><td colspan="9" style="padding:10px 16px;color:var(--gray-500);background:var(--gray-50)">下面这些分类的上级已经被删掉了，请重新选一个上级</td></tr>` + orphans.map(x => rowsOf(x, 1)).join('') : ''}</tbody></table></div></div>`;
 }
 
-function openCategoryModal(id) {
+function openCategoryModal(id, preParent) {
   const cats = DM.get('categories');
-  const cat = id ? cats.find(x => x.id === id) : null;
+  const cat = id ? cats.find(x => String(x.id) === String(id)) : null;
   const title = cat ? '编辑分类' : '新建分类';
-  // 一级才能当上级；编辑自己时不能把自己选成上级
-  const tops = cats.filter(x => !x.parent && (!cat || String(x.id) !== String(cat.id))).sort(byCatSort);
+  const depthOf = x => { let d = 0, cur = x; while (cur && cur.parent) { cur = cats.find(y => String(y.id) === String(cur.parent)); d++; } return d; };
+  const heightOf = x => { const kids = catChildren(x.id, cats); return kids.length ? 1 + Math.max(...kids.map(heightOf)) : 0; };
+  const pathOf = x => { const p = []; let cur = x; while (cur) { p.unshift(cur.name); cur = cats.find(y => String(y.id) === String(cur.parent)); } return p.join(' › '); };
+  // 只有自己和「自己下面的行」不能当上级（会成环）；往上的祖先恰恰是当前的上级，必须留着
+  const desc = new Set();
+  if (cat) { (function walk(pid) { catChildren(pid, cats).forEach(k => { desc.add(String(k.id)); walk(k.id); }); })(cat.id); }
+  const cand = [];
+  (function walk(node) {
+    if (node && depthOf(node) <= 1 && (!cat || (String(node.id) !== String(cat.id) && !desc.has(String(node.id)) && depthOf(node) + 1 + heightOf(cat) <= 2))) cand.push(node);
+    catChildren(node ? node.id : '', cats).sort(byCatSort).forEach(walk);
+  })(null);
+  const curParent = cat ? String(cat.parent || '') : String(preParent || '');
+  // 上级行不在候选里时也要留在下拉里（编辑时能选回原样、+子级时能被明确拒绝），否则一保存就把这行悄悄提成了一级
+  if (curParent && !cand.some(t => String(t.id) === curParent)) {
+    const p = cats.find(x => String(x.id) === curParent);
+    if (p) cand.push(p);
+  }
   showModal(title, `
     <div class="form-grid">
       <div class="form-group"><label class="form-label">上级分类</label><select class="form-select" id="f_parent">
-        <option value="">（不选 = 作为一级，只用来分组）</option>
-        ${tops.map(t => `<option value="${esc(t.id)}"${String(cat?.parent || '') === String(t.id) ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}
+        <option value="">（不选 = 作为一级行业）</option>
+        ${cand.map(t => `<option value="${esc(t.id)}"${curParent === String(t.id) ? ' selected' : ''}>${esc(pathOf(t))}</option>`).join('')}
       </select></div>
-      <div class="form-group"><label class="form-label">名称（中文）*</label><input class="form-input" id="f_name" value="${esc(cat?.name || '')}" placeholder="例如 水果生鲜"></div>
-      <div class="form-group"><label class="form-label">名称（English）</label><input class="form-input" id="f_nameEn" value="${esc(cat?.nameEn || '')}" placeholder="e.g. Fruit & Fresh Produce"></div>
+      <div class="form-group"><label class="form-label">名称（中文）*</label><input class="form-input" id="f_name" value="${esc(cat?.name || '')}" placeholder="例如 生鲜果蔬包装 / PET包装 / 浆果盒"></div>
+      <div class="form-group"><label class="form-label">名称（English）</label><input class="form-input" id="f_nameEn" value="${esc(cat?.nameEn || '')}" placeholder="e.g. Berry Clamshell"></div>
       <div class="form-group"><label class="form-label">名称（Bahasa Malaysia）</label><input class="form-input" id="f_nameBm" value="${esc(cat?.nameBm || '')}" placeholder="选填，留空则马来文页显示英文"></div>
       <div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="f_slug" value="${esc(cat?.slug || '')}"></div>
-      <div class="form-group"><label class="form-label">图标</label><input class="form-input" id="f_icon" value="${esc(cat?.icon || '📦')}"></div>
+      <div class="form-group"><label class="form-label">图标</label><input class="form-input" id="f_icon" value="${esc(cat?.icon || '')}" placeholder="一级二级建议放一个 emoji"></div>
       <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="${esc(cat?.sort || 1)}"></div>
       <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_active">
         <option value="1"${cat && cat.active === false ? '' : ' selected'}>上架（前台可见）</option>
         <option value="0"${cat && cat.active === false ? ' selected' : ''}>下架</option>
       </select></div>
+      <div class="form-group" style="grid-column:span 2"><label class="form-label">说明（中文，前台中文页显示）</label><textarea class="form-input" id="f_cdesc" rows="3" placeholder="这一类适用于什么产品、有什么优势">${esc(cat?.desc || '')}</textarea></div>
+      <div class="form-group" style="grid-column:span 2"><label class="form-label">说明（English，前台英文页显示）</label><textarea class="form-input" id="f_cdescEn" rows="3" placeholder="英文页以这一栏为准，留空则英文页不显示这段说明">${esc(cat?.descEn || '')}</textarea></div>
+      <div class="form-group" style="grid-column:span 2"><label class="form-label">说明（Bahasa Malaysia，前台马来文页显示）</label><textarea class="form-input" id="f_cdescBm" rows="3" placeholder="留空则马来文页显示英文">${esc(cat?.descBm || '')}</textarea></div>
+      <div class="form-group" style="grid-column:span 2"><label class="form-label">代表性产品（每行一个）</label><textarea class="form-input" id="f_csamples" rows="4" placeholder="蓝莓盒125g&#10;草莓盒500g">${esc((cat?.samples || []).join('\n'))}</textarea></div>
+      <div class="form-group full"><label class="form-label">封面图${cat?.image ? '（留空则保持不变）' : ''}</label><input class="form-input" type="file" accept="image/*" id="f_c_image"></div>
     </div>
-  `, () => {
+    ${cat?.image ? `<div style="margin-top:12px;display:flex;align-items:center;gap:12px"><img src="${esc(cat.image)}" style="height:64px;max-width:200px;object-fit:cover;background:#fff;border:1px solid var(--gray-200);border-radius:6px;padding:4px"><label style="font-size:13px;color:var(--gray-600)"><input type="checkbox" id="f_c_clear_image"> 删除当前图片</label></div>` : ''}
+  `, async () => {
     const name = val('f_name');
     if (!name) { toast('请填写分类名称'); return; }
     const parent = val('f_parent');
+    let image = cat ? (cat.image || '') : '';
+    let imagePath = cat ? (cat.imagePath || '') : '';
+    if (document.getElementById('f_c_clear_image')?.checked) { image = ''; imagePath = ''; }
+    const imgFile = document.getElementById('f_c_image')?.files?.[0];
+    if (imgFile) {
+      if (!Sync.ready) { toast('未连接后端数据库，无法上传图片'); return false; }
+      toast('正在上传图片 …');
+      const up = await cloudUpload(imgFile, 'categories');
+      image = up.url; imagePath = up.path;
+    }
     const data = {
       name,
       nameEn: val('f_nameEn'),
@@ -2990,11 +3025,23 @@ function openCategoryModal(id) {
       slug: val('f_slug') || name.toLowerCase().replace(/\s+/g, '-'),
       icon: val('f_icon'),
       sort: parseInt(val('f_sort')) || 1,
-      active: val('f_active') === '1'
+      active: val('f_active') === '1',
+      desc: val('f_cdesc'),
+      descEn: val('f_cdescEn'),
+      descBm: val('f_cdescBm'),
+      samples: val('f_csamples').split(/[\n;；]/).map(x => x.trim()).filter(Boolean),
+      image, imagePath
     };
+    // 接上去之后最深不能超过三级（行业 → 材质工艺 → 品名）；下拉已过滤，这里兜住新建时直传 parent 的路径
+    if (parent) {
+      const pNode = cats.find(x => String(x.id) === String(parent));
+      if (pNode && depthOf(pNode) + (cat ? heightOf(cat) : 0) > 1) {
+        const kids = cat ? catChildren(cat.id, cats).length : 0;
+        toast(cat && kids ? `「${cat.name}」下面还有 ${kids} 个分类，挂到「${pNode.name}」下面会超出三级。先把下面这些分类挪走或删掉。` : `「${pNode.name}」已经在最末一级了，下面不能再挂分类（本站只到三级）。`);
+        return;
+      }
+    }
     if (cat) {
-      // 一个分类不能既当一级又当二级：它下面已经有二级时再给它认上级，会变成三级
-      if (parent && catChildren(cat.id, cats).length) { toast(`「${cat.name}」下面还有 ${catChildren(cat.id, cats).length} 个二级分类，不能再把它挂到别的一级下面（先处理它下面的二级）`); return; }
       Object.assign(cat, data);
     } else {
       cats.push(Object.assign({ id: DM.genId('CAT') }, data));
@@ -3009,7 +3056,7 @@ function deleteCategory(id) {
   const cat = cats.find(x => String(x.id) === String(id));
   if (!cat) return;
   const kids = catChildren(id, cats);
-  if (kids.length) { toast(`「${cat.name}」下面还有 ${kids.length} 个二级分类（${kids.map(k => k.name).join('、')}），先删掉它们或给它们改走上级`); return; }
+  if (kids.length) { toast(`「${cat.name}」下面还有 ${kids.length} 个子分类（${kids.map(k => k.name).join('、')}），先删掉它们或给它们改走上级`); return; }
   const used = DM.get('products').filter(p => String(p.categoryId || '') === String(id)).length;
   if (!confirm(used ? `「${cat.name}」下面挂着 ${used} 个商品。删除后这些商品会变成未分类（前台商品弹窗的分类标签里就不再出现这一类），需要重新编辑商品改分类。确定删除？` : `确定删除分类「${cat.name}」？`)) return;
   DM.set('categories', cats.filter(x => String(x.id) !== String(id)));
@@ -3083,8 +3130,9 @@ function openProductModal(id) {
     <div class="form-grid">
       <div class="form-group"><label class="form-label">商品名称 (英文) *</label><input class="form-input" id="f_name" value="${esc(p?.name)}" placeholder="e.g. Mailer Box"></div>
       <div class="form-group"><label class="form-label">商品名称 (中文)</label><input class="form-input" id="f_nameZh" value="${esc(p?.nameZh)}" placeholder="e.g. 飞机盒"></div>
+      <div class="form-group"><label class="form-label">商品名称 (Bahasa Malaysia)</label><input class="form-input" id="f_nameBm" value="${esc(p?.nameBm)}" placeholder="选填，留空则马来文页显示英文"></div>
       <div class="form-group"><label class="form-label">分类 *</label><select class="form-select" id="f_category">
-        ${catOptions(categories, p?.categoryId, '选择分类（一级不能挂商品）', c => c.id)}
+        ${catOptions(categories, p?.categoryId, '选择分类（只列最末一级，可挂商品）', c => c.id)}
       </select></div>
       <div class="form-group"><label class="form-label">起步价 (RM) *</label><input class="form-input" type="number" step="0.01" id="f_price" value="${esc(p?.price||'')}" placeholder="0.00"></div>
       <div class="form-group"><label class="form-label">MOQ 数量 *</label><input class="form-input" type="number" id="f_moq" value="${esc(p?.moq||'')}" placeholder="100"></div>
@@ -3097,8 +3145,9 @@ function openProductModal(id) {
         <option value="active" ${p?.status==='active'?'selected':''}>上架</option>
         <option value="inactive" ${p?.status==='inactive'?'selected':''}>下架</option>
       </select></div>
-      <div class="form-group" style="grid-column:span 2"><label class="form-label">商品描述（英文，马来文页面同样用它）</label><textarea class="form-input" id="f_desc" rows="3" placeholder="商品简短描述...">${esc(p?.desc||'')}</textarea></div>
+      <div class="form-group" style="grid-column:span 2"><label class="form-label">商品描述（英文，前台英文页显示）</label><textarea class="form-input" id="f_desc" rows="3" placeholder="商品简短描述...">${esc(p?.desc||'')}</textarea></div>
       <div class="form-group" style="grid-column:span 2"><label class="form-label">商品描述（中文）</label><textarea class="form-input" id="f_descZh" rows="3" placeholder="留空则中文页显示英文">${esc(p?.descZh||'')}</textarea></div>
+      <div class="form-group" style="grid-column:span 2"><label class="form-label">商品描述（Bahasa Malaysia）</label><textarea class="form-input" id="f_descBm" rows="3" placeholder="留空则马来文页显示英文">${esc(p?.descBm||'')}</textarea></div>
       <div class="form-group full"><label class="form-label">商品图片${p?.image?'（留空则保持不变）':''}</label><input class="form-input" type="file" accept="image/*" id="f_p_image"></div>
     </div>
     ${p?.image?`<div style="margin-top:12px;display:flex;align-items:center;gap:12px"><img src="${esc(p.image)}" style="height:64px;max-width:200px;object-fit:cover;background:#fff;border:1px solid var(--gray-200);border-radius:6px;padding:4px"><label style="font-size:13px;color:var(--gray-600)"><input type="checkbox" id="f_p_clear_image"> 删除当前图片</label></div>`:''}
@@ -3109,7 +3158,7 @@ function openProductModal(id) {
     // 名称从分类表里反查，不读 option 的显示文字（那里可能带「（原分类已删除）」这种提示后缀）
     const categoryName = (categories.find(c => String(c.id) === String(categoryId)) || {}).name || (p ? p.category : '') || '';
     if (!name) { toast('请填写商品名称'); return; }
-    if (!categoryId) { toast('请选择分类。一级只用来分组，请选它下面的二级'); return; }
+    if (!categoryId) { toast('请选择分类。行业和材质工艺那两级只用来分组，商品要挂到最末一级'); return; }
 
     let image = p ? (p.image || '') : '';
     let imagePath = p ? (p.imagePath || '') : '';
@@ -3125,6 +3174,7 @@ function openProductModal(id) {
     if (p) {
       p.name = name;
       p.nameZh = val('f_nameZh');
+      p.nameBm = val('f_nameBm');
       p.categoryId = categoryId;
       p.category = categoryName;
       p.price = parseFloat(val('f_price')) || 0;
@@ -3133,6 +3183,7 @@ function openProductModal(id) {
       p.status = val('f_status');
       p.desc = val('f_desc');
       p.descZh = val('f_descZh');
+      p.descBm = val('f_descBm');
       p.image = image;
       p.imagePath = imagePath;
     } else {
@@ -3140,6 +3191,7 @@ function openProductModal(id) {
         id: DM.genId('PRD'),
         name,
         nameZh: val('f_nameZh'),
+        nameBm: val('f_nameBm'),
         categoryId,
         category: categoryName,
         price: parseFloat(val('f_price')) || 0,
@@ -3149,7 +3201,8 @@ function openProductModal(id) {
         image,
         imagePath,
         desc: val('f_desc'),
-        descZh: val('f_descZh')
+        descZh: val('f_descZh'),
+        descBm: val('f_descBm')
       });
     }
     DM.set('products', products);
