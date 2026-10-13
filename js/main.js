@@ -1081,7 +1081,6 @@
   }
 
   initHeroCarousel();
-  initHeroCarousel();
   loadPublicContent();
 
   switchLanguage('en');
