@@ -6,7 +6,9 @@
   const header = document.getElementById('header');
   const inquiryForm = document.getElementById('inquiryForm');
   const productModal = document.getElementById('productModal');
-  const modalClose = document.querySelector('.modal-close');
+  const detailModal = document.getElementById('productDetailModal');
+  const modalClose = productModal.querySelector('.modal-close');
+  const detailClose = detailModal.querySelector('.modal-close');
 
   // 后端：把官网询价写进共享线索池（配置见 js/sb-config.js）
   const CFG = window.JL_SB || {};
@@ -45,8 +47,12 @@
     }
 
     // 弹窗里的标题/描述是 JS 直接塞进 textContent 的，上面那圈 data-* 刷不到它：
-    // 后台只填中文时，英文页会留着刚才那段中文。重开一次同一张卡片就按新语言重取文案。
-    if (modalCard && productModal.classList.contains('active')) openProductModalFromCard(modalCard);
+    // 后台只填中文时，英文页会留着刚才那段中文。按当前语言把弹窗重开一次就重新取文案。
+    // 详情弹窗是盖在行业列表上面那一层，两个都可能开着，所以先记下卡片再逐个重开
+    //（重开行业弹窗会把 modalCard 清掉）。
+    const detailCard = detailModal.classList.contains('active') ? modalCard : null;
+    if (productModal.classList.contains('active') && modalIndustry) reopenIndustryModal();
+    if (detailCard) openProductDetail(detailCard);
   }
 
   document.querySelectorAll('.lang-btn').forEach(btn => {
@@ -95,64 +101,115 @@
   const showcaseGrid = document.getElementById('modalShowcaseGrid');
   const catTabsHost = document.getElementById('modalCatTabs');
   let catRows = [];            // 后台那张三级分类表，首页的行业卡和弹窗里那排标签都要用
-  let allProducts = [];        // 在售商品，行业卡点开时按分类筛这一份
-  let openIndustry = '';       // 首页产品区当前展开的一级分类 id，空 = 显示行业列表
-  let modalCat = '';           // 当前商品挂在那个末级分类上
-  let modalGroup = '';         // 弹窗里当前选中的分组 id（三级表=材质工艺，两级表=产品线）
+  let allProducts = [];        // 在售商品，弹窗按分类筛这一份
+  let modalIndustry = null;    // 行业弹窗点进来的那一条一级分类（entry）
+  let modalGroup = '';         // 行业弹窗里当前选中的分组 id（三级表=材质工艺，两级表=产品线）
   let modalGroups = [];        // 和它同一级的其他分组，用来出那排标签
-  let modalCard = null;        // 当前弹窗对应的那张卡片，切语言时按原样重渲染一次
+  let modalCard = null;        // 详情弹窗当前显示的那张商品卡，切语言时按原样重开一次
 
-  function openProductModalFromCard(card) {
-    modalCard = card;
-    const nameEn = card.dataset.nameEn;
-    const nameZh = card.dataset.nameZh;
-    const nameBm = card.dataset.nameBm;
-    const descEn = card.dataset.descEn;
-    const descZh = card.dataset.descZh;
-    const descBm = card.dataset.descBm;
-    const price = card.dataset.price;
-    const moq = card.dataset.moq;
-
-    // 标题/描述/价格这几行同时带 data-*：只写 textContent 的话，弹窗开着切语言
-    // 会被 switchLanguage 拿页面里那两个占位属性刷回「Product Name」。
-    // 马来文单独一路：后台没填 descBm 时沿用英文（和卡片上的规则一致），别把英文写死进 data-bm。
-    const setLangText = (id, latin, chinese, malay) => {
-      const el = document.getElementById(id);
-      const l = latin || '';
-      const c = chinese || l;
-      const b = malay || l;
-      el.setAttribute('data-en', l);
-      el.setAttribute('data-bm', b);
-      el.setAttribute('data-zh', c);
-      el.textContent = currentLang === 'zh' ? c : currentLang === 'bm' ? b : l;
-    };
-    setLangText('modalProductName', nameEn, nameZh, nameBm);
-    setLangText('modalProductDesc', descEn, descZh, descBm);
-    // 说明常常只有中文（分类表过来就是这样）：当前语言拿不到文案就整行藏掉，别留一个空paragraph
-    const descEl = document.getElementById('modalProductDesc');
-    if (descEl) descEl.style.display = descEl.textContent.trim() ? '' : 'none';
-    // 后台没填价格/起订量时整行藏掉，别显示「起价 RM 0.00」这种假数字
-    const showLine = (id, latin, chinese) => {
-      setLangText(id, latin, chinese);
-      const el = document.getElementById(id);
-      el.style.display = latin || chinese ? '' : 'none';
-    };
-    showLine('modalPrice', price ? `from RM ${price}` : '', price ? `起价 RM ${price}` : '');
-    showLine('modalMOQ', moq ? `MOQ: ${moq} pcs` : '', moq ? `起订量: ${moq}件` : '');
-
-    modalCat = catIdOf(card);
-    const group = groupOfCat(modalCat);
-    modalGroup = group ? String(group.id) : '';
-    modalGroups = group ? siblingGroups(group) : [];
-    renderModalTabs();
-    renderModalStrip();
-    productModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+  // 标题/描述/价格这几行同时带 data-*：只写 textContent 的话，弹窗开着切语言
+  // 会被 switchLanguage 拿页面里那两个占位属性刷回「Product Name」。
+  // 马来文单独一路：后台没填 descBm 时沿用英文（和卡片上的规则一致），别把英文写死进 data-bm。
+  function setLangText(id, latin, chinese, malay) {
+    const el = typeof id === 'string' ? document.getElementById(id) : id;
+    if (!el) return;
+    const l = latin || '';
+    const c = chinese || l;
+    const b = malay || l;
+    el.setAttribute('data-en', l);
+    el.setAttribute('data-bm', b);
+    el.setAttribute('data-zh', c);
+    el.textContent = currentLang === 'zh' ? c : currentLang === 'bm' ? b : l;
   }
 
-  const catIdOf = card => String(card.dataset.catId || '');
+  // 点任意一张商品卡 = 在底下那一层（行业列表弹窗 / 首页）之上再盖一个商品详情弹窗：
+  // 左边商品大图、右边名称+说明+价格/起订量，里面不排商品也不摆分类标签，
+  // 右上角关掉就回到底下那一层。
+  function openProductDetail(card) {
+    modalCard = card;
+    const d = card.dataset;
+    setLangText('detailName', d.nameEn, d.nameZh, d.nameBm);
+    setLangText('detailDesc', d.descEn, d.descZh, d.descBm);
+    // 说明常常只有中文（分类表过来就是这样）：当前语言拿不到文案就整行藏掉，别留一个空段落
+    const descEl = document.getElementById('detailDesc');
+    if (descEl) descEl.style.display = descEl.textContent.trim() ? '' : 'none';
+    showLine('detailPrice', d.price ? `from RM ${d.price}` : '', d.price ? `起价 RM ${d.price}` : '');
+    showLine('detailMOQ', d.moq ? `MOQ: ${d.moq} pcs` : '', d.moq ? `起订量: ${d.moq}件` : '');
+    syncPriceBlock('detailPriceInfo');
+    setPhoto('detailPhoto', 'detailInfo', cardPhotoOf(card), d.nameEn || d.nameZh);
+    openOverlay(detailModal);
+  }
 
-  // 弹窗「相关产品」拿哪批商品：库里有商品就用库里那份；库里空着（首页显示的是页面
+  // 点首页行业卡 = 开这个行业的弹窗：顶部整行文字是行业自己的大标题和说明（后台分类表
+  // 那一条行业的名称三栏 / 说明三栏，运营改文案不用动代码），
+  // 标签 = 这个行业下面有在售商品的材质工艺（前面再补一个「全部产品」），
+  // 标签下面默认就是整棵下级的全部商品。
+  function openIndustryModal(key) {
+    const entry = industryEntries().find(x => x.key === String(key));
+    if (!entry) return;
+    const cat = entry.cat;
+    modalIndustry = entry;
+    modalCard = null;
+    const nameTxt = cat.nameEn || cat.name;
+    setLangText('modalProductName', nameTxt, cat.name, cat.nameBm || nameTxt);
+    setLangText('modalProductDesc', cat.descEn || cat.desc, cat.desc, cat.descBm || cat.descEn || cat.desc);
+    const descEl = document.getElementById('modalProductDesc');
+    if (descEl) descEl.style.display = descEl.textContent.trim() ? '' : 'none';
+    modalGroups = childGroups(entry.key);
+    modalGroup = entry.key;
+    renderModalTabs();
+    renderModalStrip();
+    openOverlay(productModal);
+  }
+
+  // 切语言时行业弹窗按新语种重取一遍文案，选中的标签回到「全部」
+  function reopenIndustryModal() {
+    const key = modalIndustry && modalIndustry.key;
+    modalIndustry = null;
+    if (key) openIndustryModal(key);
+  }
+
+  function openOverlay(overlay) {
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    const box = overlay.querySelector('.modal-content');
+    if (box) box.scrollTop = 0;
+  }
+
+  // 后台没填价格/起订量时整行藏掉，别显示「起价 RM 0.00」这种假数字
+  function showLine(id, latin, chinese) {
+    setLangText(id, latin, chinese);
+    const el = document.getElementById(id);
+    el.style.display = latin || chinese ? '' : 'none';
+  }
+
+  // 两行都藏掉时把外面那层容器也收起来，弹窗顶部不留空档
+  function syncPriceBlock(id) {
+    const box = document.getElementById(id);
+    if (!box) return;
+    box.style.display = [...box.children].some(el => el.style.display !== 'none') ? '' : 'none';
+  }
+
+  // 弹窗顶部左侧那张图：没图就把图位收掉，右侧文字占满，不留一个空框
+  function setPhoto(figureId, wrapId, url, alt) {
+    const box = document.getElementById(figureId);
+    const info = document.getElementById(wrapId);
+    if (!box) return;
+    if (info) info.classList.toggle('no-photo', !url);
+    box.hidden = !url;
+    const img = box.querySelector('img');
+    if (img) {
+      img.src = url || '';
+      img.alt = alt || '';
+    }
+  }
+
+  const cardPhotoOf = card => {
+    const img = card.querySelector('.product-photo');
+    return img && img.getAttribute('src') ? img.getAttribute('src') : '';
+  };
+
+  // 行业弹窗列商品拿哪一批：库里有商品就用库里那份；库里空着（首页显示的是页面
   // 写死的那 6 张示例卡）就在开机时把那 6 张卡读成记录存下来。
   // 以前这块是克隆首页 DOM 卡片，改成按数据重建后写死那批不在数据里，所以要有这一份。
   const staticPool = Array.from(document.querySelectorAll('.products-grid .product-card')).map(el => ({
@@ -171,36 +228,22 @@
   }));
   const modalPool = () => (allProducts.length ? allProducts : staticPool);
 
-  // 弹窗里那排标签 = 商品所属分类的「上一级分组」：三级表里就是同一条行业下面那些
-  // 材质工艺（PET包装 / 彩印包装 / 瓦楞包装），两级表里就是那几条产品线。
-  // 商品直接挂在带下级的行上时，那一行自己就是分组。
-  function groupOfCat(catId) {
+  // 这个行业下面有在售商品的直接下级（三级表=材质工艺，两级表=品名）
+  function childGroups(indId) {
     const live = liveCats();
-    const find = id => live.find(c => String(c.id) === id);
-    const self = find(catId);
-    if (!self) return null;
-    if (self.parent) {
-      const up = find(String(self.parent));
-      if (up) return up;
-    }
-    return live.some(k => String(k.parent) === String(self.id)) ? self : null;
-  }
-
-  // 和这个分组同一级的其他分组（同一个上级下面；分组自己就是行业顶级时拿全部行业），
-  // 只留下面真的有在售商品的。
-  function siblingGroups(group) {
-    const live = liveCats();
-    const parentId = String(group.parent || '');
-    return live.filter(c => String(c.parent || '') === parentId && productsUnder(modalPool(), String(c.id), live).length)
+    return live.filter(c => String(c.parent || '') === String(indId) && productsUnder(modalPool(), String(c.id), live).length)
       .sort(catSort);
   }
 
-  // 少于两个分组就不摆标签——一个标签点了没任何变化，等于假控件。
+  // 行业弹窗的标签排 = 「全部产品」+ 这个行业下面有在售商品的材质工艺；
+  // 分组不足两个就不摆（一个点了没变化，等于假控件）。
   function renderModalTabs() {
     if (!catTabsHost) return;
     catTabsHost.textContent = '';
-    if (modalGroups.length < 2) { catTabsHost.hidden = true; return; }
-    modalGroups.forEach(c => {
+    const chips = modalGroups.length >= 2
+      ? [{ id: modalIndustry.key, nameEn: 'All products', name: '全部产品', nameBm: 'Semua produk' }, ...modalGroups]
+      : [];
+    chips.forEach(c => {
       const b = make('button', 'cat-tab', c.nameEn || c.name, c.name, c.nameBm || c.nameEn || c.name);
       // make() 只写英文，而标签是点开弹窗时才建的（比页面首次翻译晚），
       // 所以中文/马来文页要按当前语种补一次，否则整排标签会是英文。
@@ -209,41 +252,54 @@
       b.dataset.group = String(c.id);
       catTabsHost.appendChild(b);
     });
-    catTabsHost.hidden = false;
+    catTabsHost.hidden = !chips.length;
     syncModalTabs();
   }
 
   function syncModalTabs() {
     if (!catTabsHost) return;
     catTabsHost.querySelectorAll('.cat-tab').forEach(btn => {
-      const on = String(btn.dataset.group) === modalGroup;
+      const on = btn.dataset.group === modalGroup;
       btn.classList.toggle('is-active', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
   }
 
-  // 标签下面就是这一组的全部商品（卡片沿用首页那套皮肤，只是尺寸收紧）。
-  // 认不出分组的商品（没挂分类、或挂的分类不在这棵树里）就把在售商品整份列出来，不摆标签。
+  // 标签下面那批商品：选中「全部产品」时用点进来那一张卡的商品（「其他产品」
+  // 那种散行不在分类树里，只能这么给）；其余按选中的分组顺着整棵下级现数。
+  function stripList() {
+    if (modalGroup === modalIndustry.key) return modalIndustry.list;
+    return productsUnder(modalPool(), modalGroup);
+  }
+
+  // 标签下面就是这一组的全部商品（卡片沿用首页那套皮肤，只是尺寸收紧），
+  // 点其中任意一张 = 往上盖一层商品详情弹窗。
   function renderModalStrip() {
     if (!modalShowcase || !showcaseGrid) return;
     showcaseGrid.textContent = '';
-    const list = modalGroup ? productsUnder(modalPool(), modalGroup) : modalPool();
-    if (list.length < 2) { modalShowcase.hidden = true; return; }
+    const list = stripList();
+    if (!list.length) { modalShowcase.hidden = true; return; }
+    setModalHeading();
     buildProductCards(showcaseGrid, list);
-    const current = String((modalCard && modalCard.dataset.product) || '');
-    showcaseGrid.querySelectorAll('.product-card').forEach(el => {
-      if (current && el.dataset.product === current) el.classList.add('is-current');
-    });
     modalShowcase.hidden = false;
+  }
+
+  // 列表上面那行标题跟着选中的那一组走
+  function setModalHeading() {
+    const h3 = modalShowcase.querySelector('h3');
+    if (!h3) return;
+    const g = modalGroups.find(c => String(c.id) === modalGroup);
+    if (!g) { setLangText(h3, 'All products', '全部产品', 'Semua produk'); return; }
+    setLangText(h3, g.nameEn || g.name, g.name, g.nameBm || g.nameEn || g.name);
   }
 
   const productsGrid = document.querySelector('.products-grid');
   if (productsGrid) {
     productsGrid.addEventListener('click', (e) => {
       const ind = e.target.closest('.industry-card');
-      if (ind) { openIndustry = String(ind.dataset.ind || ''); renderProductSection(); return; }
+      if (ind) { openIndustryModal(String(ind.dataset.ind || '')); return; }
       const card = e.target.closest('.product-card');
-      if (card) openProductModalFromCard(card);
+      if (card) openProductDetail(card);
     });
   }
 
@@ -251,9 +307,7 @@
     showcaseGrid.addEventListener('click', (e) => {
       const mini = e.target.closest('.product-card');
       if (!mini) return;
-      openProductModalFromCard(mini);
-      const box = productModal.querySelector('.modal-content');
-      if (box) box.scrollTop = 0;
+      openProductDetail(mini);
     });
   }
 
@@ -275,6 +329,17 @@
   function closeModal() {
     productModal.classList.remove('active');
     document.body.style.overflow = '';
+  }
+
+  // 详情弹窗是盖在行业列表上面那一层：关掉它，底下那层还开着就别把页面滚动锁着解掉
+  detailClose.addEventListener('click', closeDetail);
+  detailModal.addEventListener('click', (e) => {
+    if (e.target === detailModal) closeDetail();
+  });
+
+  function closeDetail() {
+    detailModal.classList.remove('active');
+    if (!productModal.classList.contains('active')) document.body.style.overflow = '';
   }
 
   document.querySelector('.modal-quote-btn').addEventListener('click', () => {
@@ -642,7 +707,7 @@
       card.dataset.moq = Number(p.moq) > 0 ? String(p.moq) : '';
 
       const tile = make('div', 'product-tile');
-      // 点开行业才建的这批卡片比页面首次翻译晚，所以每段文案建完都按当前语种补一次（见 painted）
+      // 这批卡片是点开弹窗时才建的，比页面首次翻译晚，所以每段文案建完都按当前语种补一次（见 painted）
       tile.appendChild(painted(make('h3', 'tile-title', p.name, p.nameZh, p.nameBm)));
       const rule = document.createElement('span');
       rule.className = 'tile-rule';
@@ -682,7 +747,7 @@
     return true;
   }
 
-  // ===== 首页产品区：默认列一级分类（行业卡），点开才看该行业下的商品 =====
+  // ===== 首页产品区：一排一级分类（行业卡），点开直接弹该行业的商品弹窗 =====
   function renderProducts(list) {
     allProducts = (list || []).filter(p => p && p.name && p.status !== 'inactive');
     return renderProductSection();
@@ -694,13 +759,8 @@
     if (!host || !allProducts.length) return false;
     const entries = industryEntries();
     // 只有一个行业时，「点开看商品」点了等于没点，不如直接把商品铺开
-    if (entries.length < 2) { openIndustry = ''; hideGridToolbar(); return buildProductCards(host, allProducts); }
-    if (!openIndustry) return renderIndustryGrid(host, entries);
-    const entry = entries.find(x => x.key === openIndustry);
-    if (!entry) { openIndustry = ''; return renderIndustryGrid(host, entries); }
-    buildProductCards(host, entry.list);
-    showGridToolbar(entry.cat);
-    return true;
+    if (entries.length < 2) return buildProductCards(host, allProducts);
+    return renderIndustryGrid(host, entries);
   }
 
   const liveCats = () => catRows.filter(c => c.active !== false);
@@ -757,7 +817,6 @@
   }
 
   function renderIndustryGrid(host, entries) {
-    hideGridToolbar();
     host.textContent = '';
     entries.forEach(({ cat, list }, i) => {
       const count = list.length;
@@ -765,15 +824,6 @@
       card.dataset.ind = String(cat.id);
 
       const tile = make('div', 'product-tile');
-      // 图标必须是标题的兄弟节点：switchLanguage 只替换「第一个节点是文本」的元素，
-      // 把 emoji 塞进 h3 里，中文/马来文页就会一直顶着英文标题。
-      if (cat.icon) {
-        const ic = document.createElement('span');
-        ic.className = 'tile-icon';
-        ic.setAttribute('aria-hidden', 'true');
-        ic.textContent = String(cat.icon);
-        tile.appendChild(ic);
-      }
       tile.appendChild(painted(make('h3', 'tile-title', cat.nameEn || cat.name, cat.name, cat.nameBm || cat.nameEn || cat.name)));
       const rule = document.createElement('span');
       rule.className = 'tile-rule';
@@ -807,42 +857,7 @@
     return true;
   }
 
-  // 点开行业后网格上方那条：返回按钮 + 当前行业名
-  function gridToolbar() {
-    const host = document.querySelector('.products-grid');
-    if (!host || !host.parentNode) return null;
-    let bar = document.getElementById('gridToolbar');
-    if (!bar) {
-      bar = document.createElement('div');
-      bar.id = 'gridToolbar';
-      bar.className = 'grid-toolbar';
-      bar.addEventListener('click', e => {
-        if (!e.target.closest('.grid-back')) return;
-        openIndustry = '';
-        renderProductSection();
-      });
-      host.parentNode.insertBefore(bar, host);
-    }
-    return bar;
-  }
-
-  function hideGridToolbar() {
-    const bar = document.getElementById('gridToolbar');
-    if (bar) bar.hidden = true;
-  }
-
-  function showGridToolbar(cat) {
-    const bar = gridToolbar();
-    if (!bar) return;
-    bar.textContent = '';
-    const back = make('button', 'grid-back', '← All industries', '← 返回全部行业', '← Semua industri');
-    back.type = 'button';
-    bar.appendChild(painted(back));
-    bar.appendChild(painted(make('span', 'grid-crumb', cat.nameEn || cat.name, cat.name, cat.nameBm || cat.nameEn || cat.name)));
-    bar.hidden = false;
-  }
-
-  // make() 永远只把英文写进 textContent，而这些卡片是点开行业时才新建的（比页面首次翻译晚），
+  // make() 永远只把英文写进 textContent，而这些卡片是点开弹窗时才新建的（比页面首次翻译晚），
   // 所以中文/马来文页要按当前语种补一次，否则整排卡片会是英文。
   function painted(el) {
     if (currentLang !== 'en') el.textContent = el.dataset[currentLang] || el.textContent;

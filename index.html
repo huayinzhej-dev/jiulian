@@ -601,21 +601,39 @@
         <div class="modal-product-info">
           <h2 id="modalProductName" data-en="Product Name" data-bm="Product Name" data-zh="产品名称">Product Name</h2>
           <p id="modalProductDesc" data-en="Product description" data-bm="Product description" data-zh="产品描述">Product description</p>
-          <div class="modal-price-info">
-            <span class="modal-price" id="modalPrice" data-en="from RM 1.32" data-bm="from RM 1.32" data-zh="起价 RM 1.32">from RM 1.32</span>
-            <span class="modal-moq" id="modalMOQ" data-en="MOQ: 100 pcs" data-bm="MOQ: 100 pcs" data-zh="起订量: 100件">MOQ: 100 pcs</span>
-          </div>
         </div>
         <div class="modal-showcase" id="modalShowcase" hidden>
-          <h3 data-en="Related Products" data-bm="Produk Berkaitan" data-zh="相关产品">Related Products</h3>
-          <!-- 二级分类标签：js/main.js 按当前商品所在行业生成那一排材质工艺（PET包装/彩印包装/瓦楞包装…），
-               只列下面真有在售商品的；不足两个就藏掉。标签下面就是选中那一组的全部商品。 -->
+          <h3 data-en="All products" data-bm="Semua produk" data-zh="全部产品">All products</h3>
+          <!-- 行业弹窗：顶部整行文字 = 行业名（大标题）+ 行业说明（小字），两段都取后台
+               「商品管理 → 分类」那一条行业的名称三栏 / 说明三栏，说明留空时那一行自己藏掉；
+               下面这排标签 = 「全部产品」+ 该行业下面有在售商品的材质工艺（不足两个不摆），
+               标签下面就是选中那一组的全部商品。点其中任意一张商品卡 = 往上盖一层商品详情弹窗。 -->
           <div class="modal-cat-tabs" id="modalCatTabs" hidden></div>
           <div class="showcase-grid" id="modalShowcaseGrid"></div>
         </div>
         <div class="modal-actions">
           <a href="#contact" class="btn btn-primary btn-lg modal-quote-btn" data-en="Get Free Quote" data-bm="Get Free Quote" data-zh="获取免费报价">Get Free Quote</a>
           <a href="https://wa.me/60167241814" class="btn btn-whatsapp btn-lg" target="_blank" rel="noopener" data-en="Quote via WhatsApp" data-bm="Petik melalui WhatsApp" data-zh="通过 WhatsApp 报价">Quote via WhatsApp</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 商品详情弹窗：点任意一张商品卡时盖在行业列表（或首页）上面那一层，只放左侧商品大图 + 右侧文字 -->
+  <div class="modal-overlay detail-overlay" id="productDetailModal">
+    <div class="modal-content detail-content">
+      <button class="modal-close" aria-label="Close">&times;</button>
+      <div class="modal-body">
+        <div class="detail-info" id="detailInfo">
+          <figure class="detail-photo" id="detailPhoto" hidden><img alt="" loading="lazy"></figure>
+          <div class="detail-text">
+            <h2 id="detailName" data-en="Product Name" data-bm="Product Name" data-zh="产品名称">Product Name</h2>
+            <p id="detailDesc" data-en="Product description" data-bm="Product description" data-zh="产品描述">Product description</p>
+            <div class="modal-price-info" id="detailPriceInfo">
+              <span class="modal-price" id="detailPrice" data-en="from RM 1.32" data-bm="from RM 1.32" data-zh="起价 RM 1.32">from RM 1.32</span>
+              <span class="modal-moq" id="detailMOQ" data-en="MOQ: 100 pcs" data-bm="MOQ: 100 pcs" data-zh="起订量: 100件">MOQ: 100 pcs</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

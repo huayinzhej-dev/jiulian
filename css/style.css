@@ -688,12 +688,7 @@ ul { list-style: none; }
   white-space: nowrap;
 }
 
-/* 行业卡（首页产品区默认那一排）：图标在标题上方，白底那行是「商品数 + 查看产品」 */
-.tile-icon {
-  font-size: 30px;
-  line-height: 1;
-  margin-bottom: 8px;
-}
+/* 行业卡（首页产品区默认那一排），白底那行是「商品数 + 查看产品」 */
 .product-count {
   font-size: 12px;
   font-weight: 500;
@@ -709,34 +704,6 @@ ul { list-style: none; }
   font-weight: 700;
   color: var(--orange-600);
   white-space: nowrap;
-}
-
-/* 点开某个行业后，网格上方那条：返回 + 当前行业名 */
-.grid-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 16px;
-  margin-bottom: 20px;
-}
-.grid-toolbar[hidden] { display: none; }
-.grid-back {
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gray-700);
-  background: var(--white);
-  border: 1px solid var(--gray-200);
-  border-radius: 20px;
-  padding: 7px 16px;
-  cursor: pointer;
-  transition: border-color var(--transition), color var(--transition);
-}
-.grid-back:hover { color: var(--orange-600); border-color: var(--orange-100); }
-.grid-crumb {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--gray-900);
 }
 
 /* ===== Process ===== */
@@ -1528,11 +1495,50 @@ a.footer-info-val:hover { color: var(--white); }
 .modal-body {
   padding: 40px;
 }
+/* 行业列表弹窗顶部：整行「大标题 + 小字说明」。两段文字取的是后台
+   「商品管理 → 分类」里这一条行业的名称三栏和说明三栏，运营改文案不用动代码；
+   说明留空时那一行由 JS 藏掉，不会留一个空段落。 */
 .modal-product-info {
-  margin-bottom: 30px;
+  margin-bottom: 28px;
   padding-right: 48px;
 }
 .modal-product-info h2 {
+  font-family: var(--font-body);
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--gray-900);
+  margin-bottom: 10px;
+}
+.modal-product-info p {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--gray-500);
+  margin-bottom: 0;
+  max-width: 820px;
+}
+/* 商品详情弹窗顶部：左侧大图 + 右侧文字 */
+.detail-info {
+  display: grid;
+  grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
+  gap: 30px;
+  align-items: start;
+  margin-bottom: 0;
+  padding-right: 48px;
+}
+.detail-info.no-photo { grid-template-columns: minmax(0, 1fr); }
+.detail-photo { margin: 0; }
+.detail-photo[hidden] { display: none; }
+.detail-photo img {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+}
+.detail-text h2 {
   font-family: var(--font-body);
   font-size: 30px;
   font-weight: 700;
@@ -1540,11 +1546,14 @@ a.footer-info-val:hover { color: var(--white); }
   color: var(--gray-900);
   margin-bottom: 8px;
 }
-.modal-product-info > p {
+.detail-text > p {
   font-size: 15px;
   color: var(--gray-500);
   margin-bottom: 18px;
 }
+/* 商品详情弹窗：盖在行业列表那一层上面 */
+.detail-overlay { z-index: 2100; }
+.detail-content { max-width: 900px; }
 .modal-price-info {
   display: flex;
   align-items: center;
@@ -1605,9 +1614,6 @@ a.footer-info-val:hover { color: var(--white); }
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
-}
-.showcase-grid .product-card.is-current {
-  border-color: var(--orange-600);
 }
 .showcase-grid .product-tile {
   padding: 20px 16px 0;
@@ -2050,7 +2056,9 @@ a.footer-info-val:hover { color: var(--white); }
   .modal-content { width: auto; margin: 16px; max-height: calc(100vh - 32px); }
   .modal-body { padding: 28px 22px; }
   .modal-product-info { padding-right: 44px; }
-  .modal-product-info h2 { font-size: 24px; }
+  .modal-product-info h2 { font-size: 26px; }
+  .detail-info { grid-template-columns: minmax(0, 1fr); gap: 18px; padding-right: 44px; }
+  .detail-text h2 { font-size: 24px; }
   .modal-price { font-size: 22px; }
   .showcase-grid { grid-template-columns: minmax(0, 1fr); }
   .modal-cat-tabs { gap: 8px; margin-bottom: 18px; }
