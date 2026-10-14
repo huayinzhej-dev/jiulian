@@ -1196,20 +1196,24 @@
     car._heroRefresh = () => { buildUi(); show(0); restart(); };
   }
 
-  function applyHeroShowcase(list) {
+  // 轮播图的点击跳转：只认 http(s) 和页内锚点，别的伪协议一律当没填
+  function heroHref(h) {
+    const s = str(h).trim();
+    if (/^https?:\/\//i.test(s) || /^#[\w-]+$/.test(s)) return s;
+    return '';
+  }
+
+  function applyHeroShowcase(banner, list) {
     const car = document.getElementById('heroCarousel');
     const host = car && car.querySelector('.hero-slides');
     if (!host) return false;
-    const rows = (list || []).filter(p => p && p.status !== 'inactive');
-    const built = [];
-    rows.forEach(p => {
-      const url = safeUrl(p.image || p.imagePath || '');
-      if (!url) return;
+
+    const el = (url, alt, cap, href) => {
       const slide = document.createElement('div');
       slide.className = 'hero-slide';
       const img = document.createElement('img');
       img.src = url;
-      img.alt = p.name;
+      img.alt = alt || '';
       img.addEventListener('error', () => {
         slide.remove();
         if (car._heroRefresh) car._heroRefresh();
@@ -1218,13 +1222,38 @@
       const shade = document.createElement('div');
       shade.className = 'hero-slide-shade';
       slide.appendChild(shade);
-      slide.appendChild(make('p', 'hero-slide-caption', p.name, p.nameZh || p.name));
-      built.push(slide);
-    });
-    // 后台还没给商品配图就保留页面里那张演示图，不至于把首页开天窗
-    if (!built.length) return false;
+      if (cap) slide.appendChild(cap);
+      if (href) {
+        slide.classList.add('is-linked');
+        slide.addEventListener('click', () => { window.location.href = href; });
+      }
+      return slide;
+    };
+
+    // ① 后台「首页 Banner → 首屏轮播图」里指定的那几张，按顺序号排
+    const picked = (Array.isArray(banner && banner.slides) ? banner.slides.slice() : [])
+      .filter(s => s && s.active !== false)
+      .sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0))
+      .map(s => {
+        const url = safeUrl(s.img || s.imgPath || '');
+        if (!url) return null;
+        const capEn = str(s.cap) || str(s.capZh);
+        return el(url, capEn, capEn ? make('p', 'hero-slide-caption', s.cap, s.capZh, s.capBm) : null, heroHref(s.href));
+      })
+      .filter(Boolean);
+
+    // ② 一条都没配时退回老办法：拿已配图的上架商品凑，不至于把首页开天窗
+    const rows = picked.length ? picked : (list || [])
+      .filter(p => p && p.status !== 'inactive')
+      .map(p => {
+        const url = safeUrl(p.image || p.imagePath || '');
+        return url ? el(url, p.name, make('p', 'hero-slide-caption', p.name, p.nameZh || p.name), null) : null;
+      })
+      .filter(Boolean);
+
+    if (!rows.length) return false;
     host.textContent = '';
-    built.slice(0, 6).forEach(s => host.appendChild(s));
+    rows.slice(0, picked.length ? 12 : 8).forEach(s => host.appendChild(s));
     initHeroCarousel();
     if (car._heroRefresh) car._heroRefresh();
     return true;
@@ -1257,7 +1286,7 @@
       // 分类要先存下来：行业卡要按分类树数商品，顺序反了就会先铺商品再补分类
       [setProductCategories, bag.categories],
       [renderProducts, bag.products],
-      [applyHeroShowcase, bag.products],
+      [d => applyHeroShowcase(docs.settings_banner, d), bag.products],
       [renderFaqs, bag.faqs],
       [applyBanner, docs.settings_banner],
       [applyAdvantages, docs.settings_advantages],

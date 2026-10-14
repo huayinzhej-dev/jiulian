@@ -3418,6 +3418,26 @@ function renderBanner(c) {
   const bgBox = b.bg
     ? `<img src="${safeHref(b.bg)}" alt="背景图" style="max-height:120px;max-width:100%;border:1px solid var(--gray-200);border-radius:6px;object-fit:cover"> <button class="btn btn-sm btn-secondary" onclick="removeBannerBg()">移除</button>`
     : '<span style="font-size:12px;color:var(--gray-500)">未设置，前台沿用默认背景</span>';
+  const slides = Array.isArray(b.slides) ? b.slides.slice().sort((x, y) => (Number(x.sort) || 0) - (Number(y.sort) || 0)) : [];
+  const slideRows = slides.length === 0
+    ? '<tr><td colspan="5" style="text-align:center;padding:28px;color:#999">还没有轮播图。点右上角「添加图片」，一次选几张就行。</td></tr>'
+    : slides.map((s, i) => {
+        const badHref = s.href && slideHref(s.href) === null;
+        return `<tr>
+        <td><img src="${safeHref(s.img)}" alt="" style="width:120px;height:68px;object-fit:cover;border-radius:6px;background:#fff;border:1px solid var(--gray-200)"></td>
+        <td>${esc(s.capZh || s.cap || '') || '<span style="color:var(--gray-400)">（无文字）</span>'}${s.href ? `<div style="font-size:11px;color:${badHref ? 'var(--red, #c0392b)' : 'var(--gray-500)'};margin-top:2px">${badHref ? '⚠ 这个跳转链接格式不支持，前台会当没填（点「编辑」改一下）' : '点击跳转：' + esc(s.href)}</div>` : ''}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-sm btn-secondary" onclick="moveSlide(${i},-1)" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button class="btn btn-sm btn-secondary" onclick="moveSlide(${i},1)" ${i === slides.length - 1 ? 'disabled' : ''}>↓</button>
+        </td>
+        <td>${s.active === false ? '<span class="badge badge-gray">已停用</span>' : '<span class="badge badge-green">轮播中</span>'}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-sm btn-secondary" onclick="openSlideModal(${i})">编辑</button>
+          <button class="btn btn-sm btn-secondary" onclick="toggleSlide(${i})">${s.active === false ? '启用' : '停用'}</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteSlide(${i})">删除</button>
+        </td>
+      </tr>`;
+      }).join('');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">首页 Banner</h1><p class="page-desc">Hero 区域配置，保存后官网首页跟着变。英文 / 马来文 / 中文三栏分开填，马来文或中文留空时该项沿用英文或网站原有内容</p></div></div>
     <div class="card"><div class="card-body">
@@ -3442,6 +3462,21 @@ function renderBanner(c) {
         <div class="form-group full"><label class="form-label">背景图</label><input class="form-input" type="file" accept="image/*" onchange="saveBannerBg(this)"><div id="fs_banner_bg_box" style="margin-top:8px">${bgBox}</div></div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveBanner()">保存</button></div>
+    </div></div>
+    <div class="card" style="margin-top:16px"><div class="card-body">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0 0 4px;font-size:16px">首屏轮播图</h3>
+          <p style="margin:0;font-size:13px;color:var(--gray-500);line-height:1.7">首页右侧那个自动切换的图框。<strong>这里传什么就轮播什么，和商品列表无关。</strong><br>一张都没配时，前台会暂时改用「已配图的商品」顶着，不会开天窗。建议横图 1200×800（3:2）。</p>
+        </div>
+        <div>
+          <button class="btn btn-primary" onclick="document.getElementById('f_slide_add').click()">+ 添加图片（可一次选多张）</button>
+          <input class="form-input" type="file" accept="image/*" id="f_slide_add" multiple style="display:none" onchange="addSlides(this)">
+        </div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>图片</th><th>左下角文字</th><th>顺序</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody>${slideRows}</tbody></table></div>
+      <p style="margin:12px 0 0;font-size:12px;color:var(--gray-500)">这里增删改是<strong>立刻生效</strong>的，不用点上面的「保存」（那个只管文案）。首页最多轮播前 12 张，排在后面的不会显示。</p>
     </div></div>`;
 }
 
@@ -3493,6 +3528,110 @@ function removeBannerBg() {
   DM.set('settings_banner', b);
   toast('已移除背景图，前台恢复默认背景');
   renderPage(currentPageId);
+}
+
+// 首屏轮播图存在 settings_banner.slides 里，和商品列表无关。
+// 拉取时按顶层字段合并，所以每次改动都要把整份数组写回去，不能只补一条。
+function slideList() {
+  const b = docVal('settings_banner');
+  return Array.isArray(b.slides) ? b.slides.filter(s => s && typeof s === 'object')
+    .slice().sort((x, y) => (Number(x.sort) || 0) - (Number(y.sort) || 0)) : [];
+}
+
+function saveSlides(arr) {
+  const b = docVal('settings_banner');
+  // 顺序号按当前行重编（1 起），前台就按这个数排
+  b.slides = arr.map((s, i) => Object.assign({}, s, { sort: i + 1 }));
+  DM.set('settings_banner', b);
+  renderPage(currentPageId);
+}
+
+// 跳转链接只放行 http(s) 网址和页内锚点，别的伪协议（javascript: 等）当场拒掉
+function slideHref(v) {
+  const s = String(v || '').trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s) || /^#[\w-]+$/.test(s)) return s;
+  return null;
+}
+
+async function addSlides(input) {
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+  if (!Sync.ready) { toast('未连接后端数据库，无法上传图片'); input.value = ''; return; }
+  const arr = slideList();
+  const before = arr.length;
+  let failed = 0;
+  for (let i = 0; i < files.length; i++) {
+    toast(`正在上传第 ${i + 1}/${files.length} 张 …`);
+    try {
+      const up = await cloudUpload(files[i], 'hero');
+      arr.push({ id: DM.genId('SL'), img: up.url, imgPath: up.path, cap: '', capZh: '', capBm: '', href: '', active: true, sort: 0 });
+    } catch (e) { failed++; }
+  }
+  input.value = '';
+  if (arr.length === before) { toast(failed ? '图片上传失败：' + failed + ' 张' : '没有选中图片'); return; }
+  saveSlides(arr);
+  toast(failed ? `已添加 ${arr.length - before} 张，${failed} 张上传失败` : `已添加 ${arr.length - before} 张轮播图`);
+}
+
+function openSlideModal(i) {
+  const arr = slideList();
+  const s = arr[i];
+  if (!s) return;
+  showModal('编辑轮播图 第 ' + (i + 1) + ' 张', `
+    <div class="form-grid">
+      <div class="form-group full">${s.img ? `<label class="form-label">当前图片</label><img src="${safeHref(s.img)}" alt="" style="width:100%;max-height:200px;object-fit:cover;border:1px solid var(--gray-200);border-radius:6px;margin-bottom:8px">` : ''}<label class="form-label">换一张（不选就保持原图）</label><input class="form-input" type="file" accept="image/*" id="f_s_image"></div>
+      <div class="form-group full"><label class="form-label">左下角文字（英文）</label><input class="form-input" id="f_s_cap" value="${esc(s.cap || '')}" placeholder="留空则图片上不叠字"></div>
+      <div class="form-group full"><label class="form-label">左下角文字（中文）</label><input class="form-input" id="f_s_capZh" value="${esc(s.capZh || '')}" placeholder="留空则中文页显示英文"></div>
+      <div class="form-group full"><label class="form-label">左下角文字（Bahasa Malaysia）</label><input class="form-input" id="f_s_capBm" value="${esc(s.capBm || '')}" placeholder="留空则马来文页显示英文"></div>
+      <div class="form-group full"><label class="form-label">点击跳转<small style="font-weight:400;color:var(--gray-500)">（选填，只能填 http(s) 网址或 #页内锚点）</small></label><input class="form-input" id="f_s_href" value="${esc(s.href || '')}" placeholder="https://… 或 #products"></div>
+      <div class="form-group full"><label style="font-size:13px"><input type="checkbox" id="f_s_active" ${s.active === false ? '' : 'checked'}> 在首页轮播（取消勾选 = 先留着不上线）</label></div>
+    </div>
+  `, async () => {
+    const href = slideHref(val('f_s_href'));
+    if (href === null) { toast('跳转链接只支持 http(s) 网址或 #页内锚点'); return false; }
+    const file = document.getElementById('f_s_image')?.files?.[0];
+    if (file) {
+      if (!Sync.ready) { toast('未连接后端数据库，无法上传图片'); return false; }
+      toast('正在上传图片 …');
+      const up = await cloudUpload(file, 'hero');
+      s.img = up.url; s.imgPath = up.path;
+    }
+    s.cap = val('f_s_cap');
+    s.capZh = val('f_s_capZh');
+    s.capBm = val('f_s_capBm');
+    s.href = href;
+    s.active = document.getElementById('f_s_active').checked;
+    arr[i] = s;
+    saveSlides(arr);
+    toast('轮播图已更新');
+  });
+}
+
+function moveSlide(i, dir) {
+  const arr = slideList();
+  const j = i + dir;
+  if (!arr[i] || !arr[j]) return;
+  const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  saveSlides(arr);
+  toast('顺序已调整');
+}
+
+function toggleSlide(i) {
+  const arr = slideList();
+  if (!arr[i]) return;
+  arr[i].active = arr[i].active === false;
+  saveSlides(arr);
+  toast(arr[i].active ? '已启用，前台会轮播这张' : '已停用，前台不再轮播这张');
+}
+
+function deleteSlide(i) {
+  const arr = slideList();
+  if (!arr[i]) return;
+  if (!confirm('确定删除这张轮播图？')) return;
+  arr.splice(i, 1);
+  saveSlides(arr);
+  toast('轮播图已删除');
 }
 
 function renderAdvantages(c) {
