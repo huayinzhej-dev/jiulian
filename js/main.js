@@ -265,8 +265,8 @@
     });
   }
 
-  // 标签下面那批商品：选中「全部产品」时用点进来那一张卡的商品（「其他产品」
-  // 那种散行不在分类树里，只能这么给）；其余按选中的分组顺着整棵下级现数。
+  // 标签下面那批商品：选中「全部产品」时直接用点进来那一张卡的商品；
+  // 其余按选中的分组顺着整棵下级现数。
   function stripList() {
     if (modalGroup === modalIndustry.key) return modalIndustry.list;
     return productsUnder(modalPool(), modalGroup);
@@ -764,28 +764,17 @@
   }
 
   const liveCats = () => catRows.filter(c => c.active !== false);
-  const OTHER_KEY = '__other__';
-  const OTHER_CAT = { id: OTHER_KEY, name: '其他产品', nameEn: 'Other Products', nameBm: 'Produk Lain', icon: '📦' };
 
   // 一级（行业）= 没有上级、下面又挂着子分类的那几行。商品永远挂在最末一级，
   // 所以一个行业有多少商品要顺着整棵树往下数；下面没有在售商品的行业不出卡。
-  // 没挂进任何行业的商品（未分类、上级被删的孤儿）再补一张「其他产品」卡，
-  // 否则首页换成行业卡以后，这些商品在首页就再也翻不到了。
+  // 没挂分类的商品（孤儿行）不在首页露脸——2026-10-14 他明确要删掉那张「其他产品」兜底卡。
   function industryEntries() {
     const live = liveCats();
     const kidsOf = id => live.filter(c => String(c.parent || '') === String(id));
-    const covered = new Set();
-    const out = live.filter(c => !c.parent && kidsOf(String(c.id)).length)
+    return live.filter(c => !c.parent && kidsOf(String(c.id)).length)
       .sort(catSort)
-      .map(c => {
-        const list = productsUnder(allProducts, String(c.id), live);
-        list.forEach(p => covered.add(p));
-        return { key: String(c.id), cat: c, list };
-      })
+      .map(c => ({ key: String(c.id), cat: c, list: productsUnder(allProducts, String(c.id), live) }))
       .filter(x => x.list.length);
-    const rest = allProducts.filter(p => !covered.has(p));
-    if (rest.length) out.push({ key: OTHER_KEY, cat: OTHER_CAT, list: rest });
-    return out;
   }
 
   function leavesUnder(rootId, live) {
