@@ -116,6 +116,17 @@
     .td-id{font-weight:600;color:var(--primary)}
     .td-name{font-weight:500;color:var(--gray-900)}
     .td-sub{font-size:11px;color:var(--gray-500)}
+    /* 分类树折叠：箭头按钮 + 分层底色。展开状态只存本机浏览器，不进云同步 */
+    .cat-caret{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:-2px 6px -2px -6px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--gray-600);font-size:14px;line-height:1;cursor:pointer;vertical-align:middle}
+    .cat-caret:hover{background:var(--gray-200);color:var(--gray-900)}
+    .cat-caret-leaf,.cat-caret-leaf:hover{background:transparent;color:var(--gray-300);cursor:default}
+    tr.cat-l1 td{background:#f7f8fa}
+    tr.cat-l1:hover td{background:#eceff3}
+    tr.cat-l2 td{background:#fcfcfd}
+    tr.cat-l2:hover td{background:var(--gray-50)}
+    .cat-name-btn{border:0;padding:0;margin:0;font:inherit;color:inherit;background:transparent;cursor:pointer;text-align:left}
+    .cat-name-btn:hover{color:var(--primary)}
+    .cat-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--gray-200);font-size:12px;color:var(--gray-500)}
 
     /* Badges */
     .badge{padding:3px 10px;border-radius:10px;font-size:11px;font-weight:500;display:inline-block}
@@ -2923,6 +2934,35 @@ function migrateCategoriesToTwoLevels() {
   return changed;
 }
 
+// 展开状态只是这台电脑上的浏览偏好，故意用独立 key 存，不进 jl_ 前缀、不参与云同步
+const CAT_TREE_KEY = 'cat_tree_open';
+function catTreeOpen() { try { const a = JSON.parse(localStorage.getItem(CAT_TREE_KEY)); return new Set(Array.isArray(a) ? a.map(String) : []) } catch { return new Set() } }
+function catTreeSave(set) { try { localStorage.setItem(CAT_TREE_KEY, JSON.stringify([...set])) } catch (e) {} }
+function toggleCatNode(id) {
+  if (!catChildren(id, DM.get('categories')).length) return;
+  const s = catTreeOpen();
+  s.has(String(id)) ? s.delete(String(id)) : s.add(String(id));
+  catTreeSave(s); renderPage(currentPageId);
+}
+function expandAllCats() {
+  const cats = DM.get('categories');
+  catTreeSave(new Set(cats.filter(x => catChildren(x.id, cats).length).map(x => String(x.id))));
+  renderPage(currentPageId);
+}
+function collapseAllCats() { catTreeSave(new Set()); renderPage(currentPageId); }
+// 新建/改上级之后把这条的整条祖先链展开，否则它会藏在收起来的父级下面看不见
+function revealCatBranch(parentId) {
+  if (!parentId) return;
+  const cats = DM.get('categories');
+  const s = catTreeOpen();
+  for (let cur = parentId, guard = 0; cur && guard++ < 6;) {
+    s.add(String(cur));
+    const node = cats.find(x => String(x.id) === String(cur));
+    cur = node ? node.parent : '';
+  }
+  catTreeSave(s);
+}
+
 function renderCategories(c) {
   const cats = DM.get('categories');
   const products = DM.get('products');
@@ -2930,32 +2970,48 @@ function renderCategories(c) {
   const tops = cats.filter(x => !x.parent).sort(byCatSort);
   const orphans = cats.filter(x => x.parent && !cats.some(t => String(t.id) === String(x.parent))).sort(byCatSort);
   const loose = tops.filter(t => !catChildren(t.id, cats).length && !isCatLine(t));
+  const openSet = catTreeOpen();
   const rowsOf = (cat, depth) => {
     const kids = catChildren(cat.id, cats).sort(byCatSort);
+    const id = String(cat.id);
+    const on = openSet.has(id);
     const leafCount = () => { let n = 0; (function walk(x) { const ks = catChildren(x.id, cats); ks.length ? ks.forEach(walk) : n++; })(cat); return n; };
     const count = kids.length ? (() => { let n = 0; (function walk(x) { n += nProducts(x.id); catChildren(x.id, cats).forEach(walk); })(cat); return n; })() : nProducts(cat.id);
     const lv = ['一级 · 行业', '二级 · 材质工艺', '三级 · 品名'][Math.min(depth, 2)];
-    return `<tr>
+    const caret = kids.length
+      ? `<button class="cat-caret" title="${on ? '收起' : '展开'}这 ${kids.length} 个子分类" onclick="event.stopPropagation();toggleCatNode('${id}')">${on ? '▾' : '▸'}</button>`
+      : '<span class="cat-caret cat-caret-leaf" title="最末一级，下面没有子分类">·</span>';
+    return `<tr class="cat-l${Math.min(depth + 1, 3)}">
       <td>${esc(cat.sort)}</td>
       <td>${esc(cat.icon)}</td>
-      <td class="td-name" style="padding-left:${16 + depth * 24}px">${depth ? `<span style="color:var(--gray-400)">${depth > 1 ? '└─' : '└'}</span> ` : '<b>'}${esc(cat.name)}${depth ? '' : '</b>'} <span class="badge ${['badge-blue', 'badge-purple', 'badge-green'][Math.min(depth, 2)]}">${lv}</span>${kids.length ? ` <span class="text-sm text-gray">下面 ${leafCount()} 个末级</span>` : ''}${cat.active === false ? ' <span class="text-sm" style="color:var(--orange-600)">（未开放）</span>' : ''}</td>
+      <td class="td-name" style="padding-left:${16 + depth * 24}px">${caret}${depth ? `<span style="color:var(--gray-400)">${depth > 1 ? '└─' : '└'}</span> ` : ''}<button class="cat-name-btn"${kids.length ? ` onclick="toggleCatNode('${id}')"` : ''}>${depth ? '' : '<b>'}${esc(cat.name)}${depth ? '' : '</b>'}</button> <span class="badge ${['badge-blue', 'badge-purple', 'badge-green'][Math.min(depth, 2)]}">${lv}</span>${kids.length ? ` <span class="text-sm text-gray">${on ? `${kids.length} 个子分类 · ${leafCount()} 个末级` : `点开看 ${kids.length} 个子分类（共 ${leafCount()} 个末级）`}</span>` : ''}${cat.active === false ? ' <span class="text-sm" style="color:var(--orange-600)">（未开放）</span>' : ''}</td>
       <td>${esc(cat.nameEn || '')}</td>
       <td>${esc(cat.nameBm || '')}</td>
       <td>${cat.image ? `<img src="${esc(cat.image)}" style="width:52px;height:38px;object-fit:cover;border-radius:4px;background:var(--gray-100)" alt="">` : '<span class="text-gray">—</span>'}</td>
       <td>${count ? count + ' 个商品' : '<span class="text-gray">—</span>'}</td>
       <td>${cat.active !== false ? '<span class="badge badge-green">上架</span>' : '<span class="badge badge-gray">下架</span>'}</td>
       <td><button class="btn btn-sm btn-secondary" onclick="openCategoryModal('${cat.id}')">编辑</button> ${depth <= 1 ? `<button class="btn btn-sm btn-secondary" onclick="openCategoryModal(null,'${cat.id}')">+子级</button>` : ''} <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat.id}')">删除</button></td>
-    </tr>` + kids.map(k => rowsOf(k, depth + 1)).join('');
+    </tr>` + (on ? kids.map(k => rowsOf(k, depth + 1)).join('') : '');
   };
+  const midCount = cats.filter(x => x.parent && catChildren(x.id, cats).length).length;
+  const leafTotal = cats.filter(x => x.parent && !catChildren(x.id, cats).length).length;
+  const anyOpen = openSet.size > 0;
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">商品分类</h1><p class="page-desc">三级：一级行业 → 二级材质工艺 → 三级品名，商品挂在最末一级</p></div><button class="btn btn-primary" onclick="openCategoryModal()">+ 新建分类</button></div>
+    <div class="page-header"><div><h1 class="page-title">商品分类</h1><p class="page-desc">三级：一级行业 → 二级材质工艺 → 三级品名，商品挂在最末一级。这张表默认折叠，一行一个分类，点名称左边的 ▸ 才展开下一层</p></div><button class="btn btn-primary" onclick="openCategoryModal()">+ 新建分类</button></div>
     <div class="card"><div class="card-body" style="padding:14px 16px;font-size:13px;color:var(--gray-600);line-height:1.7">
       前台读的是这里的<b>最末一级</b>：首页「产品中心」一个行业一张卡，访客点行业卡弹出这个行业的窗口，<b>窗口顶部那一整行文字</b>就是这个行业的「名称 + 说明」（没有图），中间那排分类标签就是<b>这个行业下面挂了在售商品的材质工艺</b>（最前面多一项「全部产品」），点标签切换下面那批商品；<b>只有挂了在售商品的分类才会出现</b>，同一行业下凑不出两条这样的分类，这一排就不显示。访客再点其中任意一张商品卡，会在上面<b>再盖一层商品详情</b>（左边商品大图、右边名称+说明+价格/起订量），关掉回到刚才那份列表。<br>
       这张表同时是报价单 / 线索 / 刀模里那个「盒型」下拉的选项库。<b>English 一栏留空的话，英文页和马来文页会显示中文分类名</b>，所以每个分类都建议填上英文。<br>
       「说明」分中 / 英 / 马来三栏，是这一类的介绍文案：前台访客在当前语言下看到的那段商品说明就是这里对应的那一栏（这次导入是按每个末级分类各建一条商品，把这三栏分别写进那条商品的中 / 英 / 马来描述）。<b>一级（行业）那几条的「说明」现在也已经填了草稿</b>，它出现在两个地方：首页那张行业卡上的小字、行业窗口顶部的大标题下面那行小字，改一处两处一起变；留空则那一行自己藏掉。想单独改某个商品在前台显示的文字，去「商品列表」编辑那条商品；「代表性产品」只有后台看得到；「封面图」点编辑上传，走云存储 jl-uploads 桶——<b>行业这一层的封面图只用在首页那张行业卡上</b>，行业窗口顶部已经不摆图了。
       ${loose.length ? `<br><span style="color:var(--orange-600)">现在还有 ${loose.length} 个分类既没有上级、下面也没有子分类（${loose.map(x => x.name).join('、')}）：它们目前仍然可以直接挂商品，也仍然出现在盒型下拉里。要归到某个行业下面，点它的「编辑」选上级。</span>` : ''}
     </div></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>排序</th><th>图标</th><th>分类名称（中文）</th><th>English</th><th>Bahasa Malaysia</th><th>封面</th><th>商品</th><th>状态</th><th>操作</th></tr></thead>
+    <div class="card">
+      <div class="cat-bar">
+        <span>共 <b>${tops.length}</b> 个行业 · <b>${midCount}</b> 个材质工艺 · <b>${leafTotal}</b> 个末级品名</span>
+        <button class="btn btn-sm btn-secondary" onclick="expandAllCats()">全部展开</button>
+        <button class="btn btn-sm btn-secondary" onclick="collapseAllCats()">全部收起</button>
+        <span style="margin-left:auto">${anyOpen ? '展开到哪一层只记在这台电脑上，刷新还在' : '默认只列一级行业，点名称左边的 ▸ 逐层往下展开'}</span>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>排序</th><th>图标</th><th>分类名称（中文）</th><th>English</th><th>Bahasa Malaysia</th><th>封面</th><th>商品</th><th>状态</th><th>操作</th></tr></thead>
     <tbody>${tops.map(t => rowsOf(t, 0)).join('')}${orphans.length ? `<tr><td colspan="9" style="padding:10px 16px;color:var(--gray-500);background:var(--gray-50)">下面这些分类的上级已经被删掉了，请重新选一个上级</td></tr>` + orphans.map(x => rowsOf(x, 1)).join('') : ''}</tbody></table></div></div>`;
 }
 
@@ -3047,6 +3103,7 @@ function openCategoryModal(id, preParent) {
       cats.push(Object.assign({ id: DM.genId('CAT') }, data));
     }
     DM.set('categories', cats);
+    revealCatBranch(parent || preParent);
     toast(cat ? '分类已更新' : '分类已创建'); renderPage(currentPageId);
   });
 }
