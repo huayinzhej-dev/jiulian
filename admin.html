@@ -3123,58 +3123,10 @@ function deleteCategory(id) {
 function renderProductsList(c) {
   const products = DM.get('products');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">商品列表</h1><p class="page-desc">管理所有产品</p></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-secondary" onclick="importShowcaseProducts()">导入首页展示的 6 个商品</button><button class="btn btn-primary" onclick="openProductModal()">+ 新建商品</button></div></div>
+    <div class="page-header"><div><h1 class="page-title">商品列表</h1><p class="page-desc">管理所有产品</p></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-primary" onclick="openProductModal()">+ 新建商品</button></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>分类</th><th>起步价</th><th>MOQ</th><th>状态</th><th>操作</th></tr></thead>
     <tbody>${products.length === 0 ? '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999">暂无商品，点击上方按钮创建</td></tr>' :
     products.map(p=>`<tr><td class="td-name">${esc(p.name)}</td><td>${esc(p.category)}</td><td>RM ${p.price.toFixed(2)}</td><td>${esc(p.moq)} ${p.moqUnit}</td><td>${p.status==='active'?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openProductModal('${p.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
-}
-
-// 首页那 6 张商品卡原本只写死在 index.html 里，商品库里一条都没有：前台只要库里有货就整排替换，
-// 所以谁先建一个商品，首页剩下的六个展示位就没了。这个按钮把首页内容原样搬进商品库，
-// 之后改价、换图、下架都在后台做。文案与 index.html 的 data-name/desc/price/moq 一一对应，改那边要改这边。
-const SHOWCASE_PRODUCTS = [
-  { id:'PRD-101', name:'Gift Box', nameZh:'礼品盒', price:1.32, moq:100, catKeys:['rigid-box','精装盒'],
-    desc:'Luxury rigid boxes with custom inserts, magnetic closure, and premium finishes.',
-    descZh:'奢华硬盒，配有定制内衬、磁扣和高端表面处理。' },
-  { id:'PRD-102', name:'Food Box', nameZh:'食品盒', price:0.80, moq:500, catKeys:['food-box','食品盒'],
-    desc:'Food-grade packaging with grease-resistant coating. FDA & EU compliant materials.',
-    descZh:'食品级包装，防油涂层。符合FDA和欧盟标准的材料。' },
-  { id:'PRD-103', name:'Cosmetic Box', nameZh:'化妆品盒', price:1.00, moq:200, catKeys:['rigid-box','精装盒'],
-    desc:'Elegant printing with embossing, foil stamping, and soft-touch lamination.',
-    descZh:'精美印刷，支持烫金、压花和柔触覆膜。' },
-  { id:'PRD-104', name:'Shipping Box', nameZh:'运输纸箱', price:0.90, moq:300, catKeys:['shipping-box','彩色运输盒'],
-    desc:'Durable corrugated mailers in various sizes. Custom printing available.',
-    descZh:'各种尺寸的耐用瓦楞纸邮寄盒。支持定制印刷。' },
-  { id:'PRD-105', name:'Paper Bag', nameZh:'纸袋', price:0.50, moq:500, catKeys:['paper-bag','纸袋'],
-    desc:'Kraft and art paper bags with custom handles. Perfect for retail and events.',
-    descZh:'牛皮纸和艺术纸袋，配有定制手柄。适合零售和活动。' },
-  { id:'PRD-106', name:'Label & Sticker', nameZh:'标签贴纸', price:0.05, moq:1000, catKeys:['pos-display','POS展示架'],
-    desc:'Custom die-cut labels in matte, glossy, or transparent finishes. Roll or sheet format.',
-    descZh:'定制模切标签，哑光、光面或透明材质。卷装或张装。' }
-];
-
-function importShowcaseProducts() {
-  const list = DM.get('products');
-  const cats = DM.get('categories');
-  const hasId = new Set(list.map(p => String(p && p.id)));
-  const hasName = new Set(list.map(p => String(p && p.name || '').trim().toLowerCase()));
-  // 只在"能挂商品的那一层"里找（有二级子分类的一级、以及三条产品线都排除），否则导入会把商品挂到产品线上
-  const leafCats = cats.filter(c => !catChildren(c.id, cats).length && !isCatLine(c));
-  const pickCat = keys => leafCats.find(c => keys.some(k => String(c.slug || '').toLowerCase() === k || String(c.name || '') === k))
-                        || leafCats.find(c => c.active !== false) || leafCats[0] || null;
-  const added = [];
-  SHOWCASE_PRODUCTS.forEach(s => {
-    if (hasId.has(s.id) || hasName.has(s.name.toLowerCase())) return;
-    const c = pickCat(s.catKeys);
-    added.push({ id:s.id, name:s.name, nameZh:s.nameZh, categoryId:c ? c.id : '', category:c ? c.name : '',
-                 price:s.price, moq:s.moq, moqUnit:'pcs', status:'active', image:'', imagePath:'',
-                 desc:s.desc, descZh:s.descZh });
-  });
-  if (!added.length) { toast('这 6 个商品已经都在列表里，没有重复添加'); return }
-  DM.set('products', list.concat(added));
-  writeLog('导入首页商品', added.map(p => p.name).join('、'));
-  renderPage(currentPageId);
-  toast(`已导入 ${added.length} 个商品${Sync.ready ? '，正在上传服务器…' : '（未连接后端，只存在这台设备上）'}`);
 }
 
 function openProductModal(id) {
