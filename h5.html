@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>玖联 · 榴莲专属包装 | Durian Packaging</title>
+<meta name="description" content="玖联工业榴莲包装：高透PET展示金黄果肉，加厚防漏、卡扣锁香、耐低温适配冷链，堆叠稳固易发货。一站式定制，WhatsApp 一键询价。">
+<meta name="theme-color" content="#0f2417">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0f2417; --green:#1c5c34; --green-2:#2f7d47;
+    --gold:#F2C14E; --gold-2:#E8A825; --cream:#FBF6EA; --white:#fff;
+    --wa:#25D366;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:"Inter","Noto Serif SC",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--cream); background:var(--ink); overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .serif{font-family:"Noto Serif SC",serif}
+  /* 手机竖屏滑动容器：整屏吸附 */
+  .deck{
+    height:100vh; height:100dvh; overflow-y:scroll; scroll-snap-type:y mandatory;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  }
+  .deck::-webkit-scrollbar{display:none}
+  .screen{
+    min-height:100vh; min-height:100dvh; scroll-snap-align:start; scroll-snap-stop:always;
+    position:relative; display:flex; flex-direction:column; justify-content:center;
+    padding:calc(28px + env(safe-area-inset-top)) 26px calc(30px + env(safe-area-inset-bottom));
+    overflow:hidden;
+  }
+  /* 桌面/平板：居中一条手机宽度的栏，避免拉伸变形 */
+  @media (min-width:520px){
+    body{background:#0a1a11}
+    .deck{max-width:440px;margin:0 auto;box-shadow:0 0 60px rgba(0,0,0,.6)}
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:16px;
+  }
+  .eyebrow::before{content:"";width:26px;height:1px;background:var(--gold);opacity:.7}
+  h1{font-size:40px;line-height:1.12;font-weight:900;letter-spacing:.5px}
+  h2{font-size:27px;line-height:1.25;font-weight:800}
+  .lead{font-size:15.5px;line-height:1.75;color:rgba(251,246,234,.82);margin-top:14px}
+  .accent{color:var(--gold)}
+
+  /* 背景层 */
+  .bg{position:absolute;inset:0;z-index:0}
+  .bg-green{background:
+    radial-gradient(120% 80% at 80% -10%, rgba(47,125,71,.55), transparent 60%),
+    radial-gradient(120% 90% at 0% 110%, rgba(242,193,78,.14), transparent 55%),
+    linear-gradient(160deg,#123021 0%,#0f2417 60%,#0b1c12 100%);}
+  .bg-gold{background:
+    radial-gradient(120% 90% at 50% -20%, rgba(242,193,78,.20), transparent 60%),
+    linear-gradient(165deg,#14301f 0%,#0f2417 100%);}
+  .content{position:relative;z-index:1}
+
+  /* 封面 */
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:26px}
+  .brand img{height:34px;width:auto;display:block}
+  .brand span{font-size:12.5px;letter-spacing:.22em;color:rgba(251,246,234,.7);font-weight:600}
+  .cover-img{
+    margin-top:24px;border-radius:22px;overflow:hidden;position:relative;
+    background:radial-gradient(120% 120% at 50% 0%,#20402c,#122a1b);
+    border:1px solid rgba(242,193,78,.22);box-shadow:0 20px 50px rgba(0,0,0,.4);
+    aspect-ratio:1/1;max-height:44vh;
+  }
+  .cover-img img{width:100%;height:100%;object-fit:contain;display:block}
+  .cover-img::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 70%,rgba(11,28,18,.4))}
+
+  /* 列表卡片 */
+  .cards{display:flex;flex-direction:column;gap:12px;margin-top:22px}
+  .card{
+    background:rgba(255,255,255,.055);border:1px solid rgba(242,193,78,.16);
+    border-radius:16px;padding:16px 16px 16px 14px;display:flex;gap:14px;align-items:flex-start;
+    backdrop-filter:blur(2px);
+  }
+  .card .ic{flex:0 0 auto;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(160deg,var(--gold),var(--gold-2));color:#3a2a05;font-size:20px;font-weight:800}
+  .card .tx h3{font-size:16px;font-weight:700;color:var(--white);margin-bottom:4px}
+  .card .tx p{font-size:13.5px;line-height:1.6;color:rgba(251,246,234,.72)}
+
+  /* 痛点 */
+  .pain{display:flex;flex-direction:column;gap:14px;margin-top:22px}
+  .pain .row{display:flex;align-items:center;gap:14px;padding:15px 16px;border-radius:14px;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+  .pain .no{font-size:22px;font-weight:900;color:var(--gold);min-width:30px}
+  .pain .row b{font-size:16px;color:#fff;display:block;margin-bottom:2px}
+  .pain .row span{font-size:13px;color:rgba(251,246,234,.7)}
+
+  /* 规格表 */
+  .spec{margin-top:20px;border-radius:16px;overflow:hidden;border:1px solid rgba(242,193,78,.18)}
+  .spec .r{display:flex;justify-content:space-between;gap:16px;padding:14px 16px;font-size:14.5px;
+    background:rgba(255,255,255,.04)}
+  .spec .r:nth-child(odd){background:rgba(255,255,255,.075)}
+  .spec .k{color:rgba(251,246,234,.72)}
+  .spec .v{color:#fff;font-weight:600;text-align:right}
+
+  /* 数据 */
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+  .stat{background:rgba(255,255,255,.05);border:1px solid rgba(242,193,78,.14);border-radius:16px;padding:18px 16px;text-align:center}
+  .stat b{display:block;font-size:30px;font-weight:900;color:var(--gold);line-height:1;font-family:"Noto Serif SC",serif}
+  .stat span{display:block;font-size:12.5px;color:rgba(251,246,234,.72);margin-top:8px;line-height:1.4}
+
+  /* CTA */
+  .cta-wrap{display:flex;flex-direction:column;gap:12px;margin-top:24px}
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;
+    font-size:16.5px;font-weight:700;padding:16px 20px;border-radius:14px;transition:transform .15s ease;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn-wa{background:var(--wa);color:#fff;box-shadow:0 10px 26px rgba(37,211,102,.35)}
+  .btn-call{background:rgba(255,255,255,.08);color:var(--cream);border:1px solid rgba(242,193,78,.25)}
+  .contact-lines{margin-top:20px;display:flex;flex-direction:column;gap:8px;font-size:13.5px;color:rgba(251,246,234,.72)}
+  .contact-lines a{color:rgba(251,246,234,.86);text-decoration:none}
+
+  /* 下滑提示 */
+  .hint{position:absolute;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    z-index:2;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;letter-spacing:.1em;
+    color:rgba(251,246,234,.6)}
+  .hint .chev{width:22px;height:22px;border-right:2px solid var(--gold);border-bottom:2px solid var(--gold);
+    transform:rotate(45deg);animation:bob 1.6s infinite}
+  @keyframes bob{0%,100%{transform:rotate(45deg) translate(0,0);opacity:.5}50%{transform:rotate(45deg) translate(4px,4px);opacity:1}}
+
+  /* 进度点 */
+  .dots{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:5;display:flex;flex-direction:column;gap:10px}
+  .dots i{width:7px;height:7px;border-radius:50%;background:rgba(251,246,234,.28);transition:all .3s}
+  .dots i.on{background:var(--gold);height:20px;border-radius:4px}
+
+  /* 进场动画 */
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+  .in .reveal{opacity:1;transform:none}
+  .in .reveal:nth-child(2){transition-delay:.08s}
+  .in .reveal:nth-child(3){transition-delay:.16s}
+  .in .reveal:nth-child(4){transition-delay:.24s}
+  .in .reveal:nth-child(5){transition-delay:.32s}
+  @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}.hint .chev{animation:none}}
+</style>
+</head>
+<body>
+<div class="dots" id="dots"></div>
+<main class="deck" id="deck">
+
+  <!-- 1 封面 -->
+  <section class="screen">
+    <div class="bg bg-green"></div>
+    <div class="content">
+      <div class="brand reveal"><img src="images/logo-mark-light.png" alt="JIULIAN 玖联工业"><span>JIULIAN · 玖联工业</span></div>
+      <div class="eyebrow reveal">Premium Durian Packaging</div>
+      <h1 class="serif reveal">榴莲，<br>值得<span class="accent">更好</span>的包装</h1>
+      <p class="lead reveal">高透 PET 展示金黄果肉 · 加厚防漏 · 卡扣锁香 · 耐低温适配冷链，电商发货与商超陈列一盒搞定。</p>
+      <div class="cover-img reveal"><img src="https://sqzacdkpoozqpwchnymv.supabase.co/storage/v1/object/public/jl-uploads/product/2026-10-15-mv8xshey-_.png" alt="玖联榴莲包装"></div>
+    </div>
+    <div class="hint"><span>下滑了解</span><span class="chev"></span></div>
+  </section>
+
+  <!-- 2 痛点 -->
+  <section class="screen">
+    <div class="bg bg-gold"></div>
+    <div class="content">
+      <div class="eyebrow">Why Durian</div>
+      <h2 class="serif">榴莲出货，<br>你最怕哪一关？</h2>
+      <div class="pain">
+        <div class="row reveal"><span class="no">01</span><div><b>串味漏汁</b><span>香气散、汁水漏，收货体验差</span></div></div>
+        <div class="row reveal"><span class="no">02</span><div><b>挤压破盒</b><span>堆叠运输中变形、开裂</span></div></div>
+        <div class="row reveal"><span class="no">03</span><div><b>冷链化冻</b><span>低温下材质变脆、密封失效</span></div></div>
+      </div>
+    </div>
+    <div class="hint"><span>继续</span><span class="chev"></span></div>
+  </section>
+
+  <!-- 3 卖点 -->
+  <section class="screen">
+    <div class="bg bg-green"></div>
+    <div class="content">
+      <div class="eyebrow">The Solution</div>
+      <h2 class="serif">一盒，<span class="accent">四重</span>保障</h2>
+      <div class="cards">
+        <div class="card reveal"><div class="ic">透</div><div class="tx"><h3>高透 PET 材质</h3><p>通透展示金黄果肉，货架与详情页都更抓眼球。</p></div></div>
+        <div class="card reveal"><div class="ic">封</div><div class="tx"><h3>加厚防漏 · 卡扣锁香</h3><p>加厚盒身防渗漏，卡扣密封锁住香气与汁水。</p></div></div>
+        <div class="card reveal"><div class="ic">冷</div><div class="tx"><h3>耐低温 · 适配冷链</h3><p>低温不发脆，冷冻冷藏运输一路稳护果肉。</p></div></div>
+        <div class="card reveal"><div class="ic">稳</div><div class="tx"><h3>堆叠稳固 · 易发货</h3><p>码放整齐抗压，电商发货与商超陈列都省心。</p></div></div>
+      </div>
+    </div>
+    <div class="hint"><span>看规格</span><span class="chev"></span></div>
+  </section>
+
+  <!-- 4 规格 -->
+  <section class="screen">
+    <div class="bg bg-gold"></div>
+    <div class="content">
+      <div class="eyebrow">Specifications</div>
+      <h2 class="serif">规格 · 可按需定制</h2>
+      <div class="spec">
+        <div class="r"><span class="k">盒型</span><span class="v">圆盒 / 方盒 / 带盖盒</span></div>
+        <div class="r"><span class="k">材质</span><span class="v">食品级高透 PET</span></div>
+        <div class="r"><span class="k">尺寸 / 容量</span><span class="v">多规格，可定制</span></div>
+        <div class="r"><span class="k">印刷</span><span class="v">定制 Logo · 彩印</span></div>
+        <div class="r"><span class="k">起订量</span><span class="v">咨询报价</span></div>
+        <div class="r"><span class="k">打样</span><span class="v">支持</span></div>
+      </div>
+      <p class="lead reveal">圆盒装整颗果肉，方盒分装榴莲块，带盖盒锁鲜外带——告诉我你的规格，我来配。</p>
+    </div>
+    <div class="hint"><span>为什么选玖联</span><span class="chev"></span></div>
+  </section>
+
+  <!-- 5 信任 -->
+  <section class="screen">
+    <div class="bg bg-green"></div>
+    <div class="content">
+      <div class="eyebrow">Why Jiulian</div>
+      <h2 class="serif">30 年工厂，<br>一站式交付</h2>
+      <div class="stats">
+        <div class="stat reveal"><b>1994</b><span>始于吉隆坡甲洞</span></div>
+        <div class="stat reveal"><b>500+</b><span>服务马来西亚及海外客户</span></div>
+        <div class="stat reveal"><b>ISO</b><span>9001:2015 认证工厂</span></div>
+        <div class="stat reveal"><b>1站</b><span>设计·打样·生产·交付</span></div>
+      </div>
+    </div>
+    <div class="hint"><span>获取报价</span><span class="chev"></span></div>
+  </section>
+
+  <!-- 6 CTA -->
+  <section class="screen">
+    <div class="bg bg-gold"></div>
+    <div class="content">
+      <div class="eyebrow">Get A Quote</div>
+      <h2 class="serif">现在，<span class="accent">为榴莲定制</span>你的包装</h2>
+      <p class="lead">把你的盒型、尺寸和数量告诉我，工厂直供价，最快当天回复。</p>
+      <div class="cta-wrap">
+        <a class="btn btn-wa" id="waBtn" href="#" target="_blank" rel="noopener">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.2-.6.1-.2.3-.7 1-.9 1.1-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.2-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.2-.6-1.5-.9-2-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.6 1.1 2.7c.1.2 1.9 3 4.6 4.2.6.3 1.1.4 1.5.6.6.2 1.2.2 1.6.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg>
+          WhatsApp 一键询价
+        </a>
+        <a class="btn btn-call" href="tel:+60167241814">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15.5 15.5 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.2.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1l-2.3 2.2z"/></svg>
+          016-724 1814
+        </a>
+      </div>
+      <div class="contact-lines">
+        <span>✉ <a href="mailto:alan@jiulianpack.com.my">alan@jiulianpack.com.my</a></span>
+        <span>📍 马来西亚柔佛州巴西古丹绒浪萨巴路129号，81700</span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  var WA='60167241814';
+  var msg='你好，我想咨询玖联的【榴莲包装】。我要的盒型/尺寸/数量：';
+  document.getElementById('waBtn').href='https://wa.me/'+WA+'?text='+encodeURIComponent(msg);
+
+  var deck=document.getElementById('deck');
+  var screens=[].slice.call(deck.querySelectorAll('.screen'));
+  var dotsHost=document.getElementById('dots');
+  screens.forEach(function(_,i){ var d=document.createElement('i'); if(i===0)d.className='on'; dotsHost.appendChild(d); });
+  var dots=[].slice.call(dotsHost.children);
+
+  // 进场动画
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('in'); });
+  },{root:deck,threshold:0.55});
+  screens.forEach(function(s){ io.observe(s); });
+
+  // 进度点跟随
+  var ticking=false;
+  deck.addEventListener('scroll',function(){
+    if(ticking) return; ticking=true;
+    requestAnimationFrame(function(){
+      var idx=Math.round(deck.scrollTop/deck.clientHeight);
+      idx=Math.max(0,Math.min(screens.length-1,idx));
+      dots.forEach(function(d,i){ d.className=i===idx?'on':''; });
+      ticking=false;
+    });
+  },{passive:true});
+})();
+</script>
+</body>
+</html>
