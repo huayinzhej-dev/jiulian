@@ -676,6 +676,51 @@ function catOptions(cats, cur, ph, valueOf) {
   return html;
 }
 
+// ========== 分类 ↔ 商品 双向同步 ==========
+// 只有「和分类配对的那一条主商品」参与同步；你为了凑数手动多加的其它商品不改动分类，
+// 否则同一分类下两个商品会互相抢着覆盖。配对关系记在分类的 linkedProductId 上，
+// 老数据没这个字段时退回「该分类下的第一条商品」，所以 78 条既有数据不用迁移就能配对。
+// 字段对照：分类 name / nameEn / nameBm ↔ 商品 nameZh / name / nameBm
+//           分类 desc / descEn / descBm ↔ 商品 descZh / desc / descBm，封面图 ↔ 商品图片。
+// 价格、起订量是商品独有；slug、图标、排序、代表性产品、上级是分类独有——两边都不碰对方这些。
+// 只搬「非空」的那一栏：留空 = 保持对面原有内容，和前台「留空保持原文」是同一个规矩。
+const CAT_SYNC_FIELDS = [
+  ['name', 'nameZh'], ['nameEn', 'name'], ['nameBm', 'nameBm'],
+  ['desc', 'descZh'], ['descEn', 'desc'], ['descBm', 'descBm'],
+  ['image', 'image'], ['imagePath', 'imagePath']
+];
+const hasText = v => v !== undefined && v !== null && String(v).trim() !== '';
+
+function pairedProductOf(cat, products) {
+  if (!cat) return null;
+  const inCat = products.filter(p => String(p.categoryId || '') === String(cat.id));
+  if (!inCat.length) return null;
+  return inCat.find(p => String(p.id) === String(cat.linkedProductId || '')) || inCat[0];
+}
+
+// 分类 → 商品：把分类这几栏抄给它的配对主商品
+function syncCatToProduct(cat, products) {
+  const p = pairedProductOf(cat, products);
+  if (!p) return false;
+  CAT_SYNC_FIELDS.forEach(([from, to]) => { if (hasText(cat[from])) p[to] = cat[from]; });
+  if (hasText(cat.name)) p.category = cat.name;   // 商品行上那份分类名是冗余副本，一起跟上
+  cat.linkedProductId = p.id;
+  return true;
+}
+
+// 商品 → 分类：只有这条商品确实是它所选分类的配对主商品时才回写
+function syncProductToCat(p, cats, products) {
+  const cat = cats.find(c => String(c.id) === String(p.categoryId));
+  if (!cat) return false;
+  if (cat.linkedProductId && String(cat.linkedProductId) !== String(p.id)) return false;
+  const paired = pairedProductOf(cat, products);
+  if (paired && String(paired.id) !== String(p.id)) return false;
+  cat.linkedProductId = p.id;
+  CAT_SYNC_FIELDS.forEach(([from, to]) => { if (hasText(p[to])) cat[from] = p[to]; });
+  p.category = cat.name;   // 分类名可能刚被这条商品改掉，冗余副本跟着刷新
+  return true;
+}
+
 function fmtSize(n) {
   if (!n && n !== 0) return '—';
   return n > 1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(n/1024))+' KB';
@@ -3101,14 +3146,18 @@ function openCategoryModal(id, preParent) {
         return;
       }
     }
+    let syncedTo = '';
     if (cat) {
       Object.assign(cat, data);
+      // 编辑分类 = 以分类这一侧为准，把名称/说明/封面图推到配对主商品上
+      const prods = DM.get('products');
+      if (syncCatToProduct(cat, prods)) { DM.set('products', prods); syncedTo = '商品'; }
     } else {
       const newCat = Object.assign({ id: DM.genId('CAT') }, data);
       cats.push(newCat);
       // 新建分类时自动生成一条同名商品，继承分类名称和封面图，运营可直接在商品列表里改价格/起订量
       const products = DM.get('products');
-      products.push({
+      const newProd = {
         id: DM.genId('PRD'),
         name: data.nameEn || data.name,
         nameZh: data.name,
@@ -3124,12 +3173,17 @@ function openCategoryModal(id, preParent) {
         desc: data.descEn || '',
         descZh: data.desc || '',
         descBm: data.descBm || ''
-      });
+      };
+      products.push(newProd);
+      newCat.linkedProductId = newProd.id;
       DM.set('products', products);
+      syncedTo = '商品';
     }
     DM.set('categories', cats);
     revealCatBranch(parent || preParent);
-    toast(cat ? '分类已更新' : '分类已创建，已自动生成对应商品'); renderPage(currentPageId);
+    toast(cat ? (syncedTo ? '分类已更新，并同步到对应商品' : '分类已更新（该分类下没有可配对的商品，未同步）')
+              : '分类已创建，已自动生成对应商品');
+    renderPage(currentPageId);
   });
 }
 
@@ -3205,6 +3259,7 @@ function openProductModal(id) {
       image = up.url; imagePath = up.path;
     }
 
+    let saved;
     if (p) {
       p.name = name;
       p.nameZh = val('f_nameZh');
@@ -3220,8 +3275,9 @@ function openProductModal(id) {
       p.descBm = val('f_descBm');
       p.image = image;
       p.imagePath = imagePath;
+      saved = p;
     } else {
-      products.push({
+      saved = {
         id: DM.genId('PRD'),
         name,
         nameZh: val('f_nameZh'),
@@ -3237,10 +3293,15 @@ function openProductModal(id) {
         desc: val('f_desc'),
         descZh: val('f_descZh'),
         descBm: val('f_descBm')
-      });
+      };
+      products.push(saved);
     }
+    // 商品 → 分类：只有这条商品是所选分类的配对主商品时才回写，
+    // 你另外手动多加的同类商品不会把分类文案顶掉
+    const wroteBack = syncProductToCat(saved, categories, products);
+    if (wroteBack) DM.set('categories', categories);
     DM.set('products', products);
-    toast(p ? '商品已更新' : '商品已创建');
+    toast((p ? '商品已更新' : '商品已创建') + (wroteBack ? '，并同步到分类' : ''));
     renderPage(currentPageId);
   });
 }
