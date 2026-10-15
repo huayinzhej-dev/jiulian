@@ -4796,7 +4796,6 @@ function showModal(title, bodyHtml, onSave, buttons) {
 }
 
 function closeModal() { document.getElementById('modalOverlay').classList.remove('active') }
-document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal() });
 
 function toast(msg) {
   const t = document.createElement('div');
