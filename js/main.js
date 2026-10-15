@@ -623,7 +623,7 @@
   const PUBLIC_COLS = ['clients', 'products', 'faqs', 'categories'];
   const ROW_COLS = new Set(['clients', 'products', 'faqs', 'categories']);
   // 首页文案类：整块存成一条文档，后台「内容管理」改了前台就跟着变
-  const DOC_COLS = ['settings_banner', 'settings_advantages', 'settings_stats', 'settings_about', 'settings_process'];
+  const DOC_COLS = ['settings_banner', 'settings_advantages', 'settings_stats', 'settings_about', 'settings_process', 'settings_modal'];
 
   // 三语文案：马来文 / 中文留空时沿用英文，英文也留空时用已经填了的那一语兜底，
   // 否则后台清空一个栏位就会把前台整块刷成空白。
@@ -1128,6 +1128,41 @@
     return true;
   }
 
+  // 商品详情弹窗底部的提示文字和电商平台链接，后台「弹窗设置」可随时改
+  function applyModalSettings(d) {
+    if (!d) return false;
+    const note1 = document.getElementById('detailNote1');
+    const note2 = document.getElementById('detailNote2');
+    if (note1) {
+      const en = str(d.note1En) || 'This image is for website display only, all products can be customized according to your needs';
+      const zh = str(d.note1Zh) || '该图片为网站展示图，所有商品均可按需定制';
+      const bm = str(d.note1Bm) || en;
+      note1.setAttribute('data-en', en);
+      note1.setAttribute('data-zh', zh);
+      note1.setAttribute('data-bm', bm);
+      note1.textContent = currentLang === 'zh' ? zh : currentLang === 'bm' ? bm : en;
+    }
+    if (note2) {
+      const en = str(d.note2En) || 'Regular products, click to shop online';
+      const zh = str(d.note2Zh) || '常规商品，可点击商城购买';
+      const bm = str(d.note2Bm) || en;
+      note2.setAttribute('data-en', en);
+      note2.setAttribute('data-zh', zh);
+      note2.setAttribute('data-bm', bm);
+      note2.textContent = currentLang === 'zh' ? zh : currentLang === 'bm' ? bm : en;
+    }
+    const platforms = {Tiktok: d.tiktok, Shopee: d.shopee, Lazada: d.lazada};
+    Object.entries(platforms).forEach(([key, url]) => {
+      const el = document.getElementById('platform' + key);
+      if (el) {
+        const href = str(url);
+        if (href) { el.href = href; el.style.display = ''; }
+        else el.style.display = 'none';
+      }
+    });
+    return true;
+  }
+
   // ===== Hero 商品轮播 =====
   // 圆点和箭头只有在真的有多张图时才出现，只有一张时就是个静态图，不显示假控件。
   const HERO_CAR_MS = 5000;
@@ -1293,7 +1328,8 @@
       [applyStats, docs.settings_stats],
       [applyAbout, docs.settings_about],
       [applyCb, docs.settings_about],
-      [applyProcess, docs.settings_process]
+      [applyProcess, docs.settings_process],
+      [applyModalSettings, docs.settings_modal]
     ];
     parts.forEach(([fn, data]) => {
       // 单个版块渲染失败不影响整页，保留写死内容

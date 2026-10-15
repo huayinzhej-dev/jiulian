@@ -280,7 +280,7 @@ const MENU = [
     {id:'policies-list',label:'政策列表'}
   ]},
   { id:'settings', icon:'⚙️', label:'系统设置', children:[
-    {id:'settings-site',label:'基本信息'},{id:'settings-seo',label:'SEO 设置'},{id:'settings-notifications',label:'通知模板'},{id:'settings-certs',label:'认证/资质'},{id:'settings-shipping',label:'配送区域'},{id:'settings-finance',label:'税率/货币'},{id:'settings-users',label:'管理员列表'},{id:'settings-roles',label:'角色管理'},{id:'settings-cloud',label:'后端状态'},{id:'settings-logs',label:'操作日志'}
+    {id:'settings-site',label:'基本信息'},{id:'settings-seo',label:'SEO 设置'},{id:'settings-modal',label:'弹窗设置'},{id:'settings-notifications',label:'通知模板'},{id:'settings-certs',label:'认证/资质'},{id:'settings-shipping',label:'配送区域'},{id:'settings-finance',label:'税率/货币'},{id:'settings-users',label:'管理员列表'},{id:'settings-roles',label:'角色管理'},{id:'settings-cloud',label:'后端状态'},{id:'settings-logs',label:'操作日志'}
   ]}
 ];
 
@@ -317,7 +317,7 @@ const CLOUD = {
   doc: ['printingOptions','finishingOptions','caseCategories','settings_site','settings_seo',
         'settings_notifications','settings_finance','settings_about','settings_process',
         'settings_printing_guide','settings_advantages','settings_stats','settings_banner',
-        'settings_quote_template','settings_certs','pricebook','contactFormConfig']
+        'settings_quote_template','settings_certs','pricebook','contactFormConfig','settings_modal']
 };
 // 首页这五块文案：旧版后台的保存函数压根不写马来文/中文栏，云端那条记录因此键比本机少，
 // 整条覆盖会把本机刚填的内容抹掉。拉取时按字段合并（数组按下标合并），云端已有的字段仍以云端为准。
@@ -831,6 +831,9 @@ function seedData() {
   if (!DM.has('settings_seo')) {
     DM.set('settings_seo', {title:'Jiulian Packaging — Premium Printing & Packaging Solutions',description:'Jiulian Packaging is a leading printing and packaging manufacturer offering custom boxes, bags, and labels for global brands.',keywords:'packaging, printing, custom boxes, mailer box, food packaging, Malaysia',gaId:'',gscId:'',fbPixel:''});
   }
+  if (!DM.has('settings_modal')) {
+    DM.set('settings_modal', {note1En:'This image is for website display only, all products can be customized according to your needs',note1Zh:'该图片为网站展示图，所有商品均可按需定制',note1Bm:'',note2En:'Regular products, click to shop online',note2Zh:'常规商品，可点击商城购买',note2Bm:'',tiktok:'',shopee:'',lazada:''});
+  }
   if (!DM.has('settings_notifications')) {
     DM.set('settings_notifications', {notifyEmail:'marketing@jiulianpack.com.my',leadTemplate:'新询盘通知：\n客户：{{客户名}}\n公司：{{公司}}\n盒型：{{盒型}}\n数量：{{数量}}\n\n请及时跟进。',quoteTemplate:'尊敬的 {{客户名}}，\n\n感谢您的询价。附件是报价单 {{报价号}}，有效期 {{有效期}}。\n\n如有任何疑问请随时联系我们。'});
   }
@@ -994,6 +997,7 @@ function renderPage(id) {
     'policies-list': renderPoliciesList,
     'settings-site': renderSettingsSite,
     'settings-seo': renderSettingsSEO,
+    'settings-modal': renderSettingsModal,
     'settings-notifications': renderSettingsNotifications,
     'settings-certs': renderSettingsCerts,
     'settings-shipping': renderSettingsShipping,
@@ -3100,11 +3104,32 @@ function openCategoryModal(id, preParent) {
     if (cat) {
       Object.assign(cat, data);
     } else {
-      cats.push(Object.assign({ id: DM.genId('CAT') }, data));
+      const newCat = Object.assign({ id: DM.genId('CAT') }, data);
+      cats.push(newCat);
+      // 新建分类时自动生成一条同名商品，继承分类名称和封面图，运营可直接在商品列表里改价格/起订量
+      const products = DM.get('products');
+      products.push({
+        id: DM.genId('PRD'),
+        name: data.nameEn || data.name,
+        nameZh: data.name,
+        nameBm: data.nameBm || '',
+        categoryId: newCat.id,
+        category: data.name,
+        price: 0,
+        moq: 0,
+        moqUnit: 'pcs',
+        status: 'active',
+        image: data.image || '',
+        imagePath: data.imagePath || '',
+        desc: data.descEn || '',
+        descZh: data.desc || '',
+        descBm: data.descBm || ''
+      });
+      DM.set('products', products);
     }
     DM.set('categories', cats);
     revealCatBranch(parent || preParent);
-    toast(cat ? '分类已更新' : '分类已创建'); renderPage(currentPageId);
+    toast(cat ? '分类已更新' : '分类已创建，已自动生成对应商品'); renderPage(currentPageId);
   });
 }
 
@@ -4269,6 +4294,42 @@ function renderSettingsSEO(c) {
 
 function saveSettingsSEO() {
   DM.set('settings_seo', {title:val('fs_title'),description:val('fs_desc'),keywords:val('fs_keywords'),gaId:val('fs_gaId'),gscId:val('fs_gscId'),fbPixel:val('fs_fbPixel')});
+  toast('已保存');
+}
+
+function renderSettingsModal(c) {
+  const s = docVal('settings_modal');
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">弹窗设置</h1><p class="page-desc">商品详情弹窗的提示文字和电商平台链接</p></div></div>
+    <div class="card"><div class="card-body">
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--gray-700)">提示文字（第一行）</h3>
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">英文</label><input class="form-input" id="fm_note1En" value="${esc(s.note1En||'')}" placeholder="This image is for website display only..."></div>
+        <div class="form-group full"><label class="form-label">中文</label><input class="form-input" id="fm_note1Zh" value="${esc(s.note1Zh||'')}" placeholder="该图片为网站展示图..."></div>
+        <div class="form-group full"><label class="form-label">Bahasa Malaysia</label><input class="form-input" id="fm_note1Bm" value="${esc(s.note1Bm||'')}" placeholder="留空则马来文页显示英文"></div>
+      </div>
+      <h3 style="font-size:16px;font-weight:600;margin:24px 0 16px;color:var(--gray-700)">提示文字（第二行）</h3>
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">英文</label><input class="form-input" id="fm_note2En" value="${esc(s.note2En||'')}" placeholder="Regular products, click to shop online"></div>
+        <div class="form-group full"><label class="form-label">中文</label><input class="form-input" id="fm_note2Zh" value="${esc(s.note2Zh||'')}" placeholder="常规商品，可点击商城购买"></div>
+        <div class="form-group full"><label class="form-label">Bahasa Malaysia</label><input class="form-input" id="fm_note2Bm" value="${esc(s.note2Bm||'')}" placeholder="留空则马来文页显示英文"></div>
+      </div>
+      <h3 style="font-size:16px;font-weight:600;margin:24px 0 16px;color:var(--gray-700)">电商平台链接</h3>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">TikTok Shop</label><input class="form-input" id="fm_tiktok" value="${esc(s.tiktok||'')}" placeholder="https://www.tiktok.com/@yourshop"></div>
+        <div class="form-group"><label class="form-label">Shopee</label><input class="form-input" id="fm_shopee" value="${esc(s.shopee||'')}" placeholder="https://shopee.com.my/yourshop"></div>
+        <div class="form-group"><label class="form-label">Lazada</label><input class="form-input" id="fm_lazada" value="${esc(s.lazada||'')}" placeholder="https://www.lazada.com.my/shop/yourshop"></div>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsModal()">保存</button></div>
+    </div></div>`;
+}
+
+function saveSettingsModal() {
+  DM.set('settings_modal', {
+    note1En:val('fm_note1En'), note1Zh:val('fm_note1Zh'), note1Bm:val('fm_note1Bm'),
+    note2En:val('fm_note2En'), note2Zh:val('fm_note2Zh'), note2Bm:val('fm_note2Bm'),
+    tiktok:val('fm_tiktok'), shopee:val('fm_shopee'), lazada:val('fm_lazada')
+  });
   toast('已保存');
 }
 
