@@ -3185,6 +3185,10 @@ function openCategoryModal(id, preParent) {
               : '分类已创建，已自动生成对应商品');
     renderPage(currentPageId);
   });
+
+  // 自动翻译：中文名称/描述失焦时，自动翻译成英文和马来文
+  autoTranslateFromZh('f_name', 'f_nameEn', 'f_nameBm');
+  autoTranslateFromZh('f_cdesc', 'f_cdescEn', 'f_cdescBm');
 }
 
 function deleteCategory(id) {
@@ -3388,6 +3392,10 @@ function openProductModal(id) {
     toast((p ? '商品已更新' : '商品已创建') + (wroteBack ? '，并同步到分类' : ''));
     renderPage(currentPageId);
   });
+
+  // 自动翻译：中文名称/描述失焦时，自动翻译成英文和马来文
+  autoTranslateFromZh('f_nameZh', 'f_name', 'f_nameBm');
+  autoTranslateFromZh('f_descZh', 'f_desc', 'f_descBm');
 }
 
 function deleteProduct(id) {
@@ -4838,6 +4846,50 @@ function renderLogs(c) {
 function val(id) { return document.getElementById(id)?.value?.trim() || '' }
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 function money2(n) { return (Number(n) || 0).toFixed(2) }
+
+// ========== 自动翻译（MyMemory 免费 API，无需 key） ==========
+// 中文输入框失焦时，自动把内容翻译成英文和马来文，填入对应字段
+// 如果目标字段已有内容（用户手动改过），则不覆盖
+async function translateText(text, targetLang) {
+  if (!text || !text.trim()) return '';
+  const langMap = { en: 'en-GB', ms: 'ms-MY' };
+  const lang = langMap[targetLang] || targetLang;
+  try {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=zh-CN|${lang}`);
+    const data = await res.json();
+    if (data.responseStatus === 200 && data.responseData?.translatedText) {
+      return data.responseData.translatedText;
+    }
+  } catch (e) {
+    console.warn('翻译失败:', e);
+  }
+  return '';
+}
+
+async function autoTranslateFromZh(sourceId, targetEnId, targetBmId) {
+  const source = document.getElementById(sourceId);
+  const targetEn = document.getElementById(targetEnId);
+  const targetBm = document.getElementById(targetBmId);
+  if (!source || !targetEn || !targetBm) return;
+
+  source.addEventListener('blur', async () => {
+    const zhText = source.value.trim();
+    if (!zhText) return;
+    // 只在目标字段为空时才翻译，不覆盖用户手动填写的内容
+    const tasks = [];
+    if (!targetEn.value.trim()) {
+      tasks.push(translateText(zhText, 'en').then(t => { if (t) targetEn.value = t; }));
+    }
+    if (!targetBm.value.trim()) {
+      tasks.push(translateText(zhText, 'ms').then(t => { if (t) targetBm.value = t; }));
+    }
+    if (tasks.length) {
+      source.style.opacity = '0.6';
+      await Promise.all(tasks);
+      source.style.opacity = '1';
+    }
+  });
+}
 // 云端地址是后台可编辑字段，挡掉 javascript: 这类伪协议，只放行 http(s) 和站内路径
 function safeHref(u) {
   const s = String(u ?? '').trim();
