@@ -824,7 +824,7 @@
 
   function productsUnder(list, rootId, live) {
     const ids = leavesUnder(rootId, live || liveCats());
-    return list.filter(p => ids.has(String(p.categoryId || '')));
+    return list.filter(p => ids.has(String(p.categoryId || ''))).sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0));
   }
 
   // 行业卡上那张图：优先用他在这一级分类的「封面图」里传的，没传就拿这个行业下

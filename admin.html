@@ -3204,7 +3204,7 @@ function deleteCategory(id) {
 }
 
 // 商品列表筛选状态
-let productFilter = { search: '', category: '' };
+let productFilter = { search: '', industry: '', category: '' };
 // 折叠状态：记录哪些行业被折叠了
 let collapsedIndustries = new Set();
 
@@ -3233,6 +3233,9 @@ function renderProductsList(c) {
     if (!industryGroups.has(industryName)) industryGroups.set(industryName, []);
     industryGroups.get(industryName).push(p);
   });
+  // 收集行业列表（用于下拉菜单）
+  const industryList = [...new Set([...industryGroups.keys()])].sort((a, b) => a.localeCompare(b, 'zh'));
+
   // 按行业名称排序
   const sortedIndustries = [...industryGroups.entries()].sort((a, b) => a[0].localeCompare(b[0], 'zh'));
 
@@ -3241,17 +3244,24 @@ function renderProductsList(c) {
     <div class="card" style="padding:16px 20px;margin-bottom:16px">
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
         <input type="text" id="productSearch" class="form-input" placeholder="搜索商品名称..." value="${esc(productFilter.search)}" style="flex:1;min-width:200px;max-width:320px">
+        <select id="productIndustryFilter" class="form-select" style="min-width:160px">
+          <option value="">全部行业</option>
+          ${industryList.map(ind => `<option value="${esc(ind)}" ${productFilter.industry===ind?'selected':''}>${esc(ind)}</option>`).join('')}
+        </select>
         <select id="productCategoryFilter" class="form-select" style="min-width:180px">
           <option value="">全部分类</option>
           ${catList.map(cat => `<option value="${esc(cat)}" ${productFilter.category===cat?'selected':''}>${esc(cat)}</option>`).join('')}
         </select>
-        <button class="btn btn-sm btn-secondary" onclick="productFilter={search:'',category:''};renderPage(currentPageId)">重置</button>
+        <button class="btn btn-sm btn-secondary" onclick="productFilter={search:'',industry:'',category:''};renderPage(currentPageId)">重置</button>
       </div>
     </div>
     ${sortedIndustries.map(([industryName, prods]) => {
       const isCollapsed = collapsedIndustries.has(industryName);
       // 应用筛选
       let filtered = prods;
+      if (productFilter.industry && industryName !== productFilter.industry) {
+        filtered = [];
+      }
       if (productFilter.search) {
         const q = productFilter.search.toLowerCase();
         filtered = filtered.filter(p => (p.name||'').toLowerCase().includes(q) || (p.nameZh||'').toLowerCase().includes(q) || (p.nameBm||'').toLowerCase().includes(q));
@@ -3259,6 +3269,7 @@ function renderProductsList(c) {
       if (productFilter.category) {
         filtered = filtered.filter(p => p.category === productFilter.category);
       }
+      filtered.sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0));
       return `
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;user-select:none" onclick="toggleIndustryCollapse('${esc(industryName)}')">
@@ -3268,9 +3279,9 @@ function renderProductsList(c) {
               <span style="font-size:13px;color:var(--gray-500)">(${filtered.length} 件商品)</span>
             </div>
           </div>
-          ${!isCollapsed ? `<div class="table-wrap"><table><thead><tr><th>名称</th><th>分类</th><th>起步价</th><th>MOQ</th><th>状态</th><th>操作</th></tr></thead>
-          <tbody>${filtered.length === 0 ? '<tr><td colspan="6" style="text-align:center;padding:24px;color:#999">没有匹配的商品</td></tr>' :
-          filtered.map(p=>`<tr><td class="td-name">${esc(p.name)}</td><td>${esc(p.category)}</td><td>RM ${p.price.toFixed(2)}</td><td>${esc(p.moq)} ${p.moqUnit}</td><td>${p.status==='active'?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openProductModal('${p.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">删除</button></td></tr>`).join('')}</tbody></table></div>` : ''}
+          ${!isCollapsed ? `<div class="table-wrap"><table><thead><tr><th>排序</th><th>名称</th><th>分类</th><th>起步价</th><th>MOQ</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>${filtered.length === 0 ? '<tr><td colspan="7" style="text-align:center;padding:24px;color:#999">没有匹配的商品</td></tr>' :
+          filtered.map(p=>`<tr><td>${Number(p.sort)||0}</td><td class="td-name">${esc(p.name)}</td><td>${esc(p.category)}</td><td>RM ${p.price.toFixed(2)}</td><td>${esc(p.moq)} ${p.moqUnit}</td><td>${p.status==='active'?'<span class="badge badge-green">上架</span>':'<span class="badge badge-gray">下架</span>'}</td><td><button class="btn btn-sm btn-secondary" onclick="openProductModal('${p.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">删除</button></td></tr>`).join('')}</tbody></table></div>` : ''}
         </div>
       `;
     }).join('')}
@@ -3279,6 +3290,10 @@ function renderProductsList(c) {
   // 绑定筛选事件
   document.getElementById('productSearch')?.addEventListener('input', e => {
     productFilter.search = e.target.value;
+    renderProductsList(c);
+  });
+  document.getElementById('productIndustryFilter')?.addEventListener('change', e => {
+    productFilter.industry = e.target.value;
     renderProductsList(c);
   });
   document.getElementById('productCategoryFilter')?.addEventListener('change', e => {
@@ -3321,6 +3336,7 @@ function openProductModal(id) {
         <option value="active" ${p?.status==='active'?'selected':''}>上架</option>
         <option value="inactive" ${p?.status==='inactive'?'selected':''}>下架</option>
       </select></div>
+      <div class="form-group"><label class="form-label">排序（小的在前）</label><input class="form-input" type="number" id="f_sort" value="${esc(p?.sort ?? 1)}"></div>
       <div class="form-group" style="grid-column:span 2"><label class="form-label">商品描述（英文，前台英文页显示）</label><textarea class="form-input" id="f_desc" rows="3" placeholder="商品简短描述...">${esc(p?.desc||'')}</textarea></div>
       <div class="form-group" style="grid-column:span 2"><label class="form-label">商品描述（中文）</label><textarea class="form-input" id="f_descZh" rows="3" placeholder="留空则中文页显示英文">${esc(p?.descZh||'')}</textarea></div>
       <div class="form-group" style="grid-column:span 2"><label class="form-label">商品描述（Bahasa Malaysia）</label><textarea class="form-input" id="f_descBm" rows="3" placeholder="留空则马来文页显示英文">${esc(p?.descBm||'')}</textarea></div>
@@ -3358,6 +3374,7 @@ function openProductModal(id) {
       p.moq = parseInt(val('f_moq')) || 0;
       p.moqUnit = val('f_moqUnit');
       p.status = val('f_status');
+      p.sort = parseInt(document.getElementById('f_sort').value) || 0;
       p.desc = val('f_desc');
       p.descZh = val('f_descZh');
       p.descBm = val('f_descBm');
@@ -3376,6 +3393,7 @@ function openProductModal(id) {
         moq: parseInt(val('f_moq')) || 0,
         moqUnit: val('f_moqUnit'),
         status: val('f_status'),
+        sort: parseInt(document.getElementById('f_sort').value) || 0,
         image,
         imagePath,
         desc: val('f_desc'),
