@@ -667,26 +667,59 @@
   ];
   const FAQ_CHEVRON = '<svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
 
-  function renderClients(list) {
-    const host = document.querySelector('.clients-logos');
-    const rows = (list || []).filter(c => c && c.name && c.active !== false);
-    if (!host || !rows.length) return false;
-    host.textContent = '';
-    rows.forEach(c => {
-      const box = make('div', 'client-logo');
-      const url = safeUrl(c.logoUrl || c.logo || c.image);
-      if (url) {
-        const img = document.createElement('img');
-        img.className = 'client-logo-img';
-        img.src = url;
-        img.alt = c.name;
-        img.loading = 'lazy';
-        box.appendChild(img);
-      } else {
-        box.appendChild(make('span', null, c.name));
-      }
-      host.appendChild(box);
+  // 「操作车间」跑马灯：图片复用 clients 集合（后台上传的设备实拍），只取有图片的行。
+  // 一张都没有时用两张工厂默认图。整条无缝向左滚，鼠标悬停暂停并放大当前那张（纯 CSS）。
+  const WORKSHOP_DEFAULTS = [
+    { src: 'images/factory/cn-hq.jpg', name: '' },
+    { src: 'images/factory/my-plant.jpg', name: '' }
+  ];
+  const WORKSHOP_ITEM_W = 216; // 200 宽 + 16 gap，需与 CSS 的 .workshop-thumb 宽度 + gap 一致
+
+  function renderWorkshop(list) {
+    const marquee = document.getElementById('workshopMarquee');
+    const track = document.getElementById('workshopTrack');
+    if (!marquee || !track) return false;
+    let items = (list || [])
+      .filter(c => c && c.active !== false && safeUrl(c.logoUrl || c.logo || c.image))
+      .map(c => ({ src: safeUrl(c.logoUrl || c.logo || c.image), name: str(c.name) }));
+    if (!items.length) items = WORKSHOP_DEFAULTS.map(d => ({ src: safeUrl(d.src), name: d.name }));
+
+    // 复制成至少铺满视口的一份（set），再整体 ×2 → 滚到 -50% 正好接上，无缝循环
+    const need = Math.max(items.length, Math.ceil(marquee.clientWidth / WORKSHOP_ITEM_W) + 1);
+    const repeat = Math.ceil(need / items.length);
+    const set = [];
+    for (let r = 0; r < repeat; r++) items.forEach(it => set.push(it));
+
+    track.textContent = '';
+    const frag = document.createDocumentFragment();
+    set.concat(set).forEach((it, i) => {
+      const fig = make('figure', 'workshop-thumb');
+      const img = document.createElement('img');
+      img.src = it.src;
+      img.alt = it.name || 'Factory equipment';
+      img.loading = i < set.length ? 'eager' : 'lazy';
+      img.decoding = 'async';
+      fig.appendChild(img);
+      if (it.name) fig.appendChild(make('figcaption', 'workshop-thumb-cap', it.name));
+      frag.appendChild(fig);
     });
+    track.appendChild(frag);
+    // 每张图片约 3 秒过一遍，数量越多整条越长、时间越久，保持匀速
+    track.style.animationDuration = (set.length * 3) + 's';
+    return true;
+  }
+
+  // 「操作车间」标题：后台 About 页的 shopLabel* 三栏可随时改，留空保持前台默认
+  function applyWorkshopLabel(d) {
+    const el = document.getElementById('workshopLabel');
+    if (!el || !d) return false;
+    const en = str(d.shopLabel), zh = str(d.shopLabelZh), bm = str(d.shopLabelBm);
+    if (!en && !zh && !bm) return false;
+    const base = en || zh || bm;
+    el.setAttribute('data-en', base);
+    el.setAttribute('data-zh', zh || base);
+    el.setAttribute('data-bm', bm || base);
+    el.textContent = currentLang === 'zh' ? (zh || base) : currentLang === 'bm' ? (bm || base) : base;
     return true;
   }
 
@@ -1317,7 +1350,7 @@
 
     let changed = false;
     const parts = [
-      [renderClients, bag.clients],
+      [renderWorkshop, bag.clients],
       // 分类要先存下来：行业卡要按分类树数商品，顺序反了就会先铺商品再补分类
       [setProductCategories, bag.categories],
       [renderProducts, bag.products],
@@ -1328,6 +1361,7 @@
       [applyStats, docs.settings_stats],
       [applyAbout, docs.settings_about],
       [applyCb, docs.settings_about],
+      [applyWorkshopLabel, docs.settings_about],
       [applyProcess, docs.settings_process],
       [applyModalSettings, docs.settings_modal]
     ];

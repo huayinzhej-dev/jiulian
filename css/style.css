@@ -528,49 +528,104 @@ ul { list-style: none; }
   line-height: 1.6;
 }
 
-/* ===== Clients ===== */
+/* ===== Workshop / Factory Equipment Marquee ===== */
 .clients {
-  padding: 64px 0;
+  padding: 72px 0;
   text-align: center;
+  background: var(--cream);
 }
 
 .clients .section-label {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
-.clients-logos {
+/* 视口：只裁左右（overflow-x: clip 不影响上下），
+   放大的图可以向上/下浮出盖住相邻内容，无需预留大片空白 */
+.workshop-marquee {
+  position: relative;
+  overflow-x: clip;
+  overflow-y: visible;
+  padding: 24px 0;
+}
+/* 两端淡出，滚动更自然 */
+.workshop-marquee::before,
+.workshop-marquee::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 64px;
+  z-index: 4;
+  pointer-events: none;
+}
+.workshop-marquee::before { left: 0; background: linear-gradient(90deg, var(--cream), rgba(251,253,248,0)); }
+.workshop-marquee::after { right: 0; background: linear-gradient(270deg, var(--cream), rgba(251,253,248,0)); }
+
+/* 轨道 = 两份等长图片并排，整体向左滚到 -50% 无缝循环 */
+.workshop-marquee-track {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 48px;
-  flex-wrap: wrap;
+  gap: 16px;
+  width: max-content;
+  animation-name: workshop-marquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-duration: 30s;
+  will-change: transform;
+}
+@keyframes workshop-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+/* 鼠标移到任意一张上，整条暂停滚动，方便看清放大的图 */
+.workshop-marquee:hover .workshop-marquee-track {
+  animation-play-state: paused;
 }
 
-.client-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 24px;
-  opacity: 0.35;
-  transition: opacity var(--transition);
+.workshop-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: 200px;
+  height: 150px;
+  margin: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--gray-100);
+  box-shadow: var(--shadow-sm);
+  transform-origin: center;
+  transition: transform .35s cubic-bezier(.2, .7, .2, 1), box-shadow .35s ease;
 }
-.client-logo:hover { opacity: 0.6; }
-.client-logo span {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 3px;
-  color: var(--gray-700);
-}
-/* 后台上传了品牌 Logo 时前台显示图片，没上传才退回文字 */
-.client-logo { min-width: 0; max-width: 100%; }
-.client-logo span { overflow-wrap: anywhere; }
-.client-logo-img {
+.workshop-thumb img {
   display: block;
-  max-width: 160px;
-  max-height: 44px;
-  width: auto;
-  height: auto;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* 悬停：这张放大并浮到相邻图之上 */
+.workshop-thumb:hover {
+  transform: scale(2.4);
+  z-index: 5;
+  box-shadow: var(--shadow-lg);
+}
+.workshop-thumb-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20px 10px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--white);
+  text-align: center;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.6) 100%);
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+.workshop-thumb:hover .workshop-thumb-cap { opacity: 1; }
+
+@media (max-width: 640px) {
+  .workshop-thumb { width: 160px; height: 120px; }
+  .workshop-thumb:hover { transform: scale(1.25); }
 }
 
 /* ===== Products ===== */

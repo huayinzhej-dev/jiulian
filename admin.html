@@ -265,7 +265,7 @@ const MENU = [
     {id:'products-categories',label:'分类'},{id:'products-list',label:'商品列表'},{id:'products-printing',label:'印刷色数库'},{id:'products-finish',label:'表面处理库'},{id:'products-material',label:'材质库'}
   ]},
   { id:'content', icon:'📝', label:'内容管理', children:[
-    {id:'content-articles',label:'文章'},{id:'content-faq',label:'FAQ'},{id:'content-banner',label:'首页Banner'},{id:'content-cb',label:'跨境电商卡片'},{id:'content-advantages',label:'优势图标区'},{id:'content-stats',label:'数据展示'},{id:'content-testimonials',label:'评价'},{id:'content-clients',label:'合作品牌墙'},{id:'content-about',label:'About 关于我们'},{id:'content-process',label:'How We Work'},{id:'content-printing-guide',label:'印刷指南'}
+    {id:'content-articles',label:'文章'},{id:'content-faq',label:'FAQ'},{id:'content-banner',label:'首页Banner'},{id:'content-cb',label:'跨境电商卡片'},{id:'content-advantages',label:'优势图标区'},{id:'content-stats',label:'数据展示'},{id:'content-testimonials',label:'评价'},{id:'content-clients',label:'操作车间'},{id:'content-about',label:'About 关于我们'},{id:'content-process',label:'How We Work'},{id:'content-printing-guide',label:'印刷指南'}
   ]},
   { id:'forms', icon:'📋', label:'表单管理', children:[
     {id:'forms-list',label:'表单列表'},{id:'forms-quote-config',label:'报价表单配置'},{id:'forms-entries',label:'表单提交记录'}
@@ -3751,28 +3751,47 @@ function deleteTestimonial(id) {
 
 function renderClients(c) {
   const clients = DM.get('clients');
+  const s = docVal('settings_about');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">合作品牌墙</h1><p class="page-desc">管理展示的客户 Logo</p></div><button class="btn btn-primary" onclick="openClientModal()">+ 上传 Logo</button></div>
+    <div class="page-header"><div><h1 class="page-title">操作车间</h1><p class="page-desc">首页「操作车间」版块：改标题文字、上传工厂设备实拍（鼠标悬停图片会放大）。设备图按下面的顺序轮播</p></div></div>
     <div class="card"><div class="card-body">
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px">
-        ${clients.map(cl=>`<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;cursor:pointer;position:relative" onclick="openClientModal('${cl.id}')">${cl.logoUrl?`<img src="${esc(cl.logoUrl)}" alt="${esc(cl.name)}" style="max-height:56px;max-width:100%;object-fit:contain;margin-bottom:8px">`:''}<div style="font-weight:700;color:var(--gray-400);font-size:14px;letter-spacing:2px">${esc(cl.name)}</div>${!cl.active?'<span class="badge badge-gray" style="position:absolute;top:4px;right:4px;font-size:9px">隐藏</span>':''}</div>`).join('')}
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">版块标题（英文）</label><input class="form-input" id="fw_label" value="${esc(s.shopLabel||'')}" placeholder="留空则前台保持默认 Workshop"></div>
+        <div class="form-group full"><label class="form-label">版块标题（马来文，留空显示英文）</label><input class="form-input" id="fw_label_bm" value="${esc(s.shopLabelBm||'')}"></div>
+        <div class="form-group full"><label class="form-label">版块标题（中文，留空保持默认「操作车间」）</label><input class="form-input" id="fw_label_zh" value="${esc(s.shopLabelZh||'')}"></div>
+      </div>
+      <div style="margin-top:12px;text-align:right"><button class="btn btn-primary" onclick="saveWorkshopLabel()">保存标题</button></div>
+    </div></div>
+    <div class="page-header" style="margin-top:24px"><div><h2 class="page-title" style="font-size:18px">设备图片</h2><p class="page-desc">上传工厂 / 设备实拍图，前台轮播展示；名称会显示在图片下方作为说明。想删掉旧的，进图片里取消「前台展示」或删掉即可</p></div><button class="btn btn-primary" onclick="openClientModal()">+ 上传设备图</button></div>
+    <div class="card"><div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">
+        ${clients.length ? clients.map(cl=>`<div style="background:var(--gray-50);border-radius:8px;overflow:hidden;cursor:pointer;position:relative" onclick="openClientModal('${cl.id}')">${cl.logoUrl?`<img src="${esc(cl.logoUrl)}" alt="${esc(cl.name)}" style="width:100%;height:120px;object-fit:cover;display:block">`:'<div style="height:120px;display:flex;align-items:center;justify-content:center;color:var(--gray-400);font-size:12px">未传图</div>'}<div style="padding:8px;font-weight:600;color:var(--gray-700);font-size:13px;text-align:center">${esc(cl.name||'（无名称）')}</div>${!cl.active?'<span class="badge badge-gray" style="position:absolute;top:6px;right:6px;font-size:9px">隐藏</span>':''}</div>`).join('') : '<p style="color:var(--gray-500);font-size:13px">还没有设备图，点右上角「+ 上传设备图」添加。前台未上传时显示默认工厂图。</p>'}
       </div>
     </div></div>`;
+}
+
+function saveWorkshopLabel() {
+  const s = docVal('settings_about');
+  s.shopLabel = val('fw_label');
+  s.shopLabelBm = val('fw_label_bm');
+  s.shopLabelZh = val('fw_label_zh');
+  DM.set('settings_about', s);
+  writeLog('保存操作车间标题', s.shopLabelZh || s.shopLabel || '');
+  toast('标题已保存');
 }
 
 function openClientModal(id) {
   const clients = DM.get('clients');
   const cl = id ? clients.find(x => x.id === id) : null;
-  showModal(cl ? '编辑品牌' : '上传品牌 Logo', `
+  showModal(cl ? '编辑设备图' : '上传设备图', `
     <div class="form-grid">
-      <div class="form-group full"><label class="form-label">品牌名称 *</label><input class="form-input" id="f_cl_name" value="${esc(cl?.name)}" placeholder="e.g. Nike"></div>
-      <div class="form-group full"><label class="form-label">Logo 图片${cl?.logoUrl?'（留空则保持不变）':''}</label><input class="form-input" type="file" accept="image/*" id="f_cl_logo"></div>
+      <div class="form-group full"><label class="form-label">设备名称 / 说明（显示在图片下方，可留空）</label><input class="form-input" id="f_cl_name" value="${esc(cl?.name)}" placeholder="e.g. 高速模切机"></div>
+      <div class="form-group full"><label class="form-label">设备图片${cl?.logoUrl?'（留空则保持不变）':''}</label><input class="form-input" type="file" accept="image/*" id="f_cl_logo"></div>
       <div class="form-group"><label class="form-label">前台展示</label><select class="form-select" id="f_cl_active"><option value="true" ${cl?.active!==false?'selected':''}>展示</option><option value="false" ${cl?.active===false?'selected':''}>隐藏</option></select></div>
     </div>
-    ${cl?.logoUrl?`<div style="margin-top:12px;display:flex;align-items:center;gap:12px"><img src="${esc(cl.logoUrl)}" style="height:48px;max-width:160px;object-fit:contain;background:#fff;border:1px solid var(--gray-200);border-radius:6px;padding:4px"><label style="font-size:13px;color:var(--gray-600)"><input type="checkbox" id="f_cl_clear"> 删除当前 Logo</label></div>`:''}
+    ${cl?.logoUrl?`<div style="margin-top:12px;display:flex;align-items:center;gap:12px"><img src="${esc(cl.logoUrl)}" style="height:64px;max-width:180px;object-fit:cover;background:#fff;border:1px solid var(--gray-200);border-radius:6px;padding:4px"><label style="font-size:13px;color:var(--gray-600)"><input type="checkbox" id="f_cl_clear"> 删除当前图片</label></div>`:''}
   `, async () => {
     const name = val('f_cl_name');
-    if (!name) { toast('请填写品牌名称'); return false }
     const active = val('f_cl_active') === 'true';
     const file = document.getElementById('f_cl_logo')?.files?.[0];
     let logoUrl = cl ? (cl.logoUrl || '') : '';
@@ -3780,14 +3799,15 @@ function openClientModal(id) {
     if (document.getElementById('f_cl_clear')?.checked) { logoUrl = ''; logoPath = '' }
     if (file) {
       if (!Sync.ready) { toast('未连接后端数据库，无法上传图片'); return false }
-      toast('正在上传 Logo …');
-      const up = await cloudUpload(file, 'brand');
+      toast('正在上传图片 …');
+      const up = await cloudUpload(file, 'workshop');
       logoUrl = up.url; logoPath = up.path;
     }
+    if (!name && !logoUrl) { toast('请至少填写名称或上传图片'); return false }
     if (cl) { cl.name = name; cl.active = active; cl.logoUrl = logoUrl; cl.logoPath = logoPath }
     else clients.push({id:DM.genId('CL'), name, active, logoUrl, logoPath});
     DM.set('clients', clients);
-    toast(cl ? '品牌已更新' : '品牌已添加'); renderPage(currentPageId);
+    toast(cl ? '设备图已更新' : '设备图已添加'); renderPage(currentPageId);
   });
 }
 
