@@ -834,14 +834,9 @@
     return hit ? safeUrl(hit.image) : '';
   }
 
-  function productCountLabel(n) {
-    return make('span', 'product-count', n === 1 ? '1 product' : n + ' products', n + ' 款产品', n + ' produk');
-  }
-
   function renderIndustryGrid(host, entries) {
     host.textContent = '';
     entries.forEach(({ cat, list }, i) => {
-      const count = list.length;
       const card = make('div', 'industry-card');
       card.dataset.ind = String(cat.id);
 
@@ -871,7 +866,6 @@
       card.appendChild(tile);
 
       const meta = make('div', 'product-meta');
-      meta.appendChild(painted(productCountLabel(count)));
       meta.appendChild(painted(make('span', 'industry-go', 'View products', '查看产品', 'Lihat produk')));
       card.appendChild(meta);
       host.appendChild(card);

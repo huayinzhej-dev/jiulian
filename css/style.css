@@ -750,16 +750,7 @@ ul { list-style: none; }
   white-space: nowrap;
 }
 
-/* 行业卡（首页产品区默认那一排），白底那行是「商品数 + 查看产品」 */
-.product-count {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--gray-500);
-  background: var(--gray-100);
-  padding: 5px 12px;
-  border-radius: 20px;
-  white-space: nowrap;
-}
+/* 行业卡（首页产品区默认那一排），白底那一行只留右侧「查看产品」 */
 .industry-go {
   margin-left: auto;
   font-size: 13px;
