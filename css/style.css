@@ -1416,16 +1416,25 @@ a.footer-info-val:hover { color: var(--white); }
   line-height: 1.7;
   margin-bottom: 28px;
 }
-/* 后台可以填 4 个甚至更多卡片，英文/马来文的词又比中文长，一排摆不下会冲出 About 栏，
-   所以固定两列；窄屏再退成一列 */
+/* 后台「公司介绍」是文本域，换行会带下来；HTML 默认把换行当空格吞掉，
+   所以这段单独保留换行，后台分了几段首页就显示几段 */
+.about-content .section-title + p {
+  white-space: pre-line;
+}
+/* 四个一排横着摆（不再是 2×2）；格子等宽，长词靠 break-word 自己折行，
+   后台填超过 4 个时按每排 4 个往下排 */
 .about-stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px 12px;
   margin-bottom: 24px;
 }
 .about-stat {
   text-align: center;
+}
+/* 手机那一档 4 个一排会把说明挤成一竖条，这里退回 2×2 */
+@media (max-width: 480px) {
+  .about-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 10px; }
 }
 .about-stat-number {
   display: block;

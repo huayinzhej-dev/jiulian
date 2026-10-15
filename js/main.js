@@ -1072,6 +1072,11 @@
     });
   }
 
+  // 后台「公司介绍」是个文本域，分段通常只按一次回车、段首还带空格缩进。
+  // pre-line 只把换行当断行、不留缝，所以这里先把「换行+缩进」统一压成一个空行，
+  // 首页才看得出真正的分段；三语每一栏都走同一道处理。
+  const paragraphs = t => String(t == null ? '' : t).replace(/\r\n?/g, '\n').replace(/ *\n+ */g, '\n\n').trim();
+
   function applyAbout(d) {
     if (!d || typeof d !== 'object') return false;
     let hit = false;
@@ -1080,7 +1085,7 @@
     const intro = h2 && h2.nextElementSibling;
     hit = swap(content && content.querySelector('.section-label'), d.label, d.labelZh, d.labelBm) || hit;
     hit = swap(h2, d.title, d.titleZh, d.titleBm) || hit;
-    if (intro && intro.tagName === 'P') hit = swap(intro, d.intro, d.introZh, d.introBm) || hit;
+    if (intro && intro.tagName === 'P') hit = swap(intro, paragraphs(d.intro), paragraphs(d.introZh), paragraphs(d.introBm)) || hit;
     if (aboutVideoBox) {
       hit = swap(aboutVideoBox.querySelector('p'), d.videoText, d.videoTextZh, d.videoTextBm) || hit;
       const poster = safeUrl(d.videoPoster || d.videoPosterUrl || '').replace(/"/g, '%22');
