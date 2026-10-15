@@ -4451,6 +4451,7 @@ function renderSettingsSite(c) {
         <div class="form-group"><label class="form-label">Facebook</label><input class="form-input" id="fs_facebook" value="${esc(s.facebook||'')}" placeholder="FB 页面链接"></div>
         <div class="form-group"><label class="form-label">Instagram</label><input class="form-input" id="fs_instagram" value="${esc(s.instagram||'')}" placeholder="IG 链接"></div>
         <div class="form-group"><label class="form-label">LinkedIn</label><input class="form-input" id="fs_linkedin" value="${esc(s.linkedin||'')}" placeholder="LinkedIn 链接"></div>
+        <div class="form-group full"><label class="form-label">页脚版权文字</label><input class="form-input" id="fs_copyright" value="${esc(s.copyright||'')}" placeholder="© 2026 Jiulian Packaging. All rights reserved.（留空则保留页面原有文字）"></div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsSite()">保存</button></div>
     </div></div>`;
@@ -4460,7 +4461,8 @@ function saveSettingsSite() {
   DM.set('settings_site', {
     enName:val('fs_enName'), zhName:val('fs_zhName'), phone:val('fs_phone'),
     email:val('fs_email'), address:val('fs_address'), googleMaps:val('fs_googleMaps'),
-    waze:val('fs_waze'), facebook:val('fs_facebook'), instagram:val('fs_instagram'), linkedin:val('fs_linkedin')
+    waze:val('fs_waze'), facebook:val('fs_facebook'), instagram:val('fs_instagram'), linkedin:val('fs_linkedin'),
+    copyright:val('fs_copyright')
   });
   toast('已保存');
 }

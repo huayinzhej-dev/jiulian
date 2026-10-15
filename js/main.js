@@ -623,7 +623,7 @@
   const PUBLIC_COLS = ['clients', 'products', 'faqs', 'categories'];
   const ROW_COLS = new Set(['clients', 'products', 'faqs', 'categories']);
   // 首页文案类：整块存成一条文档，后台「内容管理」改了前台就跟着变
-  const DOC_COLS = ['settings_banner', 'settings_advantages', 'settings_stats', 'settings_about', 'settings_process', 'settings_modal'];
+  const DOC_COLS = ['settings_banner', 'settings_advantages', 'settings_stats', 'settings_about', 'settings_process', 'settings_modal', 'settings_site'];
 
   // 三语文案：马来文 / 中文留空时沿用英文，英文也留空时用已经填了的那一语兜底，
   // 否则后台清空一个栏位就会把前台整块刷成空白。
@@ -1195,6 +1195,17 @@
     return true;
   }
 
+  // 页脚版权：后台「基本信息 → 页脚版权文字」填了才覆盖，留空保留页面写死的那行。
+  // 用 textContent 写入，避免后台内容里的尖括号被当成 HTML。
+  function applyFooter(d) {
+    const el = document.getElementById('footerCopyright');
+    if (!el || !d) return false;
+    const text = str(d.copyright);
+    if (!text) return false;
+    el.textContent = text;
+    return true;
+  }
+
   // ===== Hero 商品轮播 =====
   // 圆点和箭头只有在真的有多张图时才出现，只有一张时就是个静态图，不显示假控件。
   const HERO_CAR_MS = 5000;
@@ -1362,7 +1373,8 @@
       [applyCb, docs.settings_about],
       [applyWorkshopLabel, docs.settings_about],
       [applyProcess, docs.settings_process],
-      [applyModalSettings, docs.settings_modal]
+      [applyModalSettings, docs.settings_modal],
+      [applyFooter, docs.settings_site]
     ];
     parts.forEach(([fn, data]) => {
       // 单个版块渲染失败不影响整页，保留写死内容
