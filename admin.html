@@ -280,7 +280,7 @@ const MENU = [
     {id:'policies-list',label:'政策列表'}
   ]},
   { id:'settings', icon:'⚙️', label:'系统设置', children:[
-    {id:'settings-site',label:'基本信息'},{id:'settings-seo',label:'SEO 设置'},{id:'settings-modal',label:'弹窗设置'},{id:'settings-notifications',label:'通知模板'},{id:'settings-certs',label:'认证/资质'},{id:'settings-shipping',label:'配送区域'},{id:'settings-finance',label:'税率/货币'},{id:'settings-users',label:'管理员列表'},{id:'settings-roles',label:'角色管理'},{id:'settings-cloud',label:'后端状态'},{id:'settings-logs',label:'操作日志'}
+    {id:'settings-site',label:'基本信息'},{id:'settings-seo',label:'SEO 设置'},{id:'settings-modal',label:'弹窗设置'},{id:'settings-h5',label:'H5 推广页'},{id:'settings-notifications',label:'通知模板'},{id:'settings-certs',label:'认证/资质'},{id:'settings-shipping',label:'配送区域'},{id:'settings-finance',label:'税率/货币'},{id:'settings-users',label:'管理员列表'},{id:'settings-roles',label:'角色管理'},{id:'settings-cloud',label:'后端状态'},{id:'settings-logs',label:'操作日志'}
   ]}
 ];
 
@@ -317,7 +317,8 @@ const CLOUD = {
   doc: ['printingOptions','finishingOptions','caseCategories','settings_site','settings_seo',
         'settings_notifications','settings_finance','settings_about','settings_process',
         'settings_printing_guide','settings_advantages','settings_stats','settings_banner',
-        'settings_quote_template','settings_certs','pricebook','contactFormConfig','settings_modal']
+        'settings_quote_template','settings_certs','pricebook','contactFormConfig','settings_modal',
+        'settings_h5']
 };
 // 首页这五块文案：旧版后台的保存函数压根不写马来文/中文栏，云端那条记录因此键比本机少，
 // 整条覆盖会把本机刚填的内容抹掉。拉取时按字段合并（数组按下标合并），云端已有的字段仍以云端为准。
@@ -1043,6 +1044,7 @@ function renderPage(id) {
     'settings-site': renderSettingsSite,
     'settings-seo': renderSettingsSEO,
     'settings-modal': renderSettingsModal,
+    'settings-h5': renderSettingsH5,
     'settings-notifications': renderSettingsNotifications,
     'settings-certs': renderSettingsCerts,
     'settings-shipping': renderSettingsShipping,
@@ -4524,6 +4526,215 @@ function saveSettingsModal() {
     tiktok:val('fm_tiktok'), shopee:val('fm_shopee'), lazada:val('fm_lazada')
   });
   toast('已保存');
+}
+
+// ========== H5 推广页后台 ==========
+// settings_h5 是一份文档型配置，对应 h5.html 的六屏内容。
+// 标题类字段支持两种标记：换行=另起一行；用星号包住的一段（*更好*）显示为金色高亮。
+// 这些默认值和 h5.html 里内嵌的回退内容保持一致：后台从没存过时，前台照常显示榴莲这一版。
+const H5_DEF = {
+  coverEyebrow:'Premium Durian Packaging',
+  coverTitle:'榴莲，\n值得*更好*的包装',
+  coverLead:'高透 PET 展示金黄果肉 · 加厚防漏 · 卡扣锁香 · 耐低温适配冷链，电商发货与商超陈列一盒搞定。',
+  coverImage:'https://sqzacdkpoozqpwchnymv.supabase.co/storage/v1/object/public/jl-uploads/product/2026-10-15-mv8xshey-_.png',
+  painEyebrow:'Why Durian', painTitle:'榴莲出货，\n你最怕哪一关？',
+  pain:[{t:'串味漏汁',d:'香气散、汁水漏，收货体验差'},{t:'挤压破盒',d:'堆叠运输中变形、开裂'},{t:'冷链化冻',d:'低温下材质变脆、密封失效'}],
+  featEyebrow:'The Solution', featTitle:'一盒，*四重*保障',
+  feat:[{ic:'透',t:'高透 PET 材质',d:'通透展示金黄果肉，货架与详情页都更抓眼球。'},{ic:'封',t:'加厚防漏 · 卡扣锁香',d:'加厚盒身防渗漏，卡扣密封锁住香气与汁水。'},{ic:'冷',t:'耐低温 · 适配冷链',d:'低温不发脆，冷冻冷藏运输一路稳护果肉。'},{ic:'稳',t:'堆叠稳固 · 易发货',d:'码放整齐抗压，电商发货与商超陈列都省心。'}],
+  specEyebrow:'Specifications', specTitle:'规格 · 可按需定制',
+  spec:[{k:'盒型',v:'圆盒 / 方盒 / 带盖盒'},{k:'材质',v:'食品级高透 PET'},{k:'尺寸 / 容量',v:'多规格，可定制'},{k:'印刷',v:'定制 Logo · 彩印'},{k:'起订量',v:'咨询报价'},{k:'打样',v:'支持'}],
+  specLead:'圆盒装整颗果肉，方盒分装榴莲块，带盖盒锁鲜外带——告诉我你的规格，我来配。',
+  trustEyebrow:'Why Jiulian', trustTitle:'30 年工厂，\n一站式交付',
+  stats:[{n:'1994',l:'始于吉隆坡甲洞'},{n:'500+',l:'服务马来西亚及海外客户'},{n:'ISO',l:'9001:2015 认证工厂'},{n:'1站',l:'设计·打样·生产·交付'}],
+  ctaEyebrow:'Get A Quote', ctaTitle:'现在，*为榴莲定制*你的包装',
+  ctaLead:'把你的盒型、尺寸和数量告诉我，工厂直供价，最快当天回复。',
+  wa:'60167241814', waMsg:'你好，我想咨询玖联的【榴莲包装】。我要的盒型/尺寸/数量：',
+  phone:'+60167241814', phoneLabel:'016-724 1814', email:'alan@jiulianpack.com.my',
+  address:'马来西亚柔佛州巴西古丹绒浪萨巴路129号，81700'
+};
+
+function renderSettingsH5(c) {
+  const d = docVal('settings_h5');
+  const s = k => (k in d ? d[k] : H5_DEF[k]);                 // 字符串：存过就用存的（含空），否则默认
+  const a = k => Array.isArray(d[k]) ? d[k] : H5_DEF[k];      // 数组
+  const products = DM.get('products', []).filter(p => p.status !== 'inactive');
+  const categories = DM.get('categories', []);
+  const industryOf = p => { const ind = getTopIndustry(p.categoryId, categories); return ind ? (ind.name || ind.nameEn || '未分类') : '未分类'; };
+  const prodData = products.map(p => ({ id: String(p.id), name: (p.nameZh || p.name || p.id), industry: industryOf(p) }));
+  const industryList = [...new Set(prodData.map(x => x.industry))].sort((a, b) => a.localeCompare(b, 'zh'));
+
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">H5 推广页</h1><p class="page-desc">手机端竖屏引流页 <b>h5.html</b> 的全部内容。换主推商品：先选「行业」缩小范围，再选「商品」（自动带入商品图），然后改各屏文案即可。标题里 *星号* 包住的文字会显示成金色高亮，回车可换行。保存后同步到云端，h5.html 打开时自动读取。</p></div></div>
+
+    <div class="card"><div class="card-body">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--gray-700)">① 主推商品</h3>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">行业（先选行业，缩小商品范围）</label>
+          <select class="form-select" id="h5_industry" onchange="h5FilterProducts()">
+            <option value="">全部行业</option>${industryList.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">选择商品（自动带入商品图）</label>
+          <select class="form-select" id="h5_product" onchange="h5PickProduct(this.value)">
+            <option value="">— 手动填图，不关联商品 —</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">封面图链接（可直接粘贴，或选商品自动带入）</label>
+          <input class="form-input" id="h5_coverImage" value="${esc(s('coverImage'))}" placeholder="https://…" oninput="h5Preview(this.value)">
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:12px">
+        <img id="h5_coverPrev" src="${esc(s('coverImage'))}" style="height:80px;width:80px;object-fit:contain;background:#fff;border:1px solid var(--gray-200);border-radius:8px;display:block" onerror="this.style.opacity=.3">
+        <span style="font-size:12px;color:var(--gray-500)">上方为封面预览。图片建议正方形或接近正方形。</span>
+      </div>
+    </div></div>
+
+    <div class="card" style="margin-top:16px"><div class="card-body">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--gray-700)">② 封面屏</h3>
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">顶部小标题（eyebrow）</label><input class="form-input" id="h5_coverEyebrow" value="${esc(s('coverEyebrow'))}"></div>
+        <div class="form-group full"><label class="form-label">主标题（*星号*=金色，回车换行）</label><textarea class="form-textarea" id="h5_coverTitle" rows="2">${esc(s('coverTitle'))}</textarea></div>
+        <div class="form-group full"><label class="form-label">副文案</label><textarea class="form-textarea" id="h5_coverLead" rows="2">${esc(s('coverLead'))}</textarea></div>
+      </div>
+    </div></div>
+
+    <div class="card" style="margin-top:16px"><div class="card-body">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--gray-700)">③ 痛点屏</h3>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">顶部小标题</label><input class="form-input" id="h5_painEyebrow" value="${esc(s('painEyebrow'))}"></div>
+        <div class="form-group"><label class="form-label">标题</label><textarea class="form-textarea" id="h5_painTitle" rows="2">${esc(s('painTitle'))}</textarea></div>
+      </div>
+      <div style="margin-top:8px">${a('pain').slice(0,3).map((p,i)=>`
+        <div class="form-grid" style="margin-top:8px">
+          <div class="form-group"><label class="form-label">痛点 ${i+1} 标题</label><input class="form-input h5-pt" data-idx="${i}" value="${esc(p.t||'')}"></div>
+          <div class="form-group"><label class="form-label">痛点 ${i+1} 说明</label><input class="form-input h5-pd" data-idx="${i}" value="${esc(p.d||'')}"></div>
+        </div>`).join('')}</div>
+    </div></div>
+
+    <div class="card" style="margin-top:16px"><div class="card-body">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--gray-700)">④ 卖点屏（4 项）</h3>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">顶部小标题</label><input class="form-input" id="h5_featEyebrow" value="${esc(s('featEyebrow'))}"></div>
+        <div class="form-group"><label class="form-label">标题（*星号*=金色）</label><textarea class="form-textarea" id="h5_featTitle" rows="2">${esc(s('featTitle'))}</textarea></div>
+      </div>
+      <div style="margin-top:8px">${a('feat').slice(0,4).map((f,i)=>`
+        <div class="form-grid" style="margin-top:8px">
+          <div class="form-group" style="max-width:90px"><label class="form-label">角标字</label><input class="form-input h5-fc" data-idx="${i}" maxlength="2" value="${esc(f.ic||'')}"></div>
+          <div class="form-group"><label class="form-label">卖点 ${i+1} 标题</label><input class="form-input h5-ft" data-idx="${i}" value="${esc(f.t||'')}"></div>
+          <div class="form-group full"><label class="form-label">卖点 ${i+1} 说明</label><input class="form-input h5-fd" data-idx="${i}" value="${esc(f.d||'')}"></div>
+        </div>`).join('')}</div>
+    </div></div>
+
+    <div class="card" style="margin-top:16px"><div class="card-body">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--gray-700)">⑤ 规格屏（6 行）</h3>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">顶部小标题</label><input class="form-input" id="h5_specEyebrow" value="${esc(s('specEyebrow'))}"></div>
+        <div class="form-group"><label class="form-label">标题</label><input class="form-input" id="h5_specTitle" value="${esc(s('specTitle'))}"></div>
+      </div>
+      <div style="margin-top:8px">${a('spec').slice(0,6).map((r,i)=>`
+        <div class="form-grid" style="margin-top:6px">
+          <div class="form-group"><label class="form-label">项目 ${i+1}</label><input class="form-input h5-sk" data-idx="${i}" value="${esc(r.k||'')}"></div>
+          <div class="form-group"><label class="form-label">内容 ${i+1}</label><input class="form-input h5-sv" data-idx="${i}" value="${esc(r.v||'')}"></div>
+        </div>`).join('')}</div>
+      <div class="form-group full" style="margin-top:10px"><label class="form-label">结尾文案</label><textarea class="form-textarea" id="h5_specLead" rows="2">${esc(s('specLead'))}</textarea></div>
+    </div></div>
+
+    <div class="card" style="margin-top:16px"><div class="card-body">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--gray-700)">⑥ 信任数据屏（4 格）</h3>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">顶部小标题</label><input class="form-input" id="h5_trustEyebrow" value="${esc(s('trustEyebrow'))}"></div>
+        <div class="form-group"><label class="form-label">标题（回车换行）</label><textarea class="form-textarea" id="h5_trustTitle" rows="2">${esc(s('trustTitle'))}</textarea></div>
+      </div>
+      <div style="margin-top:8px">${a('stats').slice(0,4).map((st,i)=>`
+        <div class="form-grid" style="margin-top:6px">
+          <div class="form-group"><label class="form-label">格 ${i+1} 大字</label><input class="form-input h5-sn" data-idx="${i}" value="${esc(st.n||'')}"></div>
+          <div class="form-group"><label class="form-label">格 ${i+1} 文字</label><input class="form-input h5-sl" data-idx="${i}" value="${esc(st.l||'')}"></div>
+        </div>`).join('')}</div>
+    </div></div>
+
+    <div class="card" style="margin-top:16px"><div class="card-body">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--gray-700)">⑦ 询价 CTA 屏</h3>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">顶部小标题</label><input class="form-input" id="h5_ctaEyebrow" value="${esc(s('ctaEyebrow'))}"></div>
+        <div class="form-group"><label class="form-label">标题（*星号*=金色）</label><textarea class="form-textarea" id="h5_ctaTitle" rows="2">${esc(s('ctaTitle'))}</textarea></div>
+        <div class="form-group full"><label class="form-label">副文案</label><textarea class="form-textarea" id="h5_ctaLead" rows="2">${esc(s('ctaLead'))}</textarea></div>
+        <div class="form-group"><label class="form-label">WhatsApp 号码（只填数字，带国家码）</label><input class="form-input" id="h5_wa" value="${esc(s('wa'))}" placeholder="60167241814"></div>
+        <div class="form-group"><label class="form-label">电话显示文字</label><input class="form-input" id="h5_phoneLabel" value="${esc(s('phoneLabel'))}"></div>
+        <div class="form-group"><label class="form-label">电话拨号号码（tel 链接，含 +）</label><input class="form-input" id="h5_phone" value="${esc(s('phone'))}" placeholder="+60167241814"></div>
+        <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="h5_email" value="${esc(s('email'))}"></div>
+        <div class="form-group full"><label class="form-label">地址</label><input class="form-input" id="h5_address" value="${esc(s('address'))}"></div>
+        <div class="form-group full"><label class="form-label">WhatsApp 预填消息</label><textarea class="form-textarea" id="h5_waMsg" rows="2">${esc(s('waMsg'))}</textarea></div>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsH5()">保存 H5 内容</button></div>
+    </div></div>`;
+
+  // 把商品数据挂在下拉上，行业筛选只重建商品下拉、不整页重渲染（避免丢掉其他未保存的编辑）
+  const sel = document.getElementById('h5_product');
+  sel._prodData = prodData;
+  const savedPid = (d.productId != null ? String(d.productId) : '');
+  const saved = prodData.find(x => x.id === savedPid);
+  if (saved) document.getElementById('h5_industry').value = saved.industry;
+  h5FilterProducts();
+  if (saved) sel.value = saved.id;
+}
+
+// 按行业重建商品下拉；已选中的商品即使不在当前行业里也保留，防止误改行业就丢关联
+function h5FilterProducts() {
+  const sel = document.getElementById('h5_product');
+  if (!sel) return;
+  const data = sel._prodData || [];
+  const ind = (document.getElementById('h5_industry') || {}).value || '';
+  const cur = sel.value || '';
+  let rows = data.filter(x => !ind || x.industry === ind);
+  if (cur && !rows.some(x => x.id === cur)) { const keep = data.find(x => x.id === cur); if (keep) rows = [keep, ...rows]; }
+  sel.innerHTML = '<option value="">— 手动填图，不关联商品 —</option>' + rows.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+  if (cur) sel.value = cur;
+}
+
+// 选商品 → 把商品图带入封面图输入框并刷新预览（用户仍可手动改）
+function h5PickProduct(pid) {
+  const img = document.getElementById('h5_coverImage');
+  if (!pid) { return; }
+  const p = DM.get('products', []).find(x => String(x.id) === String(pid));
+  if (p && p.image) { img.value = p.image; h5Preview(p.image); toast('已带入商品图'); }
+}
+function h5Preview(url) {
+  const prev = document.getElementById('h5_coverPrev');
+  if (prev && url) prev.src = url;
+}
+
+function saveSettingsH5() {
+  const rowArr = (tc, dc, tk, dk, extra) => {
+    const t = {}, dd = {};
+    document.querySelectorAll('.'+tc).forEach(el => t[el.dataset.idx] = el.value);
+    document.querySelectorAll('.'+dc).forEach(el => dd[el.dataset.idx] = el.value);
+    const n = Math.max(Object.keys(t).length, Object.keys(dd).length);
+    const out = [];
+    for (let i=0;i<n;i++) {
+      const o = {}; o[tk]=t[i]||''; o[dk]=dd[i]||'';
+      if (extra) { const e = {}; document.querySelectorAll('.'+extra.c).forEach(el => e[el.dataset.idx]=el.value); o[extra.k]=e[i]||''; }
+      out.push(o);
+    }
+    return out;
+  };
+  const pid = val('h5_product');
+  DM.set('settings_h5', {
+    productId: pid,
+    coverEyebrow:val('h5_coverEyebrow'), coverTitle:val('h5_coverTitle'), coverLead:val('h5_coverLead'), coverImage:val('h5_coverImage'),
+    painEyebrow:val('h5_painEyebrow'), painTitle:val('h5_painTitle'),
+    pain: rowArr('h5-pt','h5-pd','t','d'),
+    featEyebrow:val('h5_featEyebrow'), featTitle:val('h5_featTitle'),
+    feat: rowArr('h5-ft','h5-fd','t','d',{c:'h5-fc',k:'ic'}),
+    specEyebrow:val('h5_specEyebrow'), specTitle:val('h5_specTitle'), specLead:val('h5_specLead'),
+    spec: rowArr('h5-sk','h5-sv','k','v'),
+    trustEyebrow:val('h5_trustEyebrow'), trustTitle:val('h5_trustTitle'),
+    stats: rowArr('h5-sn','h5-sl','n','l'),
+    ctaEyebrow:val('h5_ctaEyebrow'), ctaTitle:val('h5_ctaTitle'), ctaLead:val('h5_ctaLead'),
+    wa:val('h5_wa'), waMsg:val('h5_waMsg'), phone:val('h5_phone'), phoneLabel:val('h5_phoneLabel'),
+    email:val('h5_email'), address:val('h5_address')
+  });
+  writeLog('保存 H5 推广页', 'productId='+pid);
+  toast('H5 内容已保存并同步');
 }
 
 function renderSettingsNotifications(c) {

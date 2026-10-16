@@ -208,7 +208,8 @@ create policy "jl_public_read_content" on public.jl_records
     collection in (
       'clients', 'products', 'testimonials', 'faqs', 'categories',
       'settings_banner', 'settings_advantages', 'settings_stats',
-      'settings_about', 'settings_process', 'settings_site', 'settings_modal'
+      'settings_about', 'settings_process', 'settings_site', 'settings_modal',
+      'settings_h5'
     )
   );
 -- 只读策略不写 with check，anon 依然改不了、删不掉任何一行
