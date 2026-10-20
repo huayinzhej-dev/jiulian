@@ -878,7 +878,7 @@ function seedData() {
     DM.set('settings_seo', {title:'Jiulian Packaging — Premium Printing & Packaging Solutions',description:'Jiulian Packaging is a leading printing and packaging manufacturer offering custom boxes, bags, and labels for global brands.',keywords:'packaging, printing, custom boxes, mailer box, food packaging, Malaysia',gaId:'',gscId:'',fbPixel:''});
   }
   if (!DM.has('settings_modal')) {
-    DM.set('settings_modal', {note1En:'This image is for website display only, all products can be customized according to your needs',note1Zh:'该图片为网站展示图，所有商品均可按需定制',note1Bm:'',note2En:'Regular products, click to shop online',note2Zh:'常规商品，可点击商城购买',note2Bm:'',tiktok:'',shopee:'',lazada:''});
+    DM.set('settings_modal', {note1En:'This image is for website display only, all products can be customized according to your needs',note1Zh:'该图片为网站展示图，所有商品均可按需定制',note1Bm:'',note2En:'Regular products — click Contact Us',note2Zh:'常规商品，点击联系我们',note2Bm:''});
   }
   if (!DM.has('settings_notifications')) {
     DM.set('settings_notifications', {notifyEmail:'marketing@jiulianpack.com.my',leadTemplate:'新询盘通知：\n客户：{{客户名}}\n公司：{{公司}}\n盒型：{{盒型}}\n数量：{{数量}}\n\n请及时跟进。',quoteTemplate:'尊敬的 {{客户名}}，\n\n感谢您的询价。附件是报价单 {{报价号}}，有效期 {{有效期}}。\n\n如有任何疑问请随时联系我们。'});
@@ -1669,10 +1669,13 @@ function openLeadModal(lead) {
       <div class="form-group"><label class="form-label">来源</label><select class="form-select" id="f_source">${selOpts(['表单','官网表单','电话','邮件','WhatsApp','Google'], lead?.source)}</select></div>
       <div class="form-group"><label class="form-label">负责人</label><select class="form-select" id="f_assignee">${selOpts(staffNames(), lead?.assignee || (isEdit ? '' : whoami()), '未分配')}</select></div>
       <div class="form-group"><label class="form-label">盒型</label><select class="form-select" id="f_boxType">${catOptions(DM.get('categories'), boxName(lead?.boxType), '未确定', c => c.name)}</select></div>
+      <div class="form-group"><label class="form-label">材质/纸张</label><select class="form-select" id="f_material">${selOpts(DM.get('materials'), lead?.material, '未确定')}</select></div>
+      <div class="form-group"><label class="form-label">克重</label><input class="form-input" id="f_gsm" placeholder="e.g. 300克 / A瓦" value="${esc(lead?.gsm||'')}"></div>
       <div class="form-group"><label class="form-label">尺寸 (cm)</label><input class="form-input" id="f_size" placeholder="长×宽×高" value="${esc(lead?.size||'')}"></div>
       <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" id="f_quantity" value="${esc(lead?.quantity||'')}"></div>
       <div class="form-group"><label class="form-label">印刷方式</label><select class="form-select" id="f_printing">${selOpts(DM.get('printingOptions'), lead?.printing, '未确定')}</select></div>
       <div class="form-group"><label class="form-label">表面处理</label><select class="form-select" id="f_finishing">${selOpts(DM.get('finishingOptions'), lead?.finishing, '未确定')}</select></div>
+      <div class="form-group"><label class="form-label">特殊要求</label><input class="form-input" id="f_specialReq" placeholder="如：食品级认证 / 防潮 / 指定潘通色号" value="${esc(lead?.specialReq||'')}"></div>
       <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_status">${['new','quoted','negotiating','sample','won','lost'].map(s=>`<option value="${s}"${(lead?.status||'new')===s?' selected':''}>${statusLabel(s)}</option>`).join('')}</select></div>
       <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="f_notes">${esc(lead?.notes||'')}</textarea></div>
     </div>
@@ -1681,8 +1684,8 @@ function openLeadModal(lead) {
     const data = {
       id: lead?.id || DM.genId('LD'),
       name: val('f_name'), company: val('f_company'), phone: val('f_phone'), email: val('f_email'),
-      source: val('f_source'), assignee: val('f_assignee'), boxType: val('f_boxType'), size: val('f_size'),
-      quantity: parseInt(val('f_quantity'))||0, printing: val('f_printing'), finishing: val('f_finishing'),
+      source: val('f_source'), assignee: val('f_assignee'), boxType: val('f_boxType'), material: val('f_material'), gsm: val('f_gsm'), size: val('f_size'),
+      quantity: parseInt(val('f_quantity'))||0, printing: val('f_printing'), finishing: val('f_finishing'), specialReq: val('f_specialReq'),
       status: val('f_status'), notes: val('f_notes'), created: lead?.created || DM.now(), followUps: lead?.followUps || []
     };
     if (isEdit) { const idx = leads.findIndex(l=>l.id===lead.id); leads[idx] = data; }
@@ -1700,9 +1703,10 @@ function viewLead(id) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
       <div><strong>姓名:</strong> ${esc(l.name)}</div><div><strong>公司:</strong> ${esc(l.company)}</div>
       <div><strong>电话:</strong> ${esc(l.phone)}</div><div><strong>邮箱:</strong> ${esc(l.email)}</div>
-      <div><strong>盒型:</strong> ${esc(boxName(l.boxType))}</div><div><strong>尺寸:</strong> ${esc(l.size)}</div>
-      <div><strong>数量:</strong> ${esc(l.quantity)}</div><div><strong>印刷:</strong> ${esc(l.printing)}</div>
-      <div><strong>表面处理:</strong> ${esc(l.finishing)}</div><div><strong>状态:</strong> ${statusBadge(l.status)}</div>
+      <div><strong>盒型:</strong> ${esc(boxName(l.boxType))}</div><div><strong>材质:</strong> ${esc([l.material, l.gsm].filter(Boolean).join(' ') || '未填')}</div>
+      <div><strong>尺寸:</strong> ${esc(l.size)}</div><div><strong>数量:</strong> ${esc(l.quantity)}</div>
+      <div><strong>印刷:</strong> ${esc(l.printing)}</div><div><strong>表面处理:</strong> ${esc(l.finishing)}</div>
+      <div><strong>特殊要求:</strong> ${esc(l.specialReq||'未填')}</div><div><strong>状态:</strong> ${statusBadge(l.status)}</div>
       <div><strong>来源:</strong> ${esc(l.source)}</div><div><strong>负责人:</strong> ${esc(l.assignee)}</div>
       <div style="grid-column:1/-1"><strong>备注:</strong> ${esc(l.notes||'无')}</div>
       <div style="grid-column:1/-1"><strong>跟进记录:</strong> ${l.followUps?.length ? l.followUps.map(f=>`<div style="padding:6px 0;border-bottom:1px solid var(--gray-100)">${esc(f.time)} - ${f.method} - ${f.content}</div>`).join('') : '暂无跟进记录'}</div>
@@ -1728,7 +1732,7 @@ function convertLeadToQuote(l) {
   const t = quoteTotals(l.quantity, unitPrice);
   const quotes = DM.get('quotes');
   const q = {id:DM.genId('QT'), leadId:l.id, customer:l.company||l.name, contact:[l.name,l.email||l.phone].filter(Boolean).join(' / '),
-             product:bt, size:l.size, printing:l.printing, finish:l.finishing,
+             product:bt, size:l.size, material:[l.material, l.gsm].filter(Boolean).join(' '), printing:l.printing, finish:l.finishing,
              note:l.notes||'', quantity:l.quantity, unitPrice, subtotal:t.subtotal, sst:t.sst, total:t.total,
              status:'draft', date:new Date().toISOString().slice(0,10),
              validUntil:new Date(Date.now()+quoteFinance().validDays*864e5).toISOString().slice(0,10),
@@ -2024,6 +2028,8 @@ function fillQuoteFromLead() {
   const box = document.getElementById('q_boxType');
   const bn = boxName(l.boxType);
   if (box && bn && [...box.options].some(o => o.value === bn)) box.value = bn;
+  const mat = document.getElementById('q_material');
+  if (mat && !mat.value && [...mat.options].some(o => o.value === l.material)) mat.value = l.material;
   const qel = document.getElementById('q_quantity');
   if (qel && !qel.value) qel.value = parseInt(l.quantity) || '';
   autoQuotePrice();
@@ -4495,7 +4501,7 @@ function saveSettingsSEO() {
 function renderSettingsModal(c) {
   const s = docVal('settings_modal');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">弹窗设置</h1><p class="page-desc">商品详情弹窗的提示文字和电商平台链接</p></div></div>
+    <div class="page-header"><div><h1 class="page-title">弹窗设置</h1><p class="page-desc">商品详情弹窗的两行提示文字（下面的「联系我们」按钮固定跳 WhatsApp，不用填链接）</p></div></div>
     <div class="card"><div class="card-body">
       <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--gray-700)">提示文字（第一行）</h3>
       <div class="form-grid">
@@ -4505,15 +4511,9 @@ function renderSettingsModal(c) {
       </div>
       <h3 style="font-size:16px;font-weight:600;margin:24px 0 16px;color:var(--gray-700)">提示文字（第二行）</h3>
       <div class="form-grid">
-        <div class="form-group full"><label class="form-label">英文</label><input class="form-input" id="fm_note2En" value="${esc(s.note2En||'')}" placeholder="Regular products, click to shop online"></div>
-        <div class="form-group full"><label class="form-label">中文</label><input class="form-input" id="fm_note2Zh" value="${esc(s.note2Zh||'')}" placeholder="常规商品，可点击商城购买"></div>
+        <div class="form-group full"><label class="form-label">英文</label><input class="form-input" id="fm_note2En" value="${esc(s.note2En||'')}" placeholder="Regular products — click Contact Us"></div>
+        <div class="form-group full"><label class="form-label">中文</label><input class="form-input" id="fm_note2Zh" value="${esc(s.note2Zh||'')}" placeholder="常规商品，点击联系我们"></div>
         <div class="form-group full"><label class="form-label">Bahasa Malaysia</label><input class="form-input" id="fm_note2Bm" value="${esc(s.note2Bm||'')}" placeholder="留空则马来文页显示英文"></div>
-      </div>
-      <h3 style="font-size:16px;font-weight:600;margin:24px 0 16px;color:var(--gray-700)">电商平台链接</h3>
-      <div class="form-grid">
-        <div class="form-group"><label class="form-label">TikTok Shop</label><input class="form-input" id="fm_tiktok" value="${esc(s.tiktok||'')}" placeholder="https://www.tiktok.com/@yourshop"></div>
-        <div class="form-group"><label class="form-label">Shopee</label><input class="form-input" id="fm_shopee" value="${esc(s.shopee||'')}" placeholder="https://shopee.com.my/yourshop"></div>
-        <div class="form-group"><label class="form-label">Lazada</label><input class="form-input" id="fm_lazada" value="${esc(s.lazada||'')}" placeholder="https://www.lazada.com.my/shop/yourshop"></div>
       </div>
       <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="saveSettingsModal()">保存</button></div>
     </div></div>`;
@@ -4522,8 +4522,7 @@ function renderSettingsModal(c) {
 function saveSettingsModal() {
   DM.set('settings_modal', {
     note1En:val('fm_note1En'), note1Zh:val('fm_note1Zh'), note1Bm:val('fm_note1Bm'),
-    note2En:val('fm_note2En'), note2Zh:val('fm_note2Zh'), note2Bm:val('fm_note2Bm'),
-    tiktok:val('fm_tiktok'), shopee:val('fm_shopee'), lazada:val('fm_lazada')
+    note2En:val('fm_note2En'), note2Zh:val('fm_note2Zh'), note2Bm:val('fm_note2Bm')
   });
   toast('已保存');
 }

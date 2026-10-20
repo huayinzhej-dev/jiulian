@@ -40,11 +40,13 @@
       btn.classList.toggle('active', btn.dataset.lang === lang);
     });
 
-    const textarea = document.getElementById('notes') || document.getElementById('message');
-    if (textarea) {
-      const placeholder = textarea.getAttribute(`data-${lang}-placeholder`);
-      if (placeholder) textarea.placeholder = placeholder;
-    }
+    document.querySelectorAll('[data-en-placeholder],[data-bm-placeholder],[data-zh-placeholder]').forEach(el => {
+      const placeholder = el.getAttribute(`data-${lang}-placeholder`);
+      if (placeholder) el.placeholder = placeholder;
+    });
+
+    // 表面处理多选的按钮文字是 JS 拼的，data-* 刷不到它，跟着语言重画一次
+    syncFinishingLabel();
 
     // 弹窗里的标题/描述是 JS 直接塞进 textContent 的，上面那圈 data-* 刷不到它：
     // 后台只填中文时，英文页会留着刚才那段中文。按当前语言把弹窗重开一次就重新取文案。
@@ -137,6 +139,15 @@
     showLine('detailMOQ', d.moq ? `MOQ: ${d.moq} pcs` : '', d.moq ? `起订量: ${d.moq}件` : '');
     syncPriceBlock('detailPriceInfo');
     setPhoto('detailPhoto', 'detailInfo', cardPhotoOf(card), d.nameEn || d.nameZh);
+    // 联系我们按钮带上这款的名字，工厂那边不用猜客户问的是哪一个
+    const wa = document.getElementById('detailContactWa');
+    if (wa) {
+      const name = document.getElementById('detailName').textContent.trim();
+      const ask = currentLang === 'zh' ? '你好，我想咨询这款：'
+        : currentLang === 'bm' ? 'Hai, saya ingin bertanya tentang produk ini: '
+        : "Hi, I'd like to ask about this product: ";
+      wa.href = `https://wa.me/60167241814?text=${encodeURIComponent(ask + name)}`;
+    }
     openOverlay(detailModal);
   }
 
@@ -346,11 +357,114 @@
     closeModal();
   });
 
+  // 纸张克重表（工厂给的「立即获取免费报价」Excel 纸张表）：瓦楞纸没有克重，档位是瓦楞型号
+  const PAPER_GSM = {
+    '白卡': ['250', '300', '350', '400', '450', '500', '600', '700', '800'],
+    '白底白': ['250', '300', '350', '400', '450', '500', '600', '700', '800'],
+    '灰底白': ['250', '300', '350', '400', '450', '500', '600', '700', '800'],
+    '铜板纸': ['105', '128', '157', '200', '250', '300', '350'],
+    '白牛皮纸': ['120', '150', '180', '200', '250', '300'],
+    '黄牛皮纸': ['120', '150', '180', '200', '250', '300'],
+    '三层瓦楞': ['A', 'B', 'C', 'E'],
+    '五层瓦楞': ['BC', 'BA', 'BE']
+  };
+
+  // 没选材质时先把全部档位铺出来，选了材质再筛成这一种纸自己的档
+  const GSM_ALL = ['105', '120', '128', '150', '157', '180', '200', '250', '300', '350', '400', '450', '500', '600', '700', '800'];
+  const FLUTE_ALL = ['A', 'B', 'C', 'E', 'BC', 'BA', 'BE'];
+
+  function fillGsmOptions() {
+    const mat = document.getElementById('material');
+    const sel = document.getElementById('gsm');
+    if (!mat || !sel) return;
+    const picked = PAPER_GSM[mat.value];
+    const fluteOnly = !!picked && /瓦楞$/.test(mat.value);
+    const weights = picked ? (fluteOnly ? [] : picked) : GSM_ALL;
+    const flutes = picked ? (fluteOnly ? picked : []) : FLUTE_ALL;
+    const ph = fluteOnly
+      ? ['Select flute...', 'Sila pilih flute...', '选择瓦楞型号...']
+      : (picked
+        ? ['Select paper weight...', 'Sila pilih berat kertas...', '选择克重...']
+        : ['Select weight / flute — narrows once you pick a paper', 'Sila pilih berat / flute — akan ditapis selepas pilih bahan', '选择克重/瓦楞型号（选好材质后会自动筛选）']);
+    const opt = (v, en, bm, zh) => `<option value="${v}" data-en="${en}" data-bm="${bm}" data-zh="${zh}">${en}</option>`;
+    sel.innerHTML = opt('', ph[0], ph[1], ph[2])
+      + weights.map(v => opt(v + '克', v + 'gsm', v + 'gsm', v + '克')).join('')
+      + flutes.map(v => opt(v + '瓦', `Flute ${v}`, `Flute ${v}`, v + '瓦')).join('');
+    [...sel.options].forEach(o => {
+      const t = o.getAttribute(`data-${currentLang}`);
+      if (t) o.textContent = t;
+    });
+  }
+
+  document.getElementById('material').addEventListener('change', fillGsmOptions);
+  fillGsmOptions();
+
+  // 表面处理：原生 select 放不进勾选框，改成自绘面板 + 确认选择才落到隐藏 input
+  const finishingInput = document.getElementById('finishing');
+  const finishingWrap = document.getElementById('finishingMsel');
+  const finishingTrigger = document.getElementById('finishingTrigger');
+  const finishingPanel = document.getElementById('finishingPanel');
+  const finishingText = finishingWrap.querySelector('.msel-text');
+  const finishingCount = finishingWrap.querySelector('.msel-count');
+  const finishingBoxes = [...finishingPanel.querySelectorAll('input[type=checkbox]')];
+  const FINISHING_PH = {
+    en: 'Not sure — please advise',
+    bm: 'Tidak pasti — sila nasihatkan',
+    zh: '还不确定——请指教。'
+  };
+
+  function syncFinishingLabel() {
+    const picked = finishingInput.value ? finishingInput.value.split(', ') : [];
+    if (!picked.length) {
+      finishingText.textContent = FINISHING_PH[currentLang];
+    } else {
+      const sep = currentLang === 'zh' ? '、' : ', ';
+      finishingText.textContent = picked.map(v => {
+        const box = finishingBoxes.find(b => b.value === v);
+        return box ? box.closest('.msel-item').querySelector('.msel-name').textContent : v;
+      }).join(sep);
+    }
+    finishingWrap.classList.toggle('has-value', picked.length > 0);
+    const n = finishingBoxes.filter(b => b.checked).length;
+    finishingCount.textContent = currentLang === 'zh' ? `已选 ${n} 项`
+      : currentLang === 'bm' ? `${n} dipilih` : `${n} selected`;
+  }
+
+  function openFinishing(open) {
+    finishingWrap.classList.toggle('open', open);
+    finishingTrigger.setAttribute('aria-expanded', String(open));
+  }
+
+  finishingTrigger.addEventListener('click', () => openFinishing(!finishingWrap.classList.contains('open')));
+  finishingBoxes.forEach(box => box.addEventListener('change', syncFinishingLabel));
+  document.getElementById('finishingConfirm').addEventListener('click', () => {
+    finishingInput.value = finishingBoxes.filter(b => b.checked).map(b => b.value).join(', ');
+    syncFinishingLabel();
+    openFinishing(false);
+  });
+  document.addEventListener('click', e => {
+    if (!finishingWrap.contains(e.target)) openFinishing(false);
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') openFinishing(false); });
+  // hidden input 的 value 在规范里是「反映内容属性」的，form.reset() 只会还原成上一次写进去的值，
+  // 所以提交成功清空表单时必须手动抹掉，否则客户的第二次询盘会带着上一次选的工艺。
+  inquiryForm.addEventListener('reset', () => setTimeout(() => {
+    finishingInput.value = '';
+    finishingBoxes.forEach(box => { box.checked = false; });
+    syncFinishingLabel();
+  }, 0));
+  syncFinishingLabel();
+
   // WhatsApp Form Submission
   inquiryForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
-    const boxType = document.getElementById('boxType').value;
+    const boxSel = document.getElementById('boxType');
+    const boxType = boxSel.value;
+    // 存给后台的是 slug（价格簿按盒型名查价），发给工厂的那一行要看得懂，所以取当前语言的选项文字
+    const boxLabel = (boxSel.selectedOptions[0] || {}).textContent?.trim() || boxType;
+    const material = document.getElementById('material').value;
+    const gsm = document.getElementById('gsm').value;
     const size = document.getElementById('size').value;
     const quantity = document.getElementById('quantity').value;
     const printing = document.getElementById('printing').value;
@@ -360,7 +474,9 @@
     const notes = document.getElementById('notes').value;
 
     let message = `Hello Jiulian Packaging! I'd like to get a quote:\n\n`;
-    if (boxType) message += `Box Type: ${boxType}\n`;
+    if (boxType) message += `Box Type: ${boxLabel}\n`;
+    if (material) message += `Material: ${material}\n`;
+    if (gsm) message += `Paper Weight: ${gsm}\n`;
     if (size) message += `Size: ${size}\n`;
     if (quantity) message += `Quantity: ${quantity}\n`;
     if (printing) message += `Printing: ${printing}\n`;
@@ -372,7 +488,7 @@
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/60167241814?text=${encodedMessage}`, '_blank');
 
-    saveLead({ boxType, size, quantity, printing, finishing, name, company, notes });
+    saveLead({ boxType, material, gsm, size, quantity, printing, finishing, name, company, notes });
   });
 
   function showInquiryStatus(text, tone) {
@@ -403,6 +519,8 @@
       email: '',
       source: '官网表单',
       boxType: f.boxType || '',
+      material: f.material || '',
+      gsm: f.gsm || '',
       size: (f.size || '').trim(),
       quantity: parseInt(f.quantity, 10) || 0,
       printing: f.printing || '',
@@ -422,6 +540,7 @@
       if (error) throw new Error(error.message);
       showInquiryStatus('已收到，我们会尽快给你报价 / Received, we will quote you shortly', 'ok');
       inquiryForm.reset();
+      fillGsmOptions();
     } catch (e) {
       showInquiryStatus('提交失败：' + e.message, 'err');
     }
@@ -1160,7 +1279,7 @@
     return true;
   }
 
-  // 商品详情弹窗底部的提示文字和电商平台链接，后台「弹窗设置」可随时改
+  // 商品详情弹窗底部的两行提示文字，后台「弹窗设置」可随时改（商城链接那套已经撤掉，改成固定的 WhatsApp 联系我们）
   function applyModalSettings(d) {
     if (!d) return false;
     const note1 = document.getElementById('detailNote1');
@@ -1175,23 +1294,14 @@
       note1.textContent = currentLang === 'zh' ? zh : currentLang === 'bm' ? bm : en;
     }
     if (note2) {
-      const en = str(d.note2En) || 'Regular products, click to shop online';
-      const zh = str(d.note2Zh) || '常规商品，可点击商城购买';
+      const en = str(d.note2En) || 'Regular products — click Contact Us';
+      const zh = str(d.note2Zh) || '常规商品，点击联系我们';
       const bm = str(d.note2Bm) || en;
       note2.setAttribute('data-en', en);
       note2.setAttribute('data-zh', zh);
       note2.setAttribute('data-bm', bm);
       note2.textContent = currentLang === 'zh' ? zh : currentLang === 'bm' ? bm : en;
     }
-    const platforms = {Tiktok: d.tiktok, Shopee: d.shopee, Lazada: d.lazada};
-    Object.entries(platforms).forEach(([key, url]) => {
-      const el = document.getElementById('platform' + key);
-      if (el) {
-        const href = str(url);
-        if (href) { el.href = href; el.style.display = ''; }
-        else el.style.display = 'none';
-      }
-    });
     return true;
   }
 

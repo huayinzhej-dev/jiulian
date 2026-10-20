@@ -105,7 +105,8 @@ ul { list-style: none; }
 
 /* ===== Section Shared ===== */
 .section-label {
-  font-size: 13px;
+  font-size: 32px;
+  line-height: 1.25;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -973,6 +974,127 @@ ul { list-style: none; }
 
 .form-group textarea { resize: vertical; min-height: 100px; }
 
+/* ===== 多选下拉（表面处理）===== */
+.msel { position: relative; }
+
+.msel-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  text-align: left;
+  color: var(--gray-700);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.msel-trigger:hover { border-color: var(--gray-400); }
+
+.msel-trigger:focus {
+  outline: none;
+  border-color: var(--brand-600);
+  box-shadow: 0 0 0 3px rgba(20,96,61,0.15);
+  background: var(--white);
+}
+
+.msel-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msel.has-value .msel-text { color: var(--gray-900); font-weight: 600; }
+
+.msel-arrow {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--gray-500);
+  border-bottom: 2px solid var(--gray-500);
+  transform: rotate(45deg);
+  margin: -4px 2px 0 0;
+  transition: transform var(--transition);
+}
+.msel.open .msel-arrow { transform: rotate(-135deg); margin: 2px 2px 0 0; }
+
+.msel-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  max-height: min(340px, 62vh);
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+.msel.open .msel-panel { display: block; }
+
+/* .form-group label 的优先级比 .msel-item 高，所以这里要带上 .form-group 才压得住 */
+.form-group .msel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0;
+  padding: 9px 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-700);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.form-group .msel-item:hover { background: var(--brand-50); }
+.form-group .msel-item input[type="checkbox"] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  border-radius: 4px;
+  accent-color: var(--brand-600);
+  cursor: pointer;
+}
+.form-group .msel-item input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 2px;
+}
+.msel-name { min-width: 0; }
+
+.msel-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 10px 10px 6px;
+  background: var(--white);
+  border-top: 1px solid var(--gray-200);
+}
+.msel-count { font-size: 12px; color: var(--gray-500); }
+
+.msel-confirm {
+  padding: 8px 18px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--brand-600);
+  border: 1px solid var(--brand-600);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.msel-confirm:hover { background: var(--brand-700); }
+
 .form-note {
   font-size: 13px;
   color: var(--gray-400);
@@ -1410,7 +1532,7 @@ a.footer-info-val:hover { color: var(--white); }
 .about-content .section-title {
   margin-bottom: 20px;
 }
-.about-content > p {
+.about-content > p:not(.section-label) {
   font-size: 16px;
   color: var(--gray-600);
   line-height: 1.7;
@@ -1704,6 +1826,19 @@ a.footer-info-val:hover { color: var(--white); }
 }
 .platform-btn svg {
   flex-shrink: 0;
+}
+/* 商城链接撤掉后这里只剩一个 WhatsApp 联系我们，做成实心按钮挑出来 */
+.platform-btn-wa {
+  background: #25D366;
+  border-color: #25D366;
+  color: #06251A;
+  font-weight: 700;
+  padding: 9px 20px;
+}
+.platform-btn-wa:hover {
+  background: #1dbe5a;
+  border-color: #1dbe5a;
+  color: #06251A;
 }
 .modal-showcase h3 {
   font-size: 19px;
@@ -2092,6 +2227,9 @@ a.footer-info-val:hover { color: var(--white); }
 }
 
 @media (max-width: 768px) {
+  /* 小标桌面是 32px，但手机上的大标题被 clamp() 压到 28px，不降一档会盖过标题 */
+  .section-label { font-size: 22px; }
+
   .cert-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .cert-card { padding: 16px 14px; gap: 12px; }
   .cert-icon { width: 40px; height: 40px; }

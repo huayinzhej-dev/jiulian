@@ -517,6 +517,51 @@ It holds authoritative certifications such as FSC, GMI, and Lowe's, and utilizes
           </div>
           <div class="form-row">
             <div class="form-group">
+              <label for="material" data-en="Material / Paper" data-bm="Bahan / Kertas" data-zh="材质/纸张">Material / Paper</label>
+              <select id="material" name="material">
+                <option value="" data-en="Select material..." data-bm="Select bahan..." data-zh="选择材质...">Select material...</option>
+                <option value="白卡" data-en="Ivory Board" data-bm="Kad Ivory" data-zh="白卡">Ivory Board</option>
+                <option value="白底白" data-en="White-Base White-Face Board" data-bm="Papan Tapak Putih" data-zh="白底白">White-Base White-Face Board</option>
+                <option value="灰底白" data-en="Grey-Back White-Face Board" data-bm="Papan Belakang Kelabu" data-zh="灰底白">Grey-Back White-Face Board</option>
+                <option value="铜板纸" data-en="Art Paper (Coated)" data-bm="Kertas Art (Salut)" data-zh="铜板纸">Art Paper (Coated)</option>
+                <option value="白牛皮纸" data-en="White Kraft Paper" data-bm="Kertas Kraft Putih" data-zh="白牛皮纸">White Kraft Paper</option>
+                <option value="黄牛皮纸" data-en="Yellow Kraft Paper" data-bm="Kertas Kraft Kuning" data-zh="黄牛皮纸">Yellow Kraft Paper</option>
+                <option value="三层瓦楞" data-en="Single-Wall Corrugated" data-bm="Kadbod Berombak 1 Lapis" data-zh="三层瓦楞">Single-Wall Corrugated</option>
+                <option value="五层瓦楞" data-en="Double-Wall Corrugated" data-bm="Kadbod Berombak 2 Lapis" data-zh="五层瓦楞">Double-Wall Corrugated</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="gsm" data-en="Paper Weight" data-bm="Berat Kertas" data-zh="克重">Paper Weight</label>
+              <select id="gsm" name="gsm">
+                <option value="" data-en="Select weight / flute — narrows once you pick a paper" data-bm="Sila pilih berat / flute — akan ditapis selepas pilih bahan" data-zh="选择克重/瓦楞型号（选好材质后会自动筛选）">Select weight / flute — narrows once you pick a paper</option>
+                <option value="105克" data-en="105gsm" data-bm="105gsm" data-zh="105克">105gsm</option>
+                <option value="120克" data-en="120gsm" data-bm="120gsm" data-zh="120克">120gsm</option>
+                <option value="128克" data-en="128gsm" data-bm="128gsm" data-zh="128克">128gsm</option>
+                <option value="150克" data-en="150gsm" data-bm="150gsm" data-zh="150克">150gsm</option>
+                <option value="157克" data-en="157gsm" data-bm="157gsm" data-zh="157克">157gsm</option>
+                <option value="180克" data-en="180gsm" data-bm="180gsm" data-zh="180克">180gsm</option>
+                <option value="200克" data-en="200gsm" data-bm="200gsm" data-zh="200克">200gsm</option>
+                <option value="250克" data-en="250gsm" data-bm="250gsm" data-zh="250克">250gsm</option>
+                <option value="300克" data-en="300gsm" data-bm="300gsm" data-zh="300克">300gsm</option>
+                <option value="350克" data-en="350gsm" data-bm="350gsm" data-zh="350克">350gsm</option>
+                <option value="400克" data-en="400gsm" data-bm="400gsm" data-zh="400克">400gsm</option>
+                <option value="450克" data-en="450gsm" data-bm="450gsm" data-zh="450克">450gsm</option>
+                <option value="500克" data-en="500gsm" data-bm="500gsm" data-zh="500克">500gsm</option>
+                <option value="600克" data-en="600gsm" data-bm="600gsm" data-zh="600克">600gsm</option>
+                <option value="700克" data-en="700gsm" data-bm="700gsm" data-zh="700克">700gsm</option>
+                <option value="800克" data-en="800gsm" data-bm="800gsm" data-zh="800克">800gsm</option>
+                <option value="A瓦" data-en="Flute A" data-bm="Flute A" data-zh="A瓦">Flute A</option>
+                <option value="B瓦" data-en="Flute B" data-bm="Flute B" data-zh="B瓦">Flute B</option>
+                <option value="C瓦" data-en="Flute C" data-bm="Flute C" data-zh="C瓦">Flute C</option>
+                <option value="E瓦" data-en="Flute E" data-bm="Flute E" data-zh="E瓦">Flute E</option>
+                <option value="BC瓦" data-en="Flute BC" data-bm="Flute BC" data-zh="BC瓦">Flute BC</option>
+                <option value="BA瓦" data-en="Flute BA" data-bm="Flute BA" data-zh="BA瓦">Flute BA</option>
+                <option value="BE瓦" data-en="Flute BE" data-bm="Flute BE" data-zh="BE瓦">Flute BE</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
               <label for="size" data-en="Size (L×W×H, cm)" data-bm="Size (L×W×H, cm)" data-zh="尺寸（长×宽×高，厘米）">Size (L×W×H, cm)</label>
               <input type="text" id="size" name="size" placeholder="e.g. 24 × 22 × 4">
             </div>
@@ -536,27 +581,45 @@ It holds authoritative certifications such as FSC, GMI, and Lowe's, and utilizes
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label for="printing" data-en="Printing Option" data-bm="Printing Option" data-zh="打印可选">Printing Option</label>
+              <label for="printing" data-en="Printing Option" data-bm="Pilihan Cetakan" data-zh="印刷可选">Printing Option</label>
               <select id="printing" name="printing">
-                <option value="" data-en="Plain / No printing" data-bm="Plain / No printing" data-zh="纯色/无打印">Plain / No printing</option>
-                <option value="1c0c">1C+0C</option>
-                <option value="1c1c">1C+1C</option>
-                <option value="4c0c">4C+0C</option>
-                <option value="4c1c">4C+1C</option>
-                <option value="4c4c">4C+4C</option>
+                <option value="" data-en="Plain / No printing" data-bm="Polos / Tiada cetakan" data-zh="纯色/无印刷">Plain / No printing</option>
+                <option value="1C+0C">1C+0C</option>
+                <option value="1C+1C">1C+1C</option>
+                <option value="4C+0C">4C+0C</option>
+                <option value="4C+1C">4C+1C</option>
+                <option value="4C+4C">4C+4C</option>
+                <option value="5C+0C">5C+0C</option>
+                <option value="5C+1C">5C+1C</option>
+                <option value="5C+4C">5C+4C</option>
+                <option value="5C+5C">5C+5C</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="finishing" data-en="Finishing Option" data-bm="Finishing Option" data-zh="可选的完成方式">Finishing Option</label>
-              <select id="finishing" name="finishing">
-                <option value="" data-en="Not sure — please advise" data-bm="Not sure — please advise" data-zh="还不确定——请指教。">Not sure — please advise</option>
-                <option value="matte" data-en="Matte Lamination" data-bm="Matte Lamination" data-zh="哑光覆膜">Matte Lamination</option>
-                <option value="glossy" data-en="Glossy Lamination" data-bm="Glossy Lamination" data-zh="光面覆膜">Glossy Lamination</option>
-                <option value="soft-touch" data-en="Soft Touch" data-bm="Soft Touch" data-zh="柔触覆膜">Soft Touch</option>
-                <option value="spot-uv" data-en="Spot UV" data-bm="Spot UV" data-zh="局部UV">Spot UV</option>
-                <option value="embossing" data-en="Embossing" data-bm="Embossing" data-zh="压花">Embossing</option>
-                <option value="foil" data-en="Foil Stamping" data-bm="Foil Stamping" data-zh="烫金">Foil Stamping</option>
-              </select>
+              <label for="finishingTrigger" data-en="Finishing Option (choose any)" data-bm="Pilihan Kemasan (boleh pilih lebih satu)" data-zh="表面处理（可多选）">Finishing Option (choose any)</label>
+              <div class="msel" id="finishingMsel">
+                <button type="button" class="msel-trigger" id="finishingTrigger" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="msel-text"></span>
+                  <span class="msel-arrow" aria-hidden="true"></span>
+                </button>
+                <div class="msel-panel" id="finishingPanel" role="listbox" aria-multiselectable="true">
+                  <label class="msel-item"><input type="checkbox" value="哑光覆膜"><span class="msel-name" data-en="Matte Lamination" data-bm="Matte Lamination" data-zh="哑光覆膜">Matte Lamination</span></label>
+                  <label class="msel-item"><input type="checkbox" value="亮光覆膜"><span class="msel-name" data-en="Glossy Lamination" data-bm="Glossy Lamination" data-zh="亮光覆膜">Glossy Lamination</span></label>
+                  <label class="msel-item"><input type="checkbox" value="单面上光"><span class="msel-name" data-en="Single-Side Gloss Varnish" data-bm="Vernis Kilat Satu Muka" data-zh="单面上光">Single-Side Gloss Varnish</span></label>
+                  <label class="msel-item"><input type="checkbox" value="双面上光"><span class="msel-name" data-en="Double-Side Gloss Varnish" data-bm="Vernis Kilat Dua Muka" data-zh="双面上光">Double-Side Gloss Varnish</span></label>
+                  <label class="msel-item"><input type="checkbox" value="单面吸塑油"><span class="msel-name" data-en="Single-Side Vacuum-Form Oil" data-bm="Minyak Vacuum Satu Muka" data-zh="单面吸塑油">Single-Side Vacuum-Form Oil</span></label>
+                  <label class="msel-item"><input type="checkbox" value="双面吸塑油"><span class="msel-name" data-en="Double-Side Vacuum-Form Oil" data-bm="Minyak Vacuum Dua Muka" data-zh="双面吸塑油">Double-Side Vacuum-Form Oil</span></label>
+                  <label class="msel-item"><input type="checkbox" value="局部UV"><span class="msel-name" data-en="Spot UV" data-bm="Spot UV" data-zh="局部UV">Spot UV</span></label>
+                  <label class="msel-item"><input type="checkbox" value="压花"><span class="msel-name" data-en="Embossing" data-bm="Embossing" data-zh="压花">Embossing</span></label>
+                  <label class="msel-item"><input type="checkbox" value="烫金"><span class="msel-name" data-en="Foil Stamping" data-bm="Foil Stamping" data-zh="烫金">Foil Stamping</span></label>
+                  <label class="msel-item"><input type="checkbox" value="开窗"><span class="msel-name" data-en="Window Patch (Clear PVC)" data-bm="Teting Jendela (PVC Jernih)" data-zh="开窗">Window Patch (Clear PVC)</span></label>
+                  <div class="msel-foot">
+                    <span class="msel-count"></span>
+                    <button type="button" class="msel-confirm" id="finishingConfirm" data-en="Confirm selection" data-bm="Sahkan pilihan" data-zh="确认选择">Confirm selection</button>
+                  </div>
+                </div>
+                <input type="hidden" name="finishing" id="finishing" value="">
+              </div>
             </div>
           </div>
           <div class="form-row">
@@ -571,7 +634,7 @@ It holds authoritative certifications such as FSC, GMI, and Lowe's, and utilizes
           </div>
           <div class="form-group">
             <label for="notes" data-en="Notes (Optional)" data-bm="Notes (Optional)" data-zh="可选备注">Notes (Optional)</label>
-            <textarea id="notes" name="notes" rows="3" placeholder="" data-en-placeholder="Artwork ready? Special finishing? Delivery area?" data-zh-placeholder="设计稿准备好了吗？特殊工艺？送货地区？"></textarea>
+            <textarea id="notes" name="notes" rows="3" placeholder="" data-en-placeholder="Does the paper need mounting? Corrugated lamination? Artwork ready? Special finishing? Delivery area?" data-bm-placeholder="Perlu pelekatan kertas? Perlu laminasi kadbod berombak? Artwork sedia? Kemasan khas? Kawasan penghantaran?" data-zh-placeholder="纸张是否对裱？是否裱瓦楞？是否已准备好设计稿？特殊工艺？送货地区？"></textarea>
           </div>
           <button type="submit" class="btn btn-whatsapp-submit btn-lg btn-full">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -640,20 +703,12 @@ It holds authoritative certifications such as FSC, GMI, and Lowe's, and utilizes
             </div>
             <div class="detail-notes" id="detailNotes">
               <p class="detail-note" id="detailNote1" data-en="This image is for website display only, all products can be customized according to your needs" data-bm="Imej ini adalah untuk paparan laman web sahaja, semua produk boleh disesuaikan mengikut keperluan anda" data-zh="该图片为网站展示图，所有商品均可按需定制">该图片为网站展示图，所有商品均可按需定制</p>
-              <p class="detail-note detail-note-sub" id="detailNote2" data-en="Regular products, click to shop online" data-bm="Produk biasa, klik untuk membeli dalam talian" data-zh="常规商品，可点击商城购买">常规商品，可点击商城购买</p>
+              <p class="detail-note detail-note-sub" id="detailNote2" data-en="Regular products — click Contact Us" data-bm="Produk biasa — klik Hubungi Kami" data-zh="常规商品，点击联系我们">常规商品，点击联系我们</p>
             </div>
             <div class="detail-platforms" id="detailPlatforms">
-              <a href="#" class="platform-btn" id="platformTiktok" target="_blank" rel="noopener" aria-label="TikTok Shop">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V8.45a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.84-.88z"/></svg>
-                <span>TikTok</span>
-              </a>
-              <a href="#" class="platform-btn" id="platformShopee" target="_blank" rel="noopener" aria-label="Shopee">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.5 14.5l-4-4 1.41-1.41L10.5 13.67l5.59-5.59L17.5 9.5l-7 7z"/></svg>
-                <span>Shopee</span>
-              </a>
-              <a href="#" class="platform-btn" id="platformLazada" target="_blank" rel="noopener" aria-label="Lazada">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18l7 3.5v7.64l-7 3.5-7-3.5V7.68l7-3.5z"/></svg>
-                <span>Lazada</span>
+              <a href="https://wa.me/60167241814" class="platform-btn platform-btn-wa" id="detailContactWa" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <span data-en="Contact Us" data-bm="Hubungi Kami" data-zh="联系我们">联系我们</span>
               </a>
             </div>
           </div>
@@ -773,6 +828,10 @@ It holds authoritative certifications such as FSC, GMI, and Lowe's, and utilizes
           <div class="guide-code-item">
             <span class="guide-code-label">4C</span>
             <span class="guide-code-desc" data-en="Full color CMYK printing (4 colors)" data-bm="Full color CMYK printing (4 colors)" data-zh="全彩CMYK印刷（4种颜色）">Full color CMYK printing (4 colors)</span>
+          </div>
+          <div class="guide-code-item">
+            <span class="guide-code-label">5C</span>
+            <span class="guide-code-desc" data-en="CMYK plus one spot colour (e.g. metallic, white or a Pantone colour)" data-bm="CMYK plus satu warna khas (cth. warna logam, putih atau warna Pantone)" data-zh="四色加一专色（如金墨、白墨或指定潘通色）">CMYK plus one spot colour (e.g. metallic, white or a Pantone colour)</span>
           </div>
           <div class="guide-code-item">
             <span class="guide-code-label">4C+0C</span>
