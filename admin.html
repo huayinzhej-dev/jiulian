@@ -318,7 +318,7 @@ const CLOUD = {
         'settings_notifications','settings_finance','settings_about','settings_process',
         'settings_printing_guide','settings_advantages','settings_stats','settings_banner',
         'settings_quote_template','settings_certs','pricebook','contactFormConfig','settings_modal',
-        'settings_h5']
+        'settings_h5','settings_quote']
 };
 // 首页这五块文案：旧版后台的保存函数压根不写马来文/中文栏，云端那条记录因此键比本机少，
 // 整条覆盖会把本机刚填的内容抹掉。拉取时按字段合并（数组按下标合并），云端已有的字段仍以云端为准。
@@ -750,6 +750,18 @@ function seedDict(key, demo) {
   if (Sync.ready) DICT_HEALED.push(key);
 }
 
+// 首页 FAQ 那 6 条的三语原文，seedData 灌种子和 FAQ 页「导入」按钮共用同一份。
+let FAQ_LIVE = [];
+// 前台报价表单「盒型」当前写死在 index.html 里的那 6 条，第一次灌进后台当默认清单用。
+// 马来文是这次一并补的（HTML 里那几条 data-bm 直接抄的英文）。
+const QUOTE_BOX_LIVE = [
+  { name: '礼品盒', nameEn: 'Gift Box', nameBm: 'Kotak Hadiah' },
+  { name: '食品盒', nameEn: 'Food Box', nameBm: 'Kotak Makanan' },
+  { name: '化妆品盒', nameEn: 'Cosmetic Box', nameBm: 'Kotak Kosmetik' },
+  { name: '运输纸箱', nameEn: 'Shipping Box', nameBm: 'Kotak Penghantaran' },
+  { name: '纸袋', nameEn: 'Paper Bag', nameBm: 'Beg Kertas' },
+  { name: '标签贴纸', nameEn: 'Label & Sticker', nameBm: 'Label & Pelekat' }
+].map((x, i) => Object.assign({ id: 'QB-' + (i + 1), sort: (i + 1) * 10, active: true }, x));
 function seedData() {
   const leads = [
     {id:'LD-001',name:'John Smith',company:'L\'Oréal Malaysia',phone:'+60123456789',email:'john@loreal.com',source:'表单',boxType:'飞机盒',size:'24×22×4',quantity:1000,printing:'4C1C',finishing:'哑光覆膜',status:'new',assignee:'销售A',notes:'需要食品级材料',created:'2026-10-04 10:30',followUps:[]},
@@ -800,15 +812,18 @@ function seedData() {
   // 云端有数据时 pullAll 会直接盖掉本机这份，所以两边不会同时存在两份。
   seedDict('categories', (window.JL_CAT_SEED || []).map(x => Object.assign({}, x)));
 
-  const faqs = [
-    {id:'FAQ-01',category:'MOQ',question:'What is the minimum order quantity?',answer:'Our MOQ starts from 100 pieces for standard products and 500 pieces for custom printed items.',sort:1},
-    {id:'FAQ-02',category:'交期',question:'How long is the production lead time?',answer:'Standard production takes 10-14 working days after artwork approval. Rush orders available upon request.',sort:2},
-    {id:'FAQ-03',category:'配送',question:'Do you offer free delivery?',answer:'Yes! We offer free delivery within Kuala Lumpur and Selangor. Other areas are charged based on volume and destination.',sort:3},
-    {id:'FAQ-04',category:'Artwork',question:'What file format do you accept?',answer:'We accept AI, PDF, PSD (300dpi minimum). Please include bleed area of 3mm on all sides.',sort:4},
-    {id:'FAQ-05',category:'认证',question:'Are your materials food-safe?',answer:'Yes, we offer FSC-certified and food-grade materials. All our materials comply with EU and FDA standards.',sort:5},
-    {id:'FAQ-06',category:'价格',question:'How is pricing calculated?',answer:'Pricing depends on box type, size, material, printing colors, finishing, and quantity. Use our 60-second quote form for instant estimates.',sort:6}
+  // 这 6 条 = 首页 index.html 里写死的那 6 条，三语齐全。云端还没有 faqs 记录时，
+  // 后台 FAQ 页会给一个「导入这 6 条」按钮，点了才落库；一落库首页就改读后台。
+  FAQ_LIVE = [
+    {id:'FAQ-01',category:'MOQ',sort:1,question:'What is the minimum order quantity (MOQ)?',questionBm:'Apakah kuantiti pesanan minimum (MOQ)?',questionZh:'最低起订量（MOQ）是多少？',answer:"We're breaking the industry norm in Malaysia: regular corrugated packaging starts from just 1 piece, while our other products start from 100 pieces. We set a flexible MOQ around your actual needs, so you never have to over-order and carry the loss.",answerBm:'Kami pecahkan kebiasaan industri di Malaysia: kadbod beralun biasa boleh dibuat mulai 1 keping, produk lain mulai 100 keping. MOQ kami sesuaikan dengan keperluan sebenar anda, jadi anda tak perlu tempah lebih dan menanggung rugi.',answerZh:'打破大马行业限制，常规瓦楞包装1件起做，其他产品最低起订量为100件起。我们会根据您的实际需求提供灵活的起订量，让您不用担心因多订数量而造成损失。'},
+    {id:'FAQ-02',category:'交期',sort:2,question:'How long does production take?',questionBm:'Berapa lama masa pengeluaran?',questionZh:'生产需要多长时间？',answer:'Our standard production takes 10-15 business days after sample approval. Rush orders can be completed within 7 days. Sample production takes 5-7 business days.',answerBm:'Pengeluaran standard mengambil masa 10-15 hari bekerja selepas kelulusan sampel. Tempahan ekspres boleh siap dalam 7 hari. Pembuatan sampel mengambil masa 5-7 hari bekerja.',answerZh:'我们的标准生产周期为样品确认后10-15个工作日。加急订单可在7天内完成。样品生产需要5-7个工作日。'},
+    {id:'FAQ-03',category:'设计',sort:3,question:'Can you help with design?',questionBm:'Boleh bantu dengan rekaan?',questionZh:'你们能提供设计服务吗？',answer:"We don't do original visual design for brand logos or product artwork. But to make sure your product gets produced smoothly, our technical team draws the standard die-line (unfolded layout) for you free of charge, and once you submit your artwork we help with professional pre-press imposition and file checks.",answerBm:'Kami tidak buat rekaan visual asal untuk logo jenama atau artwork produk. Tapi untuk pastikan produk anda dapat dikeluarkan dengan lancar, pasukan teknikal kami lukiskan lini die standard (bentangan) secara percuma, dan selepas anda hantar artwork, kami bantu semakan pra-cetak serta ketepatan fail.',answerZh:'我们不提供品牌LOGO或产品图案的原创视觉设计服务。但为了确保您的产品能够顺利生产，我们的技术团队会免费为您提供标准的刀模线（展开图）绘制，并在您提交设计稿后协助进行专业的印前拼版与文件规范检查。'},
+    {id:'FAQ-04',category:'付款',sort:4,question:'What payment methods do you accept?',questionBm:'Kaedah pembayaran apa yang diterima?',questionZh:'你们接受哪些付款方式？',answer:'We accept T/T (bank transfer), PayPal, Western Union, and Letter of Credit (L/C). Standard terms are 30% deposit, 70% balance before shipment. For repeat clients, we offer flexible payment terms.',answerBm:'Kami terima T/T (pindahan bank), PayPal, Western Union dan L/C. Terma standard: deposit 30%, baki 70% sebelum penghantaran. Untuk pelanggan tetap, terma pembayaran boleh dibincangkan dengan lebih fleksibel.',answerZh:'我们接受电汇（T/T）、PayPal、西联汇款和信用证（L/C）。标准条款为30%定金，发货前70%尾款。对于老客户，我们提供灵活的付款条件。'},
+    {id:'FAQ-05',category:'配送',sort:5,question:'Do you offer door-to-door delivery?',questionBm:'Ada penghantaran pintu ke pintu?',questionZh:'你们是否有送货上门服务？',answer:'Yes. Customers here in Johor Bahru can have door-to-door delivery; orders outside the area are handled through logistics partners.',answerBm:'Ada. Pelanggan sekitar Johor Bahru boleh pilih penghantaran pintu ke pintu; tempahan luar kawasan diuruskan melalui rakan logistik kami.',answerZh:'新山本地用户支持送货上门服务，外地客户支持物流配送服务。'},
+    {id:'FAQ-06',category:'Artwork',sort:6,question:'What file formats do you accept?',questionBm:'Format fail apa yang diterima?',questionZh:'你们接受哪些文件格式？',answer:'We accept AI, PDF, PSD, CDR, and high-resolution JPG files. Please provide vector files with all fonts outlined or embedded. Our team will check your files and confirm before production.',answerBm:'Kami terima fail AI, PDF, PSD, CDR dan JPG resolusi tinggi. Sila berikan fail vektor dengan semua fon ditukar kepada outline atau disertakan sekali. Pasukan kami akan periksa dan sahkan fail anda sebelum pengeluaran.',answerZh:'我们接受AI、PDF、PSD、CDR和高分辨率JPG文件。请提供所有字体已转曲或嵌入的矢量文件。我们的团队会在生产前检查并确认您的文件。'}
   ];
-  seedOne('faqs', faqs);
+  seedOne('faqs', FAQ_LIVE);
+  seedOne('settings_quote', { boxTypes: QUOTE_BOX_LIVE.map(x => Object.assign({}, x)) });
 
   const testimonials = [
     {id:'T-01',name:'Ahmad Razak',position:'Procurement Manager',company:'Nestlé Malaysia',rating:5,content:'Excellent quality and on-time delivery. Jiulian has been our trusted packaging partner for 3 years.',avatar:'A',active:true},
@@ -820,7 +835,7 @@ function seedData() {
   const policies = [
     {id:'P-01',slug:'privacy',title:'隐私政策 Privacy Policy',content:'We are committed to protecting your personal data in accordance with PDPA...',updated:'2026-10-01'},
     {id:'P-02',slug:'returns',title:'退换货政策 Returns Policy',content:'Due to the custom nature of our products, returns are only accepted for defective items...',updated:'2026-10-01'},
-    {id:'P-03',slug:'terms',title:'条款与条件 Terms & Conditions',content:'All orders are subject to our standard terms. Payment: 50% deposit, 50% before delivery...',updated:'2026-10-01'},
+    {id:'P-03',slug:'terms',title:'条款与条件 Terms & Conditions',content:'All orders are subject to our standard terms. Payment: 30% deposit, 70% before delivery...',updated:'2026-10-01'},
     {id:'P-04',slug:'shipping',title:'配送政策 Shipping Policy',content:'Free delivery within KL & Selangor. Other areas charged by volume and distance...',updated:'2026-10-01'},
     {id:'P-05',slug:'sst',title:'SST 说明',content:'All prices are subject to 10% Sales and Service Tax (SST) unless otherwise stated...',updated:'2026-10-01'}
   ];
@@ -872,7 +887,7 @@ function seedData() {
     DM.set('proofs', [{id:'PF-001',orderId:'OD-2026-001',customer:"L'Oréal Malaysia",type:'数字打样 (颜色确认)',status:'pending_confirm',uploaded:'2026-10-04',fileUrl:''}]);
   }
   if (!DM.has('settings_site')) {
-    DM.set('settings_site', {enName:'JIU LIAN INDUSTRIAL SDN. BHD.',zhName:'玖联包装印刷',phone:'016-724 1814',email:'marketing@jiulianpack.com.my',address:'Lot 1, Jalan KIP 2, Kepong, Kuala Lumpur',googleMaps:'',waze:'',facebook:'',instagram:'',linkedin:''});
+    DM.set('settings_site', {enName:'JIU LIAN INDUSTRIAL SDN. BHD.',zhName:'玖联包装印刷',phone:'016-724 1814',email:'alan@jiulianpack.com.my',address:'PLO 129, Jalan Bakau 5, Taman Perindustrian TG Langsat, 81700 Pasir Gudang, Johor',googleMaps:'',waze:'',facebook:'',instagram:'',linkedin:''});
   }
   if (!DM.has('settings_seo')) {
     DM.set('settings_seo', {title:'Jiulian Packaging — Premium Printing & Packaging Solutions',description:'Jiulian Packaging is a leading printing and packaging manufacturer offering custom boxes, bags, and labels for global brands.',keywords:'packaging, printing, custom boxes, mailer box, food packaging, Malaysia',gaId:'',gscId:'',fbPixel:''});
@@ -881,19 +896,19 @@ function seedData() {
     DM.set('settings_modal', {note1En:'This image is for website display only, all products can be customized according to your needs',note1Zh:'该图片为网站展示图，所有商品均可按需定制',note1Bm:'',note2En:'Regular products — click Contact Us',note2Zh:'常规商品，点击联系我们',note2Bm:''});
   }
   if (!DM.has('settings_notifications')) {
-    DM.set('settings_notifications', {notifyEmail:'marketing@jiulianpack.com.my',leadTemplate:'新询盘通知：\n客户：{{客户名}}\n公司：{{公司}}\n盒型：{{盒型}}\n数量：{{数量}}\n\n请及时跟进。',quoteTemplate:'尊敬的 {{客户名}}，\n\n感谢您的询价。附件是报价单 {{报价号}}，有效期 {{有效期}}。\n\n如有任何疑问请随时联系我们。'});
+    DM.set('settings_notifications', {notifyEmail:'alan@jiulianpack.com.my',leadTemplate:'新询盘通知：\n客户：{{客户名}}\n公司：{{公司}}\n盒型：{{盒型}}\n数量：{{数量}}\n\n请及时跟进。',quoteTemplate:'尊敬的 {{客户名}}，\n\n感谢您的询价。附件是报价单 {{报价号}}，有效期 {{有效期}}。\n\n如有任何疑问请随时联系我们。'});
   }
   if (!DM.has('settings_finance')) {
-    DM.set('settings_finance', {sstRate:10,currency:'MYR (RM)',validDays:14,depositPercent:50});
+    DM.set('settings_finance', {sstRate:10,currency:'MYR (RM)',validDays:14,depositPercent:30});
   }
   if (!DM.has('settings_quote_template')) {
-    DM.set('settings_quote_template', {header:'JIU LIAN INDUSTRIAL SDN. BHD.',terms:'50% 定金，50% 发货前付清。银行转账/TT。',delivery:'确认打样后 10-14 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
+    DM.set('settings_quote_template', {header:'JIU LIAN INDUSTRIAL SDN. BHD.',terms:'30% 定金，发货前付清 70% 尾款。银行转账/TT、PayPal、西联、L/C。',delivery:'样品确认后 10-15 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
   }
   if (!DM.has('settings_about')) {
-    DM.set('settings_about', {intro:'Jiulian Packaging (JIU LIAN INDUSTRIAL SDN. BHD.) has been a trusted packaging partner since 2008. With over 30 years of combined experience, we serve 500+ clients across 50+ countries.'});
+    DM.set('settings_about', {intro:'Jiulian Packaging (JIU LIAN INDUSTRIAL SDN. BHD.) is the first factory in Johor to fully manufacture its own paper and plastic packaging and printing products, serving 500+ clients across Malaysia and overseas.'});
   }
   if (!DM.has('settings_process')) {
-    DM.set('settings_process', [{title:'Enquire & Quote',desc:'Submit your requirements via our 60-second quote form',days:'1-2 days'},{title:'Artwork & Die-Line',desc:'Upload your artwork or use our 40+ ready moulds',days:'2-3 days'},{title:'Proof & Mock-Up',desc:'Digital proof for color + blank mock-up for structure',days:'3-5 days'},{title:'Production',desc:'Mass production with strict QC at every stage',days:'10-14 days'},{title:'Free Delivery',desc:'Free delivery within KL & Selangor',days:'1-3 days'}]);
+    DM.set('settings_process', [{title:'Send Inquiry',desc:'Send us your size, material, quantity and artwork. We reply with a factory-direct quote within 6–48 hours.',days:'',titleBm:'Hantar Pertanyaan',descBm:'Hantar saiz, bahan, kuantiti dan artwork anda. Kami balas dengan sebut harga terus dari kilang dalam masa 6–48 jam.',titleZh:'发送询价',descZh:'分享您的需求：尺寸、材质、数量和设计稿。我们将在6-48小时内回复工厂直供报价。'},{title:'Sample Approval',desc:'We produce a sample for your review. Confirm the colour, material and finish before mass production begins.',days:'',titleBm:'Kelulusan Sampel',descBm:'Kami hasilkan sampel untuk semakan anda. Sahkan warna, bahan dan kemasan sebelum pengeluaran pukal bermula.',titleZh:'样品确认',descZh:'我们生产样品供您审核。在批量生产前确认颜色、材料和表面处理。'},{title:'Mass Production',desc:'Your order goes into production. We update you on progress and share QC photos at every stage.',days:'',titleBm:'Pengeluaran Pukal',descBm:'Tempahan anda masuk ke fasa pengeluaran. Kami maklumkan kemajuan dan kongsi foto QC pada setiap peringkat.',titleZh:'批量生产',descZh:'您的订单进入生产。我们在每个阶段提供进度更新和质检照片。'},{title:'Quality Check',desc:'100% inspection before packing. We send you the final product photos for confirmation.',days:'',titleBm:'Pemeriksaan Kualiti',descBm:'Pemeriksaan 100% sebelum pembungkusan. Kami hantar foto produk akhir untuk pengesahan anda.',titleZh:'质量检验',descZh:'包装前100%检验。我们发送最终产品照片供您确认。'},{title:'Delivery',desc:'Door-to-door delivery within Johor Bahru. For other areas, we arrange courier or freight shipping.',days:'',titleBm:'Penghantaran',descBm:'Penghantaran pintu ke pintu sekitar Johor Bahru. Bagi luar kawasan, kami uruskan penghantaran kurier atau pengapit.',titleZh:'物流配送',descZh:'新山本地用户支持送货上门服务，外地客户支持物流配送服务。'}]);
   }
   if (!DM.has('settings_printing_guide')) {
     DM.set('settings_printing_guide', '## Reading the Code\n\nThe printing code format is: [Front]C[Back]C\n\n- **0C** = No printing (plain)\n- **1C** = Single color print (Flexo)\n- **4C** = Full color CMYK print\n\n### Common Combinations:\n- **4C+0C**: Full color outside, plain inside\n- **4C+1C**: Full color outside, single color inside\n- **4C+4C**: Full color both sides\n- **1C+0C**: Single color outside, plain inside\n\n### Other Terms:\n- **Flexo**: Flexographic printing (cost-effective for simple designs)\n- **Brown Base**: Kraft/natural brown material\n- **White Base**: White cardboard material\n- **Laserfoil**: Metallic foil stamping effect');
@@ -2255,7 +2270,7 @@ function deletePricebookRow(i) {
 }
 
 function renderQuoteTemplate(c) {
-  const tpl = docVal('settings_quote_template', {header:'JIU LIAN INDUSTRIAL SDN. BHD.',terms:'50% 定金，50% 发货前付清。银行转账/TT。',delivery:'确认打样后 10-14 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
+  const tpl = docVal('settings_quote_template', {header:'JIU LIAN INDUSTRIAL SDN. BHD.',terms:'30% 定金，发货前付清 70% 尾款。银行转账/TT、PayPal、西联、L/C。',delivery:'样品确认后 10-15 个工作日完成生产。加急订单另议。',sst:'以上价格需另加 10% SST (Sales & Service Tax)。',validity:'14'});
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">报价单模板</h1><p class="page-desc">这里的内容会出现在每一张打印 / PDF 报价单上</p></div></div>
     <div class="card"><div class="card-body">
@@ -3572,43 +3587,74 @@ function deleteArticle(id) {
 
 function renderFAQ(c) {
   const faqs = DM.get('faqs');
+  const langDot = (ok, tag) => `<span style="color:${ok?'var(--green, #2e7d32)':'var(--gray-400)'};white-space:nowrap">${tag} ${ok?'✓':'–'}</span>`;
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">FAQ 管理</h1><p class="page-desc">前台常见问题</p></div><button class="btn btn-primary" onclick="openFAQModal()">+ 新建 FAQ</button></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>分类</th><th>问题</th><th>回答</th><th>排序</th><th>操作</th></tr></thead>
-    <tbody>${faqs.map(f=>`<tr><td><span class="badge badge-blue">${esc(f.category)}</span></td><td class="td-name">${esc(f.question)}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.answer)}</td><td>${esc(f.sort)}</td><td><button class="btn btn-sm btn-secondary" onclick="openFAQModal('${f.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteFAQ('${f.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">FAQ 管理</h1><p class="page-desc">首页「常见问题」：这里存了几条，首页就显示几条（按排序号从小到大）；这里一条都没有时，首页才用写死在页面里的那 6 条。新建/编辑时<b>只填中文就行，英文和马来文会自动翻译填好</b></p></div><button class="btn btn-primary" onclick="openFAQModal()">+ 新建 FAQ</button></div>
+    ${faqs.length ? '' : `<div class="card" style="margin-bottom:16px"><div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div style="font-size:13px;color:var(--gray-600);line-height:1.8">后台还没有 FAQ 记录，首页显示的是内置 6 条。<br>点右边按钮把这 6 条（英 / 马来 / 中三语）导进来，之后首页 FAQ 就归后台管，可以逐条改。<b>注意：一旦这里有了记录，首页就只认这里的，不会再显示内置那 6 条。</b></div>
+      <button class="btn btn-primary" onclick="importLiveFaqs()">导入首页现有 6 条</button></div></div>`}
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>分类</th><th>问题</th><th>回答</th><th>三语</th><th>排序</th><th>操作</th></tr></thead>
+    <tbody>${faqs.map(f=>`<tr><td><span class="badge badge-blue">${esc(f.category)}</span></td><td class="td-name">${esc(f.questionZh||f.question)}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.answerZh||f.answer)}</td><td style="white-space:nowrap">${langDot(!!(f.questionBm||f.answerBm),'马')} ${langDot(!!(f.questionZh||f.answerZh),'中')}</td><td>${esc(f.sort)}</td><td><button class="btn btn-sm btn-secondary" onclick="openFAQModal('${f.id}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteFAQ('${f.id}')">删除</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function importLiveFaqs() {
+  if (!FAQ_LIVE.length) { toast('内置名单是空的，刷新后台页面再试'); return }
+  const cur = DM.get('faqs');
+  if (cur.length && !confirm('后台已有 ' + cur.length + ' 条，导入会用内置那 6 条覆盖它们，继续？')) return;
+  DM.set('faqs', FAQ_LIVE.map(f => Object.assign({}, f)));
+  toast('已导入 ' + FAQ_LIVE.length + ' 条' + (Sync.ready ? '，正在同步到云端' : '（未连后端，只存本机）'));
+  renderPage(currentPageId);
 }
 
 function openFAQModal(id) {
   const faqs = DM.get('faqs');
   const f = id ? faqs.find(x => x.id === id) : null;
   const title = f ? '编辑 FAQ' : '新建 FAQ';
-  const cats = ['MOQ','交期','配送','Artwork','认证','价格'];
+  const cats = ['MOQ','交期','配送','付款','设计','Artwork','认证','价格'];
   showModal(title, `
     <div class="form-grid">
       <div class="form-group"><label class="form-label">分类</label><select class="form-select" id="f_category">${cats.map(c=>`<option ${f?.category===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
       <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="f_sort" value="${esc(f?.sort||1)}"></div>
-      <div class="form-group full"><label class="form-label">问题 *（英文，马来文页面同样用它）</label><input class="form-input" id="f_question" value="${esc(f?.question||'')}"></div>
-      <div class="form-group full"><label class="form-label">问题（中文）</label><input class="form-input" id="f_questionZh" value="${esc(f?.questionZh||'')}" placeholder="留空则中文页显示英文"></div>
-      <div class="form-group full"><label class="form-label">回答 *（英文，马来文页面同样用它）</label><textarea class="form-textarea" id="f_answer" rows="4">${esc(f?.answer||'')}</textarea></div>
-      <div class="form-group full"><label class="form-label">回答（中文）</label><textarea class="form-textarea" id="f_answerZh" rows="4" placeholder="留空则中文页显示英文">${esc(f?.answerZh||'')}</textarea></div>
+      <div class="form-group full" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:10px 14px">
+        <span style="font-size:12px;color:var(--gray-600);line-height:1.7">只填中文就行：光标离开中文框，英文和马来文会自己填上。<br>哪一栏已经有字，自动翻译就不会动它，你手动改过的不会被顶掉。</span>
+        <button type="button" class="btn btn-sm btn-secondary" id="b_faq_retrans">按中文重译英/马来</button>
+      </div>
+      <div class="form-group full"><label class="form-label">问题（中文）*</label><input class="form-input" id="f_questionZh" value="${esc(f?.questionZh||'')}" placeholder="填完点旁边空白处，英文和马来文自动补"></div>
+      <div class="form-group full"><label class="form-label">问题（英文）</label><input class="form-input" id="f_question" value="${esc(f?.question||'')}" placeholder="留空则按中文自动翻译"></div>
+      <div class="form-group full"><label class="form-label">问题（马来文）</label><input class="form-input" id="f_questionBm" value="${esc(f?.questionBm||'')}" placeholder="留空则马来文页显示英文"></div>
+      <div class="form-group full"><label class="form-label">回答（中文）*</label><textarea class="form-textarea" id="f_answerZh" rows="4" placeholder="填完点旁边空白处，英文和马来文自动补">${esc(f?.answerZh||'')}</textarea></div>
+      <div class="form-group full"><label class="form-label">回答（英文）</label><textarea class="form-textarea" id="f_answer" rows="4" placeholder="留空则按中文自动翻译">${esc(f?.answer||'')}</textarea></div>
+      <div class="form-group full"><label class="form-label">回答（马来文）</label><textarea class="form-textarea" id="f_answerBm" rows="4" placeholder="留空则马来文页显示英文">${esc(f?.answerBm||'')}</textarea></div>
     </div>
-  `, () => {
-    const question = val('f_question');
-    const answer = val('f_answer');
-    if (!question || !answer) { toast('请填写问题和回答'); return; }
+  `, async () => {
+    let question = val('f_question'), answer = val('f_answer');
+    const questionZh = val('f_questionZh'), answerZh = val('f_answerZh');
+    if (!question && !questionZh) { toast('问题要填中文或英文'); return false }
+    if (!answer && !answerZh) { toast('回答要填中文或英文'); return false }
+    // 中文填了、外文还空着（失焦那下没来得及翻译）：保存前补一次，英文补不上才拦
+    if (!(await topUpTranslations([['f_questionZh', 'f_question', 'f_questionBm'], ['f_answerZh', 'f_answer', 'f_answerBm']], true))) return false;
+    question = val('f_question'); answer = val('f_answer');
+    if (!question || !answer) { toast('自动翻译这次没成功（网络或字数超限），英文那栏手动填一下再保存'); return false }
     if (f) {
       f.category = val('f_category');
       f.question = question;
+      f.questionBm = val('f_questionBm');
       f.questionZh = val('f_questionZh');
       f.answer = answer;
+      f.answerBm = val('f_answerBm');
       f.answerZh = val('f_answerZh');
       f.sort = parseInt(val('f_sort')) || 1;
     } else {
-      faqs.push({id:DM.genId('FAQ'),category:val('f_category'),question,questionZh:val('f_questionZh'),answer,answerZh:val('f_answerZh'),sort:parseInt(val('f_sort'))||1});
+      faqs.push({id:DM.genId('FAQ'),category:val('f_category'),question,questionBm:val('f_questionBm'),questionZh:val('f_questionZh'),answer,answerBm:val('f_answerBm'),answerZh:val('f_answerZh'),sort:parseInt(val('f_sort'))||1});
     }
     DM.set('faqs', faqs);
     toast(f ? 'FAQ 已更新' : 'FAQ 已创建'); renderPage(currentPageId);
   });
+
+  // 自动翻译：中文失焦时补英文和马来文（跟商品上架那套同一个函数）
+  autoTranslateFromZh('f_questionZh', 'f_question', 'f_questionBm');
+  autoTranslateFromZh('f_answerZh', 'f_answer', 'f_answerBm');
+  bindRetranslate('b_faq_retrans', [['f_questionZh', 'f_question', 'f_questionBm'], ['f_answerZh', 'f_answer', 'f_answerBm']]);
 }
 
 function deleteFAQ(id) {
@@ -3648,17 +3694,17 @@ function renderBanner(c) {
       <div class="form-grid">
         <div class="form-group full"><label class="form-label">小标题（英文）</label><input class="form-input" id="fs_banner_badge" value="${esc(b.badge||'')}" placeholder="留空则英文页保持原有文案"></div>
         <div class="form-group full"><label class="form-label">主标题（英文）</label><input class="form-input" id="fs_banner_title" value="${esc(b.title||'Custom Packaging That Elevates Your Brand')}"></div>
-        <div class="form-group full"><label class="form-label">副标题（英文）</label><textarea class="form-textarea" id="fs_banner_sub" rows="2">${esc(b.subtitle||'From design to delivery — we manufacture premium printed boxes, bags, and labels for businesses worldwide.')}</textarea></div>
+        <div class="form-group full"><label class="form-label">副标题（英文）</label><textarea class="form-textarea" id="fs_banner_sub" rows="2">${esc(b.subtitle||'From sample to delivery — we manufacture premium printed boxes, bags, and labels for businesses worldwide.')}</textarea></div>
         <div class="form-group"><label class="form-label">CTA 1 文案（英文）</label><input class="form-input" id="fs_banner_cta1" value="${esc(b.cta1||'Request Free Quote')}"></div>
         <div class="form-group"><label class="form-label">CTA 2 文案（英文）</label><input class="form-input" id="fs_banner_cta2" value="${esc(b.cta2||'Explore Products')}"></div>
         <div class="form-group full" style="margin-top:4px"><label class="form-label" style="color:var(--gray-500)">↓ 马来文版（BM 页）文案；哪一项留空，BM 页那一项就显示上面的英文</label></div>
-        <div class="form-group full"><label class="form-label">小标题（马来文）</label><input class="form-input" id="fs_banner_badge_bm" value="${esc(b.badgeBm||'')}" placeholder="e.g. Rakan Pembungkusan Dipercayai Sejak 2008"></div>
+        <div class="form-group full"><label class="form-label">小标题（马来文）</label><input class="form-input" id="fs_banner_badge_bm" value="${esc(b.badgeBm||'')}" placeholder="e.g. Rakan Pembungkusan Dipercayai di Malaysia"></div>
         <div class="form-group full"><label class="form-label">主标题（马来文）</label><input class="form-input" id="fs_banner_title_bm" value="${esc(b.titleBm||'')}" placeholder="留空则 BM 页显示英文"></div>
         <div class="form-group full"><label class="form-label">副标题（马来文）</label><textarea class="form-textarea" id="fs_banner_sub_bm" rows="2" placeholder="留空则 BM 页显示英文"></textarea></div>
         <div class="form-group"><label class="form-label">CTA 1 文案（马来文）</label><input class="form-input" id="fs_banner_cta1_bm" value="${esc(b.cta1Bm||'')}" placeholder="e.g. Dapatkan Sebut Harga"></div>
         <div class="form-group"><label class="form-label">CTA 2 文案（马来文）</label><input class="form-input" id="fs_banner_cta2_bm" value="${esc(b.cta2Bm||'')}" placeholder="e.g. Terokai Produk"></div>
         <div class="form-group full" style="margin-top:4px"><label class="form-label" style="color:var(--gray-500)">↓ 中文版文案；哪一项留空，中文页那一项就保持网站原有内容</label></div>
-        <div class="form-group full"><label class="form-label">小标题（中文）</label><input class="form-input" id="fs_banner_badge_zh" value="${esc(b.badgeZh||'')}" placeholder="e.g. 自2008年起的信赖包装合作伙伴"></div>
+        <div class="form-group full"><label class="form-label">小标题（中文）</label><input class="form-input" id="fs_banner_badge_zh" value="${esc(b.badgeZh||'')}" placeholder="e.g. 马来西亚值得信赖的包装合作伙伴"></div>
         <div class="form-group full"><label class="form-label">主标题（中文）</label><input class="form-input" id="fs_banner_title_zh" value="${esc(b.titleZh||'')}" placeholder="e.g. 定制包装，提升品牌价值"></div>
         <div class="form-group full"><label class="form-label">副标题（中文）</label><textarea class="form-textarea" id="fs_banner_sub_zh" rows="2" placeholder="留空则中文页保持原有内容"></textarea></div>
         <div class="form-group"><label class="form-label">CTA 1 文案（中文）</label><input class="form-input" id="fs_banner_cta1_zh" value="${esc(b.cta1Zh||'')}" placeholder="e.g. 免费获取报价"></div>
@@ -3839,7 +3885,7 @@ function deleteSlide(i) {
 }
 
 function renderAdvantages(c) {
-  const adv = DM.get('settings_advantages', [{title:'Custom Solutions',desc:'Tailored packaging design',icon:'📦'},{title:'Fast Turnaround',desc:'15-25 day production cycle',icon:'⏱️'},{title:'Factory Direct',desc:'Competitive pricing, no middleman',icon:'🏭'},{title:'Global Shipping',desc:'Reliable worldwide delivery',icon:'🌍'}]);
+  const adv = DM.get('settings_advantages', [{title:'Custom Solutions',desc:'Custom-made PET, colour-printed and corrugated packaging — small-batch orders welcome.',icon:'📦',titleBm:'Penyelesaian Tersuai',descBm:'Pembungkusan PET, cetakan warna dan kadbod beralun dibuat khas — tempahan kecil juga kami layan.',titleZh:'定制方案',descZh:'量身定制的PET包装、彩印包装、瓦楞包装，支持小批量定制服务。'},{title:'Fast Turnaround',desc:'Stock packaging ships the next day. Custom-printed orders take 10–15 working days.',icon:'⏱️',titleBm:'Penghantaran Pantas',descBm:'Barang stok dihantar keesokan harinya. Tempahan cetakan khas mengambil masa 10–15 hari bekerja.',titleZh:'快速交付',descZh:'通用包装购买次日发货，产品定制印刷10-15天交货。'},{title:'Factory Direct',desc:'Lower prices, steadier quality, faster delivery and genuine after-sales support — you save cost and worry.',icon:'🏭',titleBm:'Terus dari Kilang',descBm:'Harga lebih rendah, kualiti lebih konsisten, penghantaran lebih laju dan servis selepas jualan yang sebenar — anda jimat kos, tak perlu risau.',titleZh:'工厂直供',descZh:'价格更低、品控更稳、交期更快、售后更真，让每一个客户省心、省钱。'},{title:'Delivery & Logistics',desc:'Door-to-door delivery within Johor Bahru. Customers outside JB are served by logistics and freight.',icon:'🚚',titleBm:'Penghantaran & Logistik',descBm:'Penghantaran pintu ke pintu sekitar Johor Bahru. Pelanggan luar JB diuruskan melalui perkhidmatan logistik.',titleZh:'配送物流',descZh:'新山本地用户支持送货上门服务，外地客户支持物流配送服务。'}]);
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">优势图标区</h1><p class="page-desc">4 个核心卖点，保存后首页跟着变（图标沿用前台现有线条图标，这里只改文字；英文 / 马来文 / 中文三栏）</p></div></div>
     <div class="card"><div class="card-body">
@@ -3941,10 +3987,10 @@ function renderClients(c) {
       </div>
       <div style="margin-top:12px;text-align:right"><button class="btn btn-primary" onclick="saveWorkshopLabel()">保存标题</button></div>
     </div></div>
-    <div class="page-header" style="margin-top:24px"><div><h2 class="page-title" style="font-size:18px">设备图片</h2><p class="page-desc">上传工厂 / 设备实拍图，前台轮播展示；名称会显示在图片下方作为说明。想删掉旧的，进图片里取消「前台展示」或删掉即可</p></div><button class="btn btn-primary" onclick="openClientModal()">+ 上传设备图</button></div>
+    <div class="page-header" style="margin-top:24px"><div><h2 class="page-title" style="font-size:18px">设备图片</h2><p class="page-desc">上传工厂 / 设备实拍图，前台轮播展示；名称会显示在图片下方作为说明，<b>只填中文就行，英文和马来文会自动翻译</b>。一次可以选多张，每张生成一条（填了名称会自动加 1、2、3 编号）。想删掉旧的，进图片里取消「前台展示」或删掉即可</p></div><button class="btn btn-primary" onclick="openClientModal()">+ 批量上传设备图</button></div>
     <div class="card"><div class="card-body">
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">
-        ${clients.length ? clients.map(cl=>`<div style="background:var(--gray-50);border-radius:8px;overflow:hidden;cursor:pointer;position:relative" onclick="openClientModal('${cl.id}')">${cl.logoUrl?`<img src="${esc(cl.logoUrl)}" alt="${esc(cl.name)}" style="width:100%;height:120px;object-fit:cover;display:block">`:'<div style="height:120px;display:flex;align-items:center;justify-content:center;color:var(--gray-400);font-size:12px">未传图</div>'}<div style="padding:8px;font-weight:600;color:var(--gray-700);font-size:13px;text-align:center">${esc(cl.name||'（无名称）')}</div>${!cl.active?'<span class="badge badge-gray" style="position:absolute;top:6px;right:6px;font-size:9px">隐藏</span>':''}</div>`).join('') : '<p style="color:var(--gray-500);font-size:13px">还没有设备图，点右上角「+ 上传设备图」添加。前台未上传时显示默认工厂图。</p>'}
+        ${clients.length ? clients.map(cl=>`<div style="background:var(--gray-50);border-radius:8px;overflow:hidden;cursor:pointer;position:relative" onclick="openClientModal('${cl.id}')">${cl.logoUrl?`<img src="${esc(cl.logoUrl)}" alt="${esc(cl.name)}" style="width:100%;height:120px;object-fit:cover;display:block">`:'<div style="height:120px;display:flex;align-items:center;justify-content:center;color:var(--gray-400);font-size:12px">未传图</div>'}<div style="padding:8px 8px 2px;font-weight:600;color:var(--gray-700);font-size:13px;text-align:center">${esc(cl.name||'（无名称）')}</div>${cl.name?`<div style="padding:0 8px 8px;font-size:11px;text-align:center;line-height:1.5;color:${cl.nameEn&&cl.nameBm?'var(--gray-500)':'#c62828'}">${cl.nameEn&&cl.nameBm?esc(cl.nameEn):'英文 / 马来文待补'}</div>`:''}${!cl.active?'<span class="badge badge-gray" style="position:absolute;top:6px;right:6px;font-size:9px">隐藏</span>':''}</div>`).join('') : '<p style="color:var(--gray-500);font-size:13px">还没有设备图，点右上角「+ 上传设备图」添加。前台未上传时显示默认工厂图。</p>'}
       </div>
     </div></div>`;
 }
@@ -3962,19 +4008,48 @@ function saveWorkshopLabel() {
 function openClientModal(id) {
   const clients = DM.get('clients');
   const cl = id ? clients.find(x => x.id === id) : null;
-  showModal(cl ? '编辑设备图' : '上传设备图', `
+  showModal(cl ? '编辑设备图' : '批量上传设备图', `
     <div class="form-grid">
-      <div class="form-group full"><label class="form-label">设备名称 / 说明（显示在图片下方，可留空）</label><input class="form-input" id="f_cl_name" value="${esc(cl?.name)}" placeholder="e.g. 高速模切机"></div>
-      <div class="form-group full"><label class="form-label">设备图片${cl?.logoUrl?'（留空则保持不变）':''}</label><input class="form-input" type="file" accept="image/*" id="f_cl_logo"></div>
+      <div class="form-group full" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:10px 14px">
+        <span style="font-size:12px;color:var(--gray-600);line-height:1.7">只填中文就行：光标离开中文框，英文和马来文会自己填上；已经有字的栏不会被动。<br>一次选多张图时，三语名称都会自动加 1、2、3 编号。</span>
+        <button type="button" class="btn btn-sm btn-secondary" id="b_cl_retrans">按中文重译英/马来</button>
+      </div>
+      <div class="form-group full"><label class="form-label">设备名称 / 说明（中文）</label><input class="form-input" id="f_cl_name" value="${esc(cl?.name)}" placeholder="e.g. 高速模切机，可留空"></div>
+      <div class="form-group full"><label class="form-label">设备名称（英文）</label><input class="form-input" id="f_cl_nameEn" value="${esc(cl?.nameEn||'')}" placeholder="留空则按中文自动翻译"></div>
+      <div class="form-group full"><label class="form-label">设备名称（马来文）</label><input class="form-input" id="f_cl_nameBm" value="${esc(cl?.nameBm||'')}" placeholder="留空则马来文页显示英文"></div>
+      <div class="form-group full"><label class="form-label">设备图片${cl ? (cl.logoUrl?'（留空则保持不变）':'') : '（可一次选多张，每张生成一条）'}</label><input class="form-input" type="file" accept="image/*" id="f_cl_logo" ${cl?'':'multiple'} onchange="document.getElementById('f_cl_pick').textContent=this.files.length>1?('已选 '+this.files.length + ' 张，名称会自动加 1、2、3 编号'):''"><div id="f_cl_pick" style="font-size:12px;color:var(--gray-500);margin-top:4px"></div></div>
       <div class="form-group"><label class="form-label">前台展示</label><select class="form-select" id="f_cl_active"><option value="true" ${cl?.active!==false?'selected':''}>展示</option><option value="false" ${cl?.active===false?'selected':''}>隐藏</option></select></div>
     </div>
     ${cl?.logoUrl?`<div style="margin-top:12px;display:flex;align-items:center;gap:12px"><img src="${esc(cl.logoUrl)}" style="height:64px;max-width:180px;object-fit:cover;background:#fff;border:1px solid var(--gray-200);border-radius:6px;padding:4px"><label style="font-size:13px;color:var(--gray-600)"><input type="checkbox" id="f_cl_clear"> 删除当前图片</label></div>`:''}
   `, async () => {
     const name = val('f_cl_name');
     const active = val('f_cl_active') === 'true';
-    const file = document.getElementById('f_cl_logo')?.files?.[0];
-    let logoUrl = cl ? (cl.logoUrl || '') : '';
-    let logoPath = cl ? (cl.logoPath || '') : '';
+    const files = Array.from(document.getElementById('f_cl_logo')?.files || []);
+    if (name && !(await topUpTranslations([['f_cl_name', 'f_cl_nameEn', 'f_cl_nameBm']], false))) return false;
+    // 中文是主输入：清空中文就等于不要这行说明，外文跟着一起清，免得只剩英文在图上
+    const nameEn = name ? val('f_cl_nameEn') : '';
+    const nameBm = name ? val('f_cl_nameBm') : '';
+    if (!cl) {
+      if (!files.length) { toast('请先选择图片'); return false }
+      if (!Sync.ready) { toast('未连接后端数据库，无法上传图片'); return false }
+      toast('正在上传 ' + files.length + ' 张 …');
+      let ok = 0, fail = 0, lastErr = '';
+      for (let i = 0; i < files.length; i++) {
+        try {
+          const up = await cloudUpload(files[i], 'workshop');
+          const tag = files.length > 1 ? ' ' + (i + 1) : ''; // 三语一起编号，第 2 张图才对上第 2 个名字
+          clients.push({ id: DM.genId('CL'), name: name ? name + tag : name, nameEn: nameEn ? nameEn + tag : nameEn, nameBm: nameBm ? nameBm + tag : nameBm, active, logoUrl: up.url, logoPath: up.path });
+          ok++;
+        } catch (e) { fail++; lastErr = e.message }
+      }
+      if (!ok) { toast('上传失败：' + (lastErr || '请检查网络或登录状态')); return false }
+      DM.set('clients', clients); renderPage(currentPageId);
+      toast(fail ? '已上传 ' + ok + ' 张，失败 ' + fail + ' 张（' + lastErr + '）' : '已上传 ' + ok + ' 张');
+      return;
+    }
+    const file = files[0];
+    let logoUrl = cl.logoUrl || '';
+    let logoPath = cl.logoPath || '';
     if (document.getElementById('f_cl_clear')?.checked) { logoUrl = ''; logoPath = '' }
     if (file) {
       if (!Sync.ready) { toast('未连接后端数据库，无法上传图片'); return false }
@@ -3983,11 +4058,14 @@ function openClientModal(id) {
       logoUrl = up.url; logoPath = up.path;
     }
     if (!name && !logoUrl) { toast('请至少填写名称或上传图片'); return false }
-    if (cl) { cl.name = name; cl.active = active; cl.logoUrl = logoUrl; cl.logoPath = logoPath }
-    else clients.push({id:DM.genId('CL'), name, active, logoUrl, logoPath});
+    cl.name = name; cl.nameEn = nameEn; cl.nameBm = nameBm; cl.active = active; cl.logoUrl = logoUrl; cl.logoPath = logoPath;
     DM.set('clients', clients);
-    toast(cl ? '设备图已更新' : '设备图已添加'); renderPage(currentPageId);
+    toast('设备图已更新'); renderPage(currentPageId);
   });
+
+  // 自动翻译：中文失焦时补英文和马来文（跟商品上架那套同一个函数）
+  autoTranslateFromZh('f_cl_name', 'f_cl_nameEn', 'f_cl_nameBm');
+  bindRetranslate('b_cl_retrans', [['f_cl_name', 'f_cl_nameEn', 'f_cl_nameBm']]);
 }
 
 function renderAbout(c) {
@@ -4217,15 +4295,245 @@ function renderFormsList(c) {
     </tbody></table></div></div>`;
 }
 
+// 前台报价表单的「盒子类型」清单：存在 settings_quote 这份文档里（docVal 取，整份覆盖写）。
+// 页面上的输入框才是当前编辑状态，QUOTE_ROWS 只是渲染用的工作副本，
+// 所以任何动作（加行/删行/保存）之前必须先把 DOM 冲回 QUOTE_ROWS，否则他刚打的字会丢。
+let QUOTE_ROWS = null;
+
+function quoteBoxRows() {
+  if (QUOTE_ROWS) return QUOTE_ROWS;
+  const d = docVal('settings_quote');
+  const src = Array.isArray(d.boxTypes) && d.boxTypes.length ? d.boxTypes : QUOTE_BOX_LIVE;
+  QUOTE_ROWS = src.map((x, i) => ({
+    id: x.id || ('QB-' + (i + 1)),
+    name: x.name || '', nameEn: x.nameEn || '', nameBm: x.nameBm || '',
+    imgUrl: x.imgUrl || '', imgPath: x.imgPath || '',
+    lineUrl: x.lineUrl || '', linePath: x.linePath || '',
+    sort: Number(x.sort) || (i + 1) * 10,
+    active: x.active !== false
+  }));
+  return QUOTE_ROWS;
+}
+
+function flushQuoteBoxRows() {
+  if (!QUOTE_ROWS) return [];
+  QUOTE_ROWS.forEach((r, i) => {
+    const n = document.getElementById('qb_name_' + i);
+    const en = document.getElementById('qb_nameEn_' + i);
+    const bm = document.getElementById('qb_nameBm_' + i);
+    const so = document.getElementById('qb_sort_' + i);
+    const ac = document.getElementById('qb_active_' + i);
+    if (n) r.name = n.value.trim();
+    if (en) r.nameEn = en.value.trim();
+    if (bm) r.nameBm = bm.value.trim();
+    if (so) r.sort = parseInt(so.value, 10) || r.sort;
+    if (ac) r.active = ac.checked;
+  });
+  return QUOTE_ROWS;
+}
+
+const QB_PIC = { img: '盒型图', line: '展开图' };
+
 function renderQuoteConfig(c) {
+  const rows = quoteBoxRows();
+  const cell = 'class="form-input" style="width:100%;min-width:110px;padding:6px 8px;font-size:13px"';
+  const pic = (i, which, url, cap) => `<div style="position:relative">
+      <label title="点我上传${cap}" style="display:flex;align-items:center;justify-content:center;width:54px;height:54px;border:1px dashed ${url ? 'var(--gray-300)' : 'var(--gray-400)'};border-radius:6px;background:var(--gray-50);overflow:hidden;cursor:pointer">
+        <input type="file" accept="image/*" style="display:none" onchange="quoteImgUpload(${i},'${which}',this)">
+        ${url ? `<img src="${esc(url)}" alt="${esc(cap)}" style="width:100%;height:100%;object-fit:contain">` : `<span style="font-size:18px;color:var(--gray-400);line-height:1">＋</span>`}
+      </label>
+      ${url ? `<button title="去掉这张" onclick="quoteImgClear(${i},'${which}')" style="position:absolute;right:1px;bottom:1px;width:18px;height:18px;padding:0;border:0;border-radius:50%;background:rgba(220,38,38,.9);color:#fff;font-size:12px;line-height:18px;cursor:pointer;z-index:2">×</button>` : ''}
+    </div>`;
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">报价表单配置</h1><p class="page-desc">字段设计器</p></div></div>
-    <div class="card"><div class="card-body">
+    <div class="page-header"><div><h1 class="page-title">报价表单配置</h1><p class="page-desc">下面这份清单就是前台「立即获取免费报价」里<b>盒子类型</b>下拉框的内容：要加盒型、改名、删掉，都在这里做。<b>只填中文就行，英文和马来文会自动翻译补上</b>。改完要点最下面的「保存盒型清单」，前台刷新后才会变。</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="addQuoteBox()">+ 加一个盒型</button>
+        <button class="btn btn-secondary btn-sm" onclick="openQuoteBoxFromCat()">从商品分类里挑</button>
+        <button class="btn btn-secondary btn-sm" onclick="resetQuoteBox()">恢复默认 6 条</button>
+      </div></div>
+    <div class="card" style="margin-bottom:16px"><div class="card-body" style="font-size:12px;color:var(--gray-600);line-height:1.8">
+      顺序按「排序」那一列从小到大，前台下拉就是这个顺序。取消勾选「显示」= 前台不再出现这一项，但清单留着，勾回来就恢复。<br>
+      「盒型图 / 展开图」这两栏：前台客户把鼠标移到盒型名字上，右边就会显示这两张图。<b>盒型图</b>放成品立体图，<b>展开图</b>放刀模平面图；没传图的那个盒型，前台悬停时只会显示一句「这个盒型还没有图片」，不会破版。<br>
+      名字改过、还没点保存的话，切到别的页面再回来这些改动就没了——改完记得点保存。
+    </div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr>
+      <th style="width:150px">中文名称 *</th><th style="width:150px">英文名称</th><th style="width:150px">马来文名称</th>
+      <th style="width:132px">盒型图 / 展开图</th>
+      <th style="width:78px">排序</th><th style="width:66px">显示</th><th style="width:70px">操作</th>
+    </tr></thead><tbody>
+      ${rows.map((r, i) => `<tr>
+        <td><input ${cell} id="qb_name_${i}" value="${esc(r.name)}" placeholder="如：方形翻盖盒"></td>
+        <td><input ${cell} id="qb_nameEn_${i}" value="${esc(r.nameEn)}" placeholder="留空按中文自动翻译"></td>
+        <td><input ${cell} id="qb_nameBm_${i}" value="${esc(r.nameBm)}" placeholder="留空按中文自动翻译"></td>
+        <td><div style="display:flex;gap:8px">
+          ${['img', 'line'].map(k => `<div style="width:54px">${pic(i, k, r[k + 'Url'], QB_PIC[k])}<div style="font-size:10px;color:var(--gray-400);text-align:center;margin-top:2px">${QB_PIC[k]}</div></div>`).join('')}
+        </div></td>
+        <td><input class="form-input" type="number" id="qb_sort_${i}" value="${esc(r.sort)}" style="width:100%;padding:6px 8px;font-size:13px"></td>
+        <td style="text-align:center"><input type="checkbox" id="qb_active_${i}" ${r.active ? 'checked' : ''} style="width:18px;height:18px"></td>
+        <td style="text-align:center"><button class="btn btn-sm btn-danger" onclick="removeQuoteBox(${i})">删除</button></td>
+      </tr>`).join('')}
+      ${rows.length ? '' : '<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:24px">清单空着——上面「+ 加一个盒型」加一行，或「从商品分类里挑」直接选现成的</td></tr>'}
+    </tbody></table></div>
+    <div class="card-body" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--gray-200)">
+      <button class="btn btn-secondary" onclick="quoteBoxDiscard()">放弃未保存的修改</button>
+      <button class="btn btn-primary" onclick="saveQuoteBox()">保存盒型清单</button>
+    </div></div>
+    <div class="card" style="margin-top:16px"><div class="card-body">
+      <div style="font-weight:600;margin-bottom:4px">表单其他字段</div>
+      <div style="font-size:12px;color:var(--gray-600);line-height:1.8;margin-bottom:12px">除「盒子类型」由上面这份清单驱动外，其余几项目前固定在网页里，后台改不了；客户不填也能发出去（WhatsApp 消息里只写他填了的那几行）。</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        ${[['盒型','下拉选择',true],['尺寸 (cm)','文本输入',true],['采购数量','数字输入',true],['印刷方式','下拉选择',true],['表面处理','下拉选择',true],['特殊工艺','多选',false],['姓名','文本输入',true],['公司','文本输入',false],['电话','文本输入',true],['邮箱','邮箱输入',true],['备注','多行文本',false],['附件上传','文件上传',false]].map(([name,type,req])=>`<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--gray-50);border-radius:6px"><span style="width:20px;text-align:center">${req?'🔴':'⚪'}</span><span style="flex:1;font-weight:500">${esc(name)}</span><span class="badge badge-gray">${esc(type)}</span><span style="font-size:11px;color:var(--gray-400)">${req?'必填':'选填'}</span></div>`).join('')}
+        ${[['盒子类型','下拉选择','本页清单（含盒型图 / 展开图）'],['材质 / 纸张','下拉选择','固定在网页里'],['克重','下拉选择','跟着材质自动变'],['尺寸（长×宽×高 cm）','文本输入','固定在网页里'],['数量','下拉选择','固定在网页里'],['印刷方式','下拉选择','固定在网页里'],['表面处理','多选','固定在网页里'],['你的名字','文本输入','固定在网页里'],['公司','文本输入','固定在网页里'],['备注','多行文本','固定在网页里']].map(([name, type, where]) => `<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--gray-50);border-radius:6px"><span style="flex:1;font-weight:500">${esc(name)}</span><span class="badge badge-gray">${esc(type)}</span><span style="font-size:11px;color:var(--gray-400)">${esc(where)}</span></div>`).join('')}
       </div>
-      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" onclick="toast('配置已保存');renderPage(currentPageId)">保存配置</button></div>
     </div></div>`;
+  rows.forEach((r, i) => autoTranslateFromZh('qb_name_' + i, 'qb_nameEn_' + i, 'qb_nameBm_' + i));
+}
+
+function addQuoteBox() {
+  const rows = flushQuoteBoxRows();
+  rows.push({ id: 'QB-' + Date.now(), name: '', nameEn: '', nameBm: '', imgUrl: '', imgPath: '', lineUrl: '', linePath: '', sort: (rows.length + 1) * 10, active: true });
+  renderPage(currentPageId);
+  const el = document.getElementById('qb_name_' + (rows.length - 1));
+  if (el) { el.focus(); el.scrollIntoView({ block: 'center' }) }
+}
+
+function removeQuoteBox(i) {
+  const rows = flushQuoteBoxRows();
+  const r = rows[i];
+  if (r && (r.name || r.nameEn) && !confirm('删除「' + (r.name || r.nameEn) + '」？保存后前台下拉就没有这一项了')) return;
+  rows.splice(i, 1);
+  renderPage(currentPageId);
+}
+
+function resetQuoteBox() {
+  if (!confirm('把清单恢复成前台现在写死的那 6 条？（还没保存，点了下面的保存才生效）')) return;
+  QUOTE_ROWS = QUOTE_BOX_LIVE.map(x => Object.assign({}, x));
+  renderPage(currentPageId);
+}
+
+function quoteBoxDiscard() {
+  QUOTE_ROWS = null;
+  renderPage(currentPageId);
+  toast('已回到上次保存的清单');
+}
+
+// 图先传到云端、路径挂在未保存的工作副本上：所以传完必须点「保存盒型清单」前台才看得到
+async function quoteImgUpload(i, which, input) {
+  const rows = flushQuoteBoxRows();
+  const r = rows[i];
+  const cap = QB_PIC[which] || '图';
+  if (!r) return;
+  const file = input && input.files && input.files[0];
+  if (!file) return;
+  if (!Sync.ready) { toast('没连后端传不了图，先登录后台'); return }
+  try {
+    const res = await cloudUpload(file, 'boxtypes');
+    r[which + 'Url'] = res.url;
+    r[which + 'Path'] = res.path;
+    renderPage(currentPageId);
+    toast(cap + '已传好，点「保存盒型清单」前台才会显示');
+  } catch (e) {
+    toast(cap + '上传失败：' + ((e && e.message) || e));
+  }
+}
+
+function quoteImgClear(i, which) {
+  const rows = flushQuoteBoxRows();
+  const r = rows[i];
+  if (!r) return;
+  r[which + 'Url'] = '';
+  r[which + 'Path'] = '';
+  renderPage(currentPageId);
+  toast((QB_PIC[which] || '图') + '已去掉，点「保存盒型清单」才生效');
+}
+
+// 弹窗里那份「可选分类」列表：搜索/点击都按这里的下标取，避免过滤后错位
+let QB_PICK = [];
+
+function openQuoteBoxFromCat() {
+  const leaves = quoteCatLeaves();
+  if (!leaves.length) { toast('商品分类里还没有可选的分类，先去商品管理建分类'); return }
+  QB_PICK = leaves;
+  showModal('从商品分类里加盒型', `
+    <div class="form-group"><label class="form-label">搜名字</label>
+      <input class="form-input" id="f_qb_search" placeholder="如：月饼 / 抽屉 / 瓦楞 / 手提" oninput="renderQuoteCatPick()"></div>
+    <div id="qb_cat_list" style="max-height:340px;overflow:auto;border:1px solid var(--gray-200);border-radius:8px;padding:8px"></div>
+    <div style="font-size:12px;color:var(--gray-600);line-height:1.8;margin-top:10px">点一行就加进上面的清单，可以连着点好几个。加进来会带上这个分类现有的英 / 马来文名字，还能在这页改。<b>清单和商品分类是两回事：改这里不影响商品分类。</b>别忘了最后点「保存盒型清单」。</div>
+  `, null, [{ label: '完成', cls: 'btn-primary', fn: () => closeModal() }]);
+  renderQuoteCatPick();
+}
+
+// 分类几百个，所以给搜索框 + 按行业折叠，不铺一个几百项的下拉
+function renderQuoteCatPick() {
+  const host = document.getElementById('qb_cat_list');
+  if (!host) return;
+  const kw = (val('f_qb_search') || '').toLowerCase();
+  const names = new Set(flushQuoteBoxRows().map(r => r.name));
+  const hit = QB_PICK.map((x, i) => ({ x, i })).filter(o => !kw ||
+    [o.x.c.name, o.x.c.nameEn, o.x.c.nameBm, o.x.path].filter(Boolean).join(' ').toLowerCase().includes(kw));
+  const groups = {};
+  hit.forEach(o => { const k = o.x.path.split(' › ')[0] || '未归级'; (groups[k] = groups[k] || []).push(o) });
+  const keys = Object.keys(groups);
+  host.innerHTML = hit.length ? keys.map(k => `
+    <details open style="margin-bottom:6px"><summary style="cursor:pointer;font-size:13px;font-weight:600;padding:4px 0">${esc(k)} <span style="font-weight:400;color:var(--gray-400)">(${groups[k].length})</span></summary>
+      ${groups[k].map(o => {
+        const dup = names.has(o.x.c.name);
+        return `<div data-qbpick="${o.i}" style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;cursor:${dup ? 'default' : 'pointer'};background:${dup ? 'var(--gray-50)' : '#fff'};border:1px solid var(--gray-200);margin-bottom:4px">
+          <span style="flex:1;font-size:13px">${esc(o.x.c.name)}</span>
+          <span style="font-size:11px;color:var(--gray-400)">${esc(o.x.c.nameEn || '')}</span>
+          <span style="font-size:11px;color:${dup ? 'var(--gray-400)' : 'var(--primary, #1a6b52)'};white-space:nowrap">${dup ? '已在清单' : '+ 加入'}</span>
+        </div>` }).join('')}
+    </details>`).join('')
+    : `<div style="padding:16px;color:var(--gray-400);font-size:13px">没有匹配的分类，换个词试试（清单里已有 ${names.size} 个盒型）</div>`;
+  host.querySelectorAll('[data-qbpick]').forEach(el => el.addEventListener('click', () => addQuoteBoxFromCat(Number(el.dataset.qbpick))));
+}
+
+function addQuoteBoxFromCat(i) {
+  const x = QB_PICK[i];
+  if (!x || !x.c.name) return;
+  const rows = flushQuoteBoxRows();
+  if (rows.some(r => r.name === x.c.name)) { toast('「' + x.c.name + '」已经在清单里了'); return }
+  rows.push({ id: 'QB-' + Date.now(), name: x.c.name, nameEn: x.c.nameEn || '', nameBm: x.c.nameBm || '', imgUrl: '', imgPath: '', lineUrl: '', linePath: '', sort: (rows.length + 1) * 10, active: true });
+  toast('已加入「' + x.c.name + '」，点「保存盒型清单」才生效');
+  renderPage(currentPageId);
+  renderQuoteCatPick();
+}
+
+// 能挂商品的那一级才是盒型（三级树里永远是叶子），复用商品下拉那份 catGroups 结果
+function quoteCatLeaves() {
+  const out = [];
+  catGroups(DM.get('categories')).forEach(g => {
+    const label = g.top ? String(g.top.name) : '未归级';
+    g.items.forEach(c => out.push({ c, path: (g.groupLabel || {})[String(c.id)] || label }));
+  });
+  return out;
+}
+
+async function saveQuoteBox() {
+  const rows = flushQuoteBoxRows();
+  const kept = rows.filter(r => r.name || r.nameEn || r.nameBm);
+  if (!kept.length) { toast('清单是空的，前台下拉就只剩「请选择」了——至少留一个盒型'); return }
+  for (let i = 0; i < kept.length; i++) {
+    if (!kept[i].name) { toast('第 ' + (i + 1) + ' 行的中文名称没填（中文是主名字，前台存的就是它）'); return }
+  }
+  const seen = new Map();
+  for (let i = 0; i < kept.length; i++) {
+    const k = kept[i].name.toLowerCase();
+    if (seen.has(k)) { toast('「' + kept[i].name + '」重复了（第 ' + (seen.get(k) + 1) + ' 行和第 ' + (i + 1) + ' 行），去掉一个再保存'); return }
+    seen.set(k, i);
+  }
+  // 中文填了、外文空着：保存前按中文补一次翻译（跟商品、FAQ 同一个函数）
+  // pairs 用整份 rows 的下标，DOM 里第几行就是第几行；中文空着的行会被 topUpTranslations 自己跳过
+  const pairs = rows.map((r, i) => ['qb_name_' + i, 'qb_nameEn_' + i, 'qb_nameBm_' + i]);
+  if (!(await topUpTranslations(pairs, true))) return;
+  flushQuoteBoxRows();
+  const list = kept.filter(r => r.name).sort((a, b) => a.sort - b.sort)
+    .map(x => ({ id: x.id, name: x.name, nameEn: x.nameEn, nameBm: x.nameBm, imgUrl: x.imgUrl, imgPath: x.imgPath, lineUrl: x.lineUrl, linePath: x.linePath, sort: x.sort, active: x.active }));
+  const d = Object.assign({}, docVal('settings_quote'));
+  d.boxTypes = list.map(x => Object.assign({}, x));
+  DM.set('settings_quote', d);
+  QUOTE_ROWS = null;
+  toast('盒型清单已保存（前台 ' + list.filter(x => x.active).length + ' 项）' + (Sync.ready ? '，正在同步到云端' : '（未连后端，只存本机）'));
+  renderPage(currentPageId);
 }
 
 function renderFormEntries(c) {
@@ -4544,12 +4852,12 @@ const H5_DEF = {
   spec:[{k:'盒型',v:'圆盒 / 方盒 / 带盖盒'},{k:'材质',v:'食品级高透 PET'},{k:'尺寸 / 容量',v:'多规格，可定制'},{k:'印刷',v:'定制 Logo · 彩印'},{k:'起订量',v:'咨询报价'},{k:'打样',v:'支持'}],
   specLead:'圆盒装整颗果肉，方盒分装榴莲块，带盖盒锁鲜外带——告诉我你的规格，我来配。',
   trustEyebrow:'Why Jiulian', trustTitle:'30 年工厂，\n一站式交付',
-  stats:[{n:'1994',l:'始于吉隆坡甲洞'},{n:'500+',l:'服务马来西亚及海外客户'},{n:'ISO',l:'9001:2015 认证工厂'},{n:'1站',l:'设计·打样·生产·交付'}],
+  stats:[{n:'柔佛',l:'州内首家自有纸塑印刷工厂'},{n:'500+',l:'服务马来西亚及海外客户'},{n:'ISO',l:'9001:2015 认证工厂'},{n:'1站',l:'刀模·打样·生产·交付'}],
   ctaEyebrow:'Get A Quote', ctaTitle:'现在，*为榴莲定制*你的包装',
-  ctaLead:'把你的盒型、尺寸和数量告诉我，工厂直供价，最快当天回复。',
+  ctaLead:'把你的盒型、尺寸和数量告诉我，工厂直供价，6-48 小时内回复报价。',
   wa:'60167241814', waMsg:'你好，我想咨询玖联的【榴莲包装】。我要的盒型/尺寸/数量：',
   phone:'+60167241814', phoneLabel:'016-724 1814', email:'alan@jiulianpack.com.my',
-  address:'马来西亚柔佛州巴西古丹绒浪萨巴路129号，81700'
+  address:'马来西亚柔佛州巴西古丹绒浪萨巴靠路129号，81700'
 };
 
 function renderSettingsH5(c) {
@@ -5118,6 +5426,44 @@ async function autoTranslateFromZh(sourceId, targetEnId, targetBmId) {
       await Promise.all(tasks);
       source.style.opacity = '1';
     }
+  });
+}
+
+// 保存前兜底：中文填了、外文还空着（没失焦或那一下翻译失败）就补一次翻译。
+// pairs = [[中文id, 英文id, 马来文id], ...]；strict 为真时英文补不上就返回 false（让调用别存）
+async function topUpTranslations(pairs, strict) {
+  const jobs = [], missEn = [];
+  pairs.forEach(p => {
+    const zh = val(p[0]);
+    if (!zh) return;
+    if (!val(p[1])) jobs.push(translateText(zh, 'en').then(t => { if (t) document.getElementById(p[1]).value = t; else missEn.push(p[1]) }));
+    if (!val(p[2])) jobs.push(translateText(zh, 'ms').then(t => { if (t) document.getElementById(p[2]).value = t }));
+  });
+  if (!jobs.length) return true;
+  await Promise.all(jobs);
+  if (strict && missEn.length) { toast('自动翻译这次没成功（网络或字数超限），英文那栏手动填一下再保存'); return false }
+  return true;
+}
+
+// 「按中文重译」按钮：外文栏已经有字时失焦自动翻译不会覆盖，这个给「改了中文想让外文跟着走」用
+function bindRetranslate(btnId, pairs) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const srcs = pairs.map(p => val(p[0]));
+    if (!srcs.some(s => s)) { toast('先把中文填上'); return }
+    btn.disabled = true;
+    const old = btn.textContent; btn.textContent = '翻译中…';
+    const miss = [];
+    const jobs = [];
+    pairs.forEach((p, i) => {
+      if (!srcs[i]) return;
+      jobs.push(translateText(srcs[i], 'en').then(t => { if (t) document.getElementById(p[1]).value = t; else miss.push(p[1]) }));
+      jobs.push(translateText(srcs[i], 'ms').then(t => { if (t) document.getElementById(p[2]).value = t; else miss.push(p[2]) }));
+    });
+    await Promise.all(jobs);
+    btn.disabled = false; btn.textContent = old;
+    toast(miss.length ? '有 ' + miss.length + ' 栏没译出来（网络或字数超限），空着的自己补一下' : '已按中文重译，保存后生效');
   });
 }
 // 云端地址是后台可编辑字段，挡掉 javascript: 这类伪协议，只放行 http(s) 和站内路径

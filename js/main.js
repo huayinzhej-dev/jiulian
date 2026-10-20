@@ -452,17 +452,124 @@
     finishingInput.value = '';
     finishingBoxes.forEach(box => { box.checked = false; });
     syncFinishingLabel();
+    boxInput.value = '';
+    syncBoxPicked();
+    showBoxPic(null);
   }, 0));
   syncFinishingLabel();
+
+  // 盒子类型：清单来自后台「报价表单配置」，每项可以带盒型图 + 展开图。
+  // 原生 select 的 option 里塞不进图片、也拿不到悬停事件，所以整个控件自绘；
+  // 真正提交用的值还是那个 hidden input（name 不变，saveLead 和 WhatsApp 那段照旧）。
+  const boxInput = document.getElementById('boxType');
+  const boxWrap = document.getElementById('boxPick');
+  const boxTrigger = document.getElementById('boxTypeTrigger');
+  const boxText = document.getElementById('boxTypeText');
+  const boxList = document.getElementById('boxTypeList');
+  const boxView = document.getElementById('boxTypeView');
+  const boxTip = document.getElementById('boxTypeTip');
+  const boxFigImg = document.getElementById('boxTypeFigImg');
+  const boxFigLine = document.getElementById('boxTypeFigLine');
+  const boxImg = document.getElementById('boxTypeImg');
+  const boxLineImg = document.getElementById('boxTypeLineImg');
+  const boxFoot = document.getElementById('boxTypeFoot');
+  const BOX_PH = { en: 'Select box type...', zh: '选择盒子类型...', bm: 'Sila pilih jenis kotak...' };
+  // 后台读不到清单时的兜底（跟 index.html 原先写死那 6 条一致），下拉绝不能空着
+  const BOX_FALLBACK = [
+    { en: 'Gift Box', zh: '礼品盒', bm: 'Kotak Hadiah' },
+    { en: 'Food Box', zh: '食品盒', bm: 'Kotak Makanan' },
+    { en: 'Cosmetic Box', zh: '化妆品盒', bm: 'Kotak Kosmetik' },
+    { en: 'Shipping Box', zh: '运输纸箱', bm: 'Kotak Penghantaran' },
+    { en: 'Paper Bag', zh: '纸袋', bm: 'Beg Kertas' },
+    { en: 'Label & Sticker', zh: '标签贴纸', bm: 'Label & Pelekat' }
+  ].map(x => Object.assign({ value: x.zh, img: '', line: '' }, x));
+  // 触屏没有悬停：点一下就选中并把图留在面板里，靠「选好了」关闭
+  const boxHover = !(window.matchMedia && window.matchMedia('(hover: none)').matches);
+  let boxRows = BOX_FALLBACK.slice();
+
+  function boxRowByValue(v) { return boxRows.find(r => r.value === v) || null }
+  function boxLabelOf(r) { return currentLang === 'zh' ? r.zh : currentLang === 'bm' ? r.bm : r.en }
+
+  function showBoxPic(row) {
+    const img = row ? safeUrl(row.img) : '';
+    const line = row ? safeUrl(row.line) : '';
+    boxFigImg.hidden = !img;
+    boxFigLine.hidden = !line;
+    if (img) boxImg.src = img; else boxImg.removeAttribute('src');
+    if (line) boxLineImg.src = line; else boxLineImg.removeAttribute('src');
+    boxView.hidden = !(img || line);
+    boxTip.hidden = !(row && !img && !line);
+  }
+
+  function syncBoxPicked() {
+    const row = boxRowByValue(boxInput.value);
+    const at = row ? boxRows.indexOf(row) : -1;
+    [...boxList.children].forEach(el => el.classList.toggle('is-picked', el.dataset.i === String(at)));
+    boxWrap.classList.toggle('has-value', !!row);
+    painted(row ? i18nText(boxText, row.en, row.zh, row.bm) : i18nText(boxText, BOX_PH.en, BOX_PH.zh, BOX_PH.bm));
+  }
+
+  function renderBoxList(rows) {
+    boxRows = rows;
+    if (boxInput.value && !boxRowByValue(boxInput.value)) boxInput.value = '';
+    boxList.textContent = '';
+    rows.forEach((r, i) => {
+      const item = document.createElement('div');
+      item.className = 'boxpick-item';
+      item.setAttribute('role', 'option');
+      item.dataset.i = String(i);
+      item.appendChild(painted(make('span', 'boxpick-name', r.en, r.zh, r.bm)));
+      if (r.img || r.line) item.appendChild(make('span', 'boxpick-haspic'));
+      boxList.appendChild(item);
+    });
+    syncBoxPicked();
+  }
+
+  function openBoxPick(open) {
+    boxWrap.classList.toggle('open', open);
+    boxTrigger.setAttribute('aria-expanded', String(open));
+    if (open) showBoxPic(boxRowByValue(boxInput.value));
+    else { [...boxList.children].forEach(el => el.classList.remove('is-hover')); showBoxPic(null) }
+  }
+
+  function pickBox(row) {
+    if (!row) return;
+    boxInput.value = row.value;
+    syncBoxPicked();
+    showBoxPic(row);
+  }
+
+  boxTrigger.addEventListener('click', () => openBoxPick(!boxWrap.classList.contains('open')));
+  boxList.addEventListener('mouseover', e => {
+    const item = e.target.closest('.boxpick-item');
+    if (!item) return;
+    [...boxList.children].forEach(el => el.classList.toggle('is-hover', el === item));
+    showBoxPic(boxRows[Number(item.dataset.i)]);
+  });
+  boxList.addEventListener('mouseleave', () => {
+    [...boxList.children].forEach(el => el.classList.remove('is-hover'));
+    showBoxPic(boxRowByValue(boxInput.value));
+  });
+  boxList.addEventListener('click', e => {
+    const item = e.target.closest('.boxpick-item');
+    if (!item) return;
+    pickBox(boxRows[Number(item.dataset.i)]);
+    if (boxHover) openBoxPick(false);
+  });
+  document.getElementById('boxTypeDone').addEventListener('click', () => openBoxPick(false));
+  document.addEventListener('click', e => { if (!boxWrap.contains(e.target)) openBoxPick(false) });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') openBoxPick(false) });
+  boxFoot.hidden = boxHover;
+  renderBoxList(boxRows);
 
   // WhatsApp Form Submission
   inquiryForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
-    const boxSel = document.getElementById('boxType');
-    const boxType = boxSel.value;
-    // 存给后台的是 slug（价格簿按盒型名查价），发给工厂的那一行要看得懂，所以取当前语言的选项文字
-    const boxLabel = (boxSel.selectedOptions[0] || {}).textContent?.trim() || boxType;
+    const boxType = boxInput.value;
+    // 存给后台的是盒型名（价格簿按名字查价），发给工厂的那一行要看得懂，所以取当前语言的名字
+    const picked = boxRowByValue(boxType);
+    const boxLabel = picked ? boxLabelOf(picked) : boxType;
     const material = document.getElementById('material').value;
     const gsm = document.getElementById('gsm').value;
     const size = document.getElementById('size').value;
@@ -742,11 +849,13 @@
   const PUBLIC_COLS = ['clients', 'products', 'faqs', 'categories'];
   const ROW_COLS = new Set(['clients', 'products', 'faqs', 'categories']);
   // 首页文案类：整块存成一条文档，后台「内容管理」改了前台就跟着变
-  const DOC_COLS = ['settings_banner', 'settings_advantages', 'settings_stats', 'settings_about', 'settings_process', 'settings_modal', 'settings_site'];
+  const DOC_COLS = ['settings_banner', 'settings_advantages', 'settings_stats', 'settings_about', 'settings_process', 'settings_modal', 'settings_site', 'settings_quote'];
 
   // 三语文案：马来文 / 中文留空时沿用英文，英文也留空时用已经填了的那一语兜底，
   // 否则后台清空一个栏位就会把前台整块刷成空白。
-  const str = v => String(v == null ? '' : v).trim();
+  // 写成函数声明而不是 const 箭头：i18nText 要在页面早段就被调用（盒子类型下拉建列表），
+  // 箭头函数有 TDZ，声明位置之前的调用会直接炸掉整段脚本。
+  function str(v) { return String(v == null ? '' : v).trim() }
   function i18nText(node, en, zh, bm) {
     const e = str(en) || str(bm) || str(zh);
     node.setAttribute('data-en', e);
@@ -800,7 +909,7 @@
     if (!marquee || !track) return false;
     let items = (list || [])
       .filter(c => c && c.active !== false && safeUrl(c.logoUrl || c.logo || c.image))
-      .map(c => ({ src: safeUrl(c.logoUrl || c.logo || c.image), name: str(c.name) }));
+      .map(c => ({ src: safeUrl(c.logoUrl || c.logo || c.image), name: str(c.name), nameEn: str(c.nameEn), nameBm: str(c.nameBm) }));
     if (!items.length) items = WORKSHOP_DEFAULTS.map(d => ({ src: safeUrl(d.src), name: d.name }));
 
     // 复制成至少铺满视口的一份（set），再整体 ×2 → 滚到 -50% 正好接上，无缝循环
@@ -815,11 +924,14 @@
       const fig = make('figure', 'workshop-thumb');
       const img = document.createElement('img');
       img.src = it.src;
-      img.alt = it.name || 'Factory equipment';
+      img.alt = it.nameEn || it.name || 'Factory equipment';
       img.loading = i < set.length ? 'eager' : 'lazy';
       img.decoding = 'async';
       fig.appendChild(img);
-      if (it.name) fig.appendChild(make('figcaption', 'workshop-thumb-cap', it.name));
+      // 三语：后台没补英文/马来文时退回中文，跟改之前一样显示 name，不会变空白
+      if (it.name || it.nameEn || it.nameBm) {
+        fig.appendChild(make('figcaption', 'workshop-thumb-cap', it.nameEn || it.name, it.name, it.nameBm || it.nameEn || it.name));
+      }
       frag.appendChild(fig);
     });
     track.appendChild(frag);
@@ -1020,14 +1132,35 @@
       btn.type = 'button';
       btn.className = 'faq-question';
       btn.setAttribute('aria-expanded', 'false');
-      btn.appendChild(make('span', null, f.question, f.questionZh));
+      btn.appendChild(make('span', null, f.question, f.questionZh, f.questionBm));
       btn.insertAdjacentHTML('beforeend', FAQ_CHEVRON);
       const ans = make('div', 'faq-answer');
-      ans.appendChild(make('p', null, f.answer, f.answerZh));
+      ans.appendChild(make('p', null, f.answer, f.answerZh, f.answerBm));
       item.appendChild(btn);
       item.appendChild(ans);
       host.appendChild(item);
     });
+    return true;
+  }
+
+  // 报价表单的「盒子类型」下拉：以后台「表单管理 → 报价表单配置」那份清单为准。
+  // 清单一条都没有（没连后端 / 没跑白名单 SQL / 后台还没存）就返回 false，
+  // 让 BOX_FALLBACK 那 6 条继续顶着——绝不能把下拉刷成只剩「请选择」。
+  function applyQuoteBoxTypes(d) {
+    if (!d) return false;
+    const rows = (Array.isArray(d.boxTypes) ? d.boxTypes : [])
+      .filter(r => r && r.active !== false && (str(r.name) || str(r.nameEn)))
+      .slice().sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0))
+      .map(r => {
+        const name = str(r.name) || str(r.nameEn);
+        return {
+          // 存给后台、查价格簿都按中文名走，和后台新建报价那边选分类名保持一致
+          value: name, en: str(r.nameEn) || name, zh: name, bm: str(r.nameBm) || str(r.nameEn) || name,
+          img: str(r.imgUrl), line: str(r.lineUrl)
+        };
+      });
+    if (!rows.length) return false;
+    renderBoxList(rows);
     return true;
   }
 
@@ -1039,8 +1172,10 @@
     const z = String(zh == null ? '' : zh).trim();
     const b = String(bm == null ? '' : bm).trim();
     if (!e && !z && !b) return false;
-    if (e) { el.setAttribute('data-en', e); el.setAttribute('data-bm', b || e); }
-    else if (b) el.setAttribute('data-bm', b);
+    if (e) el.setAttribute('data-en', e);
+    // 后台马来文留空时不硬套英文：保住页面原有的 data-bm（HTML 里那份马来文兜底）
+    if (b) el.setAttribute('data-bm', b);
+    else if (e && !el.getAttribute('data-bm')) el.setAttribute('data-bm', e);
     if (z) el.setAttribute('data-zh', z);
     return true;
   }
@@ -1272,7 +1407,7 @@
       const bm = s.descBm ? [str(s.descBm), bmDays(s.days)].filter(Boolean).join(' ') : (p.bm || en);
       const card = make('div', 'process-step');
       card.appendChild(make('div', 'step-number', String(i + 1).padStart(2, '0')));
-      card.appendChild(make('h3', null, title, str(s.titleZh) || h.zh || title, str(s.titleBm) || title));
+      card.appendChild(make('h3', null, title, str(s.titleZh) || h.zh || title, str(s.titleBm) || h.bm || title));
       card.appendChild(make('p', null, en, zh, bm));
       host.appendChild(card);
     });
@@ -1484,7 +1619,8 @@
       [applyWorkshopLabel, docs.settings_about],
       [applyProcess, docs.settings_process],
       [applyModalSettings, docs.settings_modal],
-      [applyFooter, docs.settings_site]
+      [applyFooter, docs.settings_site],
+      [applyQuoteBoxTypes, docs.settings_quote]
     ];
     parts.forEach(([fn, data]) => {
       // 单个版块渲染失败不影响整页，保留写死内容

@@ -197,8 +197,10 @@ create policy "jl_public_insert_lead" on public.jl_records
 --     全部客户线索、客户资料、报价、订单、付款记录和管理员账号。
 --     清单与 js/main.js 里的 PUBLIC_COLS + DOC_COLS 一一对应：前台多渲染一个版块，
 --     这里才多放一个集合，反过来砍掉前台版块时也要同步砍掉，别多给。
---     settings_* 只放首页真正读的那 5 个；其余 settings_*（通知模板、税率、
+--     settings_* 只放首页/H5 页真正读的那几个；其余 settings_*（通知模板、税率、
 --     报价单模板、价格簿 pricebook 等）前台不读或含内部经营数据，绝不放开。
+--     settings_quote 里只存前台「盒子类型」下拉要显示的盒型名（中/英/马来三语）和顺序，
+--     没有价格、成本、客户信息，所以可以公开读。
 --     categories 是首页「产品中心」那排分类筛选标签要读的（只有分类名/层级，无经营数据）。
 --     ⚠️ 改完这一段必须在 SQL Editor 里重跑一次本文件，前台才会读到新集合。
 drop policy if exists "jl_public_read_content" on public.jl_records;
@@ -209,7 +211,7 @@ create policy "jl_public_read_content" on public.jl_records
       'clients', 'products', 'testimonials', 'faqs', 'categories',
       'settings_banner', 'settings_advantages', 'settings_stats',
       'settings_about', 'settings_process', 'settings_site', 'settings_modal',
-      'settings_h5'
+      'settings_h5', 'settings_quote'
     )
   );
 -- 只读策略不写 with check，anon 依然改不了、删不掉任何一行
