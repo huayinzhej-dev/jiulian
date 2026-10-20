@@ -2196,8 +2196,10 @@ a.footer-info-val:hover { color: var(--white); }
 }
 .guide-modal-image img {
   width: 100%;
+  max-width: 320px;
   height: auto;
   display: block;
+  margin: 0 auto;
   border-radius: 8px;
 }
 .guide-modal-list {
