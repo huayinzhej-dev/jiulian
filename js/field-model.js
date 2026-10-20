@@ -23,7 +23,6 @@ var FIELD_DICT_KINDS = [
 // 首次启动且云端为空时的默认选项。区域按公司所在地（柔佛巴西古丹）给的常见跑动范围，
 // 主管能在后台「外勤管理 → 基础配置」里改，改完整公司共享同一份。
 var FIELD_DICT_SEED = [
-  { kind: 'visit_type', name: '陌拜',     sort: 1 },
   { kind: 'visit_type', name: '预约拜访', sort: 2 },
 
   { kind: 'area', name: '柔佛·巴西古丹', sort: 1 },

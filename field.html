@@ -356,7 +356,7 @@ function render() {
 }
 
 // ---------- 公共片段 ----------
-function tripLabel(t) { return (t.area || '未填区域') + ' · ' + (t.visitType || '陌拜') }
+function tripLabel(t) { return (t.area || '未填区域') + ' · ' + (t.visitType || '未填类型') }
 function tripsOfMine() {
   var id = me().id;
   return rowsOf('field_trips').filter(function (t) { return !id || String(t.ownerId) === String(id) })
@@ -476,7 +476,7 @@ function screenTrip() {
   var h = '<div class="card"><div class="card-title">提交外出报备</div>'
     + '<div class="field"><label for="tDate">申请日期 <span class="req">*</span></label><input id="tDate" type="date" value="' + esc(fieldToday()) + '"></div>'
     + '<div class="grid2">'
-    + '<div class="field"><label for="tType">拜访类型 <span class="req">*</span></label><select id="tType">' + selOptions(fieldDictNames('visit_type'), '陌拜') + '</select></div>'
+    + '<div class="field"><label for="tType">拜访类型 <span class="req">*</span></label><select id="tType">' + selOptions(fieldDictNames('visit_type')) + '</select></div>'
     + '<div class="field"><label for="tTransport">出行方式 <span class="req">*</span></label><select id="tTransport">' + selOptions(fieldDictNames('transport')) + '</select></div>'
     + '</div>'
     + '<div class="grid2">'
