@@ -540,6 +540,7 @@ It holds authoritative certifications such as FSC, GMI, and Lowe's, and utilizes
                 <option value="黄牛皮纸" data-en="Yellow Kraft Paper" data-bm="Kertas Kraft Kuning" data-zh="黄牛皮纸">Yellow Kraft Paper</option>
                 <option value="三层瓦楞" data-en="Single-Wall Corrugated" data-bm="Kadbod Berombak 1 Lapis" data-zh="三层瓦楞">Single-Wall Corrugated</option>
                 <option value="五层瓦楞" data-en="Double-Wall Corrugated" data-bm="Kadbod Berombak 2 Lapis" data-zh="五层瓦楞">Double-Wall Corrugated</option>
+                <option value="其他" data-en="Other" data-bm="Lain-lain" data-zh="其他">Other</option>
               </select>
             </div>
             <div class="form-group">
@@ -574,21 +575,12 @@ It holds authoritative certifications such as FSC, GMI, and Lowe's, and utilizes
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label for="size" data-en="Size (L×W×H, cm)" data-bm="Size (L×W×H, cm)" data-zh="尺寸（长×宽×高，厘米）">Size (L×W×H, cm)</label>
-              <input type="text" id="size" name="size" placeholder="e.g. 24 × 22 × 4">
+              <label for="size" data-en="Size (L×W×H, mm)" data-bm="Size (L×W×H, mm)" data-zh="尺寸（长×宽×高，毫米）">Size (L×W×H, mm)</label>
+              <input type="text" id="size" name="size" placeholder="e.g. 240 × 220 × 40">
             </div>
             <div class="form-group">
               <label for="quantity" data-en="Quantity" data-bm="Kuantiti" data-zh="数量">Quantity</label>
-              <select id="quantity" name="quantity">
-                <option value="" data-en="Select quantity..." data-bm="Select quantity..." data-zh="选择数量...">Select quantity...</option>
-                <option value="100">100</option>
-                <option value="200">200</option>
-                <option value="500">500</option>
-                <option value="1000">1,000</option>
-                <option value="2000">2,000</option>
-                <option value="5000">5,000</option>
-                <option value="10000">10,000+</option>
-              </select>
+              <input type="number" id="quantity" name="quantity" min="1" step="1" inputmode="numeric" placeholder="e.g. 3000" data-en-placeholder="e.g. 3000" data-bm-placeholder="cth. 3000" data-zh-placeholder="如：3000">
             </div>
           </div>
           <div class="form-row">
@@ -605,6 +597,7 @@ It holds authoritative certifications such as FSC, GMI, and Lowe's, and utilizes
                 <option value="5C+1C">5C+1C</option>
                 <option value="5C+4C">5C+4C</option>
                 <option value="5C+5C">5C+5C</option>
+                <option value="其他" data-en="Other" data-bm="Lain-lain" data-zh="其他">Other</option>
               </select>
             </div>
             <div class="form-group">
@@ -625,6 +618,7 @@ It holds authoritative certifications such as FSC, GMI, and Lowe's, and utilizes
                   <label class="msel-item"><input type="checkbox" value="压花"><span class="msel-name" data-en="Embossing" data-bm="Embossing" data-zh="压花">Embossing</span></label>
                   <label class="msel-item"><input type="checkbox" value="烫金"><span class="msel-name" data-en="Foil Stamping" data-bm="Foil Stamping" data-zh="烫金">Foil Stamping</span></label>
                   <label class="msel-item"><input type="checkbox" value="开窗"><span class="msel-name" data-en="Window Patch (Clear PVC)" data-bm="Teting Jendela (PVC Jernih)" data-zh="开窗">Window Patch (Clear PVC)</span></label>
+                  <label class="msel-item"><input type="checkbox" value="其他"><span class="msel-name" data-en="Other" data-bm="Lain-lain" data-zh="其他">Other</span></label>
                   <div class="msel-foot">
                     <span class="msel-count"></span>
                     <button type="button" class="msel-confirm" id="finishingConfirm" data-en="Confirm selection" data-bm="Sahkan pilihan" data-zh="确认选择">Confirm selection</button>
@@ -816,7 +810,7 @@ It holds authoritative certifications such as FSC, GMI, and Lowe's, and utilizes
           <li><strong data-en="Width" data-bm="Lebar" data-zh="宽度">Width</strong> <span data-en="— the shorter side of the opening" data-bm="— sisi lebih pendek bukaan" data-zh="——开口的较短边">— the shorter side of the opening</span></li>
           <li><strong data-en="Height" data-bm="Tinggi" data-zh="高度">Height</strong> <span data-en="— the depth from bottom to top edge" data-bm="— kedalaman dari bawah ke tepi atas" data-zh="——从底部到顶部边缘的深度">— the depth from bottom to top edge</span></li>
         </ul>
-        <p class="guide-modal-note" data-en="Please provide dimensions in L×W×H format, e.g. 24×22×4 cm. Not sure? Send us your product dimensions and we'll recommend the right box." data-bm="Sila berikan dimensi dalam format P×L×T, cth. 24×22×4 cm. Tidak pasti? Hantar dimensi produk anda dan kami akan mengesyorkan kotak yang sesuai." data-zh="请以长×宽×高的形式填写，例如24×22×4 厘米。不确定？请将您的产品尺寸发送给我们，我们会为您推荐合适的包装盒。">Please provide dimensions in L×W×H format, e.g. 24×22×4 cm. Not sure? Send us your product dimensions and we'll recommend the right box.</p>
+        <p class="guide-modal-note" data-en="Please provide dimensions in L×W×H format, e.g. 240×220×40 mm. Not sure? Send us your product dimensions and we'll recommend the right box." data-bm="Sila berikan dimensi dalam format P×L×T, cth. 240×220×40 mm. Tidak pasti? Hantar dimensi produk anda dan kami akan mengesyorkan kotak yang sesuai." data-zh="请以长×宽×高的形式填写，例如240×220×40 毫米。不确定？请将您的产品尺寸发送给我们，我们会为您推荐合适的包装盒。">Please provide dimensions in L×W×H format, e.g. 240×220×40 mm. Not sure? Send us your product dimensions and we'll recommend the right box.</p>
       </div>
     </div>
   </div>
@@ -994,6 +988,7 @@ It holds authoritative certifications such as FSC, GMI, and Lowe's, and utilizes
 
   <script src="js/sb-config.js"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="js/quote-options.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

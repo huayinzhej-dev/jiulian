@@ -357,28 +357,27 @@
     closeModal();
   });
 
-  // 纸张克重表（工厂给的「立即获取免费报价」Excel 纸张表）：瓦楞纸没有克重，档位是瓦楞型号
-  const PAPER_GSM = {
-    '白卡': ['250', '300', '350', '400', '450', '500', '600', '700', '800'],
-    '白底白': ['250', '300', '350', '400', '450', '500', '600', '700', '800'],
-    '灰底白': ['250', '300', '350', '400', '450', '500', '600', '700', '800'],
-    '铜板纸': ['105', '128', '157', '200', '250', '300', '350'],
-    '白牛皮纸': ['120', '150', '180', '200', '250', '300'],
-    '黄牛皮纸': ['120', '150', '180', '200', '250', '300'],
-    '三层瓦楞': ['A', 'B', 'C', 'E'],
-    '五层瓦楞': ['BC', 'BA', 'BE']
-  };
+  // 纸张克重表：口径和后台「新建报价」共用 js/quote-options.js 那一份，别在这里另抄一张表
+  const QOPT = window.JL_QUOTE_OPTIONS;
+  const PAPER_GSM = {};
+  QOPT.papers.forEach(p => { PAPER_GSM[p.name] = p.spec });
 
   // 没选材质时先把全部档位铺出来，选了材质再筛成这一种纸自己的档
-  const GSM_ALL = ['105', '120', '128', '150', '157', '180', '200', '250', '300', '350', '400', '450', '500', '600', '700', '800'];
-  const FLUTE_ALL = ['A', 'B', 'C', 'E', 'BC', 'BA', 'BE'];
+  const GSM_ALL = QOPT.specsOf('克');
+  const FLUTE_ALL = QOPT.specsOf('瓦');
+
+  // 清单是死的、客户的要求是活的：每个下拉最后都留一条「其他」。前台不让客户打字，
+  // 选了「其他」存的就是「其他」两个字，具体要什么由我们回 WhatsApp 问。
+  const OTHER = '其他';
+  const OTHER_LBL = { en: 'Other', bm: 'Lain-lain', zh: '其他' };
 
   function fillGsmOptions() {
     const mat = document.getElementById('material');
     const sel = document.getElementById('gsm');
     if (!mat || !sel) return;
-    const picked = PAPER_GSM[mat.value];
-    const fluteOnly = !!picked && /瓦楞$/.test(mat.value);
+    const paper = QOPT.paperOf(mat.value);
+    const picked = paper && paper.spec;
+    const fluteOnly = !!paper && paper.unit === '瓦';
     const weights = picked ? (fluteOnly ? [] : picked) : GSM_ALL;
     const flutes = picked ? (fluteOnly ? picked : []) : FLUTE_ALL;
     const ph = fluteOnly
@@ -389,7 +388,8 @@
     const opt = (v, en, bm, zh) => `<option value="${v}" data-en="${en}" data-bm="${bm}" data-zh="${zh}">${en}</option>`;
     sel.innerHTML = opt('', ph[0], ph[1], ph[2])
       + weights.map(v => opt(v + '克', v + 'gsm', v + 'gsm', v + '克')).join('')
-      + flutes.map(v => opt(v + '瓦', `Flute ${v}`, `Flute ${v}`, v + '瓦')).join('');
+      + flutes.map(v => opt(v + '瓦', `Flute ${v}`, `Flute ${v}`, v + '瓦')).join('')
+      + opt(OTHER, OTHER_LBL.en, OTHER_LBL.bm, OTHER_LBL.zh);
     [...sel.options].forEach(o => {
       const t = o.getAttribute(`data-${currentLang}`);
       if (t) o.textContent = t;
@@ -399,7 +399,7 @@
   document.getElementById('material').addEventListener('change', fillGsmOptions);
   fillGsmOptions();
 
-  // 表面处理：原生 select 放不进勾选框，改成自绘面板 + 确认选择才落到隐藏 input
+  // 表面处理：原生 select 放不进勾选框，改成自绘面板，勾选即时生效，「选好了」只负责收起
   const finishingInput = document.getElementById('finishing');
   const finishingWrap = document.getElementById('finishingMsel');
   const finishingTrigger = document.getElementById('finishingTrigger');
@@ -414,6 +414,8 @@
   };
 
   function syncFinishingLabel() {
+    // 勾上就立刻写隐藏 input：以前只有点「选好了」才写，客户勾完直接点别处，工艺就悄悄丢了
+    finishingInput.value = finishingBoxes.filter(b => b.checked).map(b => b.value).join(', ');
     const picked = finishingInput.value ? finishingInput.value.split(', ') : [];
     if (!picked.length) {
       finishingText.textContent = FINISHING_PH[currentLang];
@@ -437,11 +439,7 @@
 
   finishingTrigger.addEventListener('click', () => openFinishing(!finishingWrap.classList.contains('open')));
   finishingBoxes.forEach(box => box.addEventListener('change', syncFinishingLabel));
-  document.getElementById('finishingConfirm').addEventListener('click', () => {
-    finishingInput.value = finishingBoxes.filter(b => b.checked).map(b => b.value).join(', ');
-    syncFinishingLabel();
-    openFinishing(false);
-  });
+  document.getElementById('finishingConfirm').addEventListener('click', () => openFinishing(false));
   document.addEventListener('click', e => {
     if (!finishingWrap.contains(e.target)) openFinishing(false);
   });
@@ -483,6 +481,8 @@
     { en: 'Paper Bag', zh: '纸袋', bm: 'Beg Kertas' },
     { en: 'Label & Sticker', zh: '标签贴纸', bm: 'Label & Pelekat' }
   ].map(x => Object.assign({ value: x.zh, img: '', line: '' }, x));
+  // 清单最后一项固定是「其他」，不让后台改清单时把它挤掉
+  const BOX_OTHER = Object.assign({ value: OTHER, img: '', line: '', other: true }, OTHER_LBL);
   // 触屏没有悬停：点一下就选中并把图留在面板里，靠「选好了」关闭
   const boxHover = !(window.matchMedia && window.matchMedia('(hover: none)').matches);
   let boxRows = BOX_FALLBACK.slice();
@@ -498,7 +498,7 @@
     if (img) boxImg.src = img; else boxImg.removeAttribute('src');
     if (line) boxLineImg.src = line; else boxLineImg.removeAttribute('src');
     boxView.hidden = !(img || line);
-    boxTip.hidden = !(row && !img && !line);
+    boxTip.hidden = !(row && !row.other && !img && !line);
   }
 
   function syncBoxPicked() {
@@ -510,10 +510,10 @@
   }
 
   function renderBoxList(rows) {
-    boxRows = rows;
+    boxRows = rows.concat([BOX_OTHER]);
     if (boxInput.value && !boxRowByValue(boxInput.value)) boxInput.value = '';
     boxList.textContent = '';
-    rows.forEach((r, i) => {
+    boxRows.forEach((r, i) => {
       const item = document.createElement('div');
       item.className = 'boxpick-item';
       item.setAttribute('role', 'option');
@@ -573,7 +573,14 @@
     const material = document.getElementById('material').value;
     const gsm = document.getElementById('gsm').value;
     const size = document.getElementById('size').value;
-    const quantity = document.getElementById('quantity').value;
+    const quantityEl = document.getElementById('quantity');
+    // 客户写「3000-5000」这种范围时，number 框会把值吞成空、字却还留在屏幕上，不拦就等于悄悄丢掉
+    if (quantityEl.validity.badInput) {
+      showInquiryStatus('数量请只填数字，例如 3000 / Numbers only, e.g. 3000', 'err');
+      quantityEl.focus();
+      return;
+    }
+    const quantity = quantityEl.value;
     const printing = document.getElementById('printing').value;
     const finishing = document.getElementById('finishing').value;
     const name = document.getElementById('name').value;
