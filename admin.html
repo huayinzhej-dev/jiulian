@@ -264,7 +264,7 @@ const MENU = [
     {id:'quotes-list',label:'报价单'},{id:'quotes-new',label:'新建报价'},{id:'quotes-contract',label:'合同'},{id:'quotes-pricebook',label:'价格簿'},{id:'quotes-template',label:'模板'}
   ]},
   { id:'orders', icon:'📦', label:'订单管理', children:[
-    {id:'orders-list',label:'全部订单'},{id:'orders-production',label:'生产工单'},{id:'orders-payments',label:'付款'},{id:'orders-delivery',label:'发货'},{id:'orders-dieline',label:'刀模/Artwork'},{id:'orders-proof',label:'打样'}
+    {id:'orders-list',label:'全部订单'},{id:'orders-production',label:'生产工单'},{id:'orders-board',label:'状态看板'},{id:'orders-payments',label:'付款'},{id:'orders-delivery',label:'发货'},{id:'orders-dieline',label:'刀模/Artwork'},{id:'orders-proof',label:'打样'}
   ]},
   { id:'products', icon:'🏷️', label:'商品管理', children:[
     {id:'products-categories',label:'分类'},{id:'products-list',label:'商品列表'},{id:'products-printing',label:'印刷色数库'},{id:'products-finish',label:'表面处理库'},{id:'products-material',label:'材质库'}
@@ -991,7 +991,7 @@ function seedData() {
   }
   seedDict('caseCategories', ['F&B','Retail','FMCG','Luxury','E-commerce']);
   seedDict('shippingZones', [{id:'SZ-01',region:'Penang',rate:'1.5x',active:true},{id:'SZ-02',region:'Johor',rate:'1.5x',active:true},{id:'SZ-03',region:'Melaka',rate:'1.5x',active:true},{id:'SZ-04',region:'Ipoh',rate:'1.3x',active:true},{id:'SZ-05',region:'East Malaysia',rate:'2.5x',active:true}]);
-  seedDict('roles', [{id:'R-01',name:'超级管理员',perms:['全部权限']},{id:'R-02',name:'销售',perms:['线索管理','报价管理','订单管理']},{id:'R-03',name:'主管',perms:['外勤管理(全部)','商品管理','内容管理','媒体库']},{id:'R-04',name:'财务',perms:['订单管理(付款)','数据看板']},{id:'R-05',name:'运营',perms:['内容管理','表单管理','案例','政策']}]);
+  seedDict('roles', [{id:'R-01',name:'超级管理员',perms:['全部权限']},{id:'R-02',name:'销售',perms:['线索管理','报价管理','订单管理']},{id:'R-03',name:'主管',perms:['外勤管理(全部)','商品管理','内容管理','媒体库']},{id:'R-04',name:'财务',perms:['订单管理(付款)','数据看板']},{id:'R-05',name:'运营',perms:['内容管理','表单管理','案例','政策']},{id:'R-06',name:'生产',perms:['订单管理(生产工单)']}]);
   // 外勤字典（拜访类型/区域/出行方式/意向等级/跟进方式）：手机端下拉读这一份，
   // 默认值在 js/field-model.js 里，主管在「外勤管理 → 基础配置」改完整公司共享。
   seedDict('field_dicts', FIELD_DICT_SEED.map(function (d, i) { return { id: 'FD-' + (i + 1), kind: d.kind, name: d.name, sort: d.sort, active: true } }));
@@ -1060,6 +1060,61 @@ function seedData() {
   }
 }
 
+// ========== 权限（角色 → 能看哪些页面） ==========
+// 权限串两种写法：「订单管理」＝整组都能看；「订单管理(生产工单)」＝只给这一页；「全部权限」＝不限。
+// 这是后台界面层的门禁，不是数据库隔离：车间同事按 F12 或进 Supabase 控制台照样翻得到全部数据，
+// 要真隔离得在库上按角色配 RLS 策略。
+function parsePerm(p) {
+  const s = String(p || '').trim();
+  const m = s.match(/^(.*?)[(（](.*)[)）]$/);
+  return m ? { group: m[1].trim(), page: m[2].trim() } : { group: s, page: '' };
+}
+function menuGroup(label) {
+  const s = String(label || '').trim().replace(/[(（]全部[)）]$/, '');
+  return MENU.find(g => g.label === s) || null;
+}
+function permPages(p) {
+  const x = parsePerm(p), g = menuGroup(x.group);
+  if (!g) return [];
+  if (!x.page || x.page === '全部') return g.children.map(c => c.id);
+  return g.children.filter(c => c.label === x.page).map(c => c.id);
+}
+function myRoleRow() {
+  const users = DM.get('users'), me = Sync.user;
+  const row = me && me.email
+    ? users.find(u => (u.email || '').toLowerCase() === String(me.email).toLowerCase())
+    : users.find(u => (u.name || '').trim() && u.name === whoami());
+  if (!row) return null;
+  return DM.get('roles').find(r => r.name === row.role) || null;
+}
+// 返回 null ＝ 不限（超级管理员、或后台压根没挂这个账号时按老规矩全给，别把人锁在门外）
+function allowedPages() {
+  const role = myRoleRow();
+  if (!role) return null;
+  const perms = Array.isArray(role.perms) ? role.perms : [];
+  if (perms.some(p => String(p).trim() === '全部权限')) return null;
+  const set = new Set();
+  perms.forEach(p => permPages(p).forEach(id => set.add(id)));
+  return set;
+}
+function canSee(pageId) {
+  const a = allowedPages();
+  return !a || a.has(pageId);
+}
+function firstAllowedPage() {
+  const a = allowedPages();
+  for (const g of MENU) for (const c of g.children) {
+    if (!a || a.has(c.id)) return { id: c.id, group: g.label, groupId: g.id, label: c.label };
+  }
+  return null;
+}
+function showNoPerm() {
+  document.getElementById('content').innerHTML = `<div class="card"><div class="card-body" style="padding:28px;text-align:center">
+    <div style="font-size:15px;font-weight:700">你这个角色还没分到能看的页面</div>
+    <div style="font-size:13px;color:var(--gray-500);margin-top:6px">请让管理员在「系统设置 → 角色管理」给你的角色勾上页面，或在「管理员列表」把你的账号挂到对的角色上。</div>
+  </div></div>`;
+}
+
 // ========== RENDER SIDEBAR ==========
 function navBadge(id) {
   if (id === 'leads') return DM.get('leads').filter(l => (l.status || 'new') === 'new').length;
@@ -1079,7 +1134,11 @@ function updateNavBadges() {
 
 function renderSidebar() {
   const nav = document.getElementById('sidebarNav');
-  nav.innerHTML = MENU.map(group => `
+  const allow = allowedPages();
+  nav.innerHTML = MENU.map(group => {
+    const kids = allow ? group.children.filter(c => allow.has(c.id)) : group.children;
+    if (!kids.length) return '';
+    return `
     <div class="nav-group">
       <div class="nav-item nav-parent" data-group="${group.id}" onclick="toggleGroup('${group.id}')">
         <span class="icon">${esc(group.icon)}</span>
@@ -1088,14 +1147,14 @@ function renderSidebar() {
         <span class="arrow">▶</span>
       </div>
       <div class="nav-children" id="children-${group.id}">
-        ${group.children.map(c => `
+        ${kids.map(c => `
           <div class="nav-item" data-page="${c.id}" onclick="navigateTo('${c.id}','${group.label}','${c.label}')">
             ${c.label}
           </div>
         `).join('')}
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 function toggleGroup(id) {
@@ -1113,6 +1172,7 @@ function toggleGroup(id) {
 // ========== NAVIGATION ==========
 let currentPageId = '';
 function navigateTo(pageId, groupLabel, pageLabel) {
+  if (!canSee(pageId)) { toast('你的角色看不到这一页'); return; }
   currentPageId = pageId;
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
   document.querySelector(`[data-page="${pageId}"]`)?.classList.add('active');
@@ -1122,6 +1182,7 @@ function navigateTo(pageId, groupLabel, pageLabel) {
 
 function renderPage(id) {
   const c = document.getElementById('content');
+  if (!canSee(id)) { showNoPerm(); return; }
   const pages = {
     'dashboard-overview': renderDashboard,
     'dashboard-trend': renderDashboardTrend,
@@ -1142,6 +1203,7 @@ function renderPage(id) {
     'quotes-template': renderQuoteTemplate,
     'orders-list': renderOrdersList,
     'orders-production': renderProduction,
+    'orders-board': renderOrdersBoard,
     'orders-payments': renderPayments,
     'orders-delivery': renderDelivery,
     'orders-dieline': renderDieline,
@@ -2204,6 +2266,8 @@ function convertQuoteToOrder(id) {
     quoteId: q.id,
     customer: q.customer,
     product: [q.product, sizeLabel(q.size), [q.material, q.gsm].filter(Boolean).join(' '), q.quantity ? q.quantity + ' pcs' : ''].filter(Boolean).join(' / '),
+    boxType: q.product, material: q.material, gsm: q.gsm, size: q.size, quantity: q.quantity,
+    printing: q.printing, finishing: q.finish,
     amount: Number(q.total) || 0,
     depositPct: quoteDepositPct(q),
     assignee: staffNames().includes(q.creator) ? q.creator : whoami(),
@@ -2271,7 +2335,11 @@ function viewQuote(id) {
 }
 
 function editQuote(id) {
-  const q = DM.get('quotes').find(x => x.id === id);
+  // DM.get 每次都是 localStorage 的深拷贝，所以名单要先抓在手里：
+  // 之前这里写回的是当场重新读出来的一份新拷贝，改单价、改有效期点保存全被吞掉，
+  // 页面重画就弹回原数据。
+  const quotes = DM.get('quotes');
+  const q = quotes.find(x => x.id === id);
   if (!q) return;
   showModal('编辑报价 ' + q.id, `
     <div class="form-grid">
@@ -2301,7 +2369,7 @@ function editQuote(id) {
     q.termsNote = own.termsNote; q.deliveryNote = own.deliveryNote; q.sstNote = own.sstNote;
     q.status = val('fq_status');
     q.validUntil = val('fq_validUntil');
-    DM.set('quotes', DM.get('quotes'));
+    DM.set('quotes', quotes);
     toast('报价已更新'); renderPage(currentPageId);
   });
   recalcEditQuote();
@@ -3266,10 +3334,29 @@ function openOrderModal(o, prefill) {
   const d = o || prefill || {};
   const amount = Number(d.amount) || 0;
   const pct = pickRate(d.depositPct, depositPercent());
+  const sp = isEdit ? orderSpec(o) : null;
+  const sv = { boxType: sp ? sp.name : d.boxType, material: sp ? sp.material : d.material, gsm: sp ? sp.gsm : d.gsm,
+    size: sp ? sp.size : d.size, quantity: sp ? sp.quantity : d.quantity, printing: sp ? sp.printing : d.printing,
+    finishing: sp ? sp.finishing : d.finishing };
+  const srcQ = sp && o.quoteId ? DM.get('quotes').find(x => x.id === o.quoteId) : null;
+  const specHint = srcQ && !String(o.boxType || '').trim()
+    ? `<div style="font-size:12px;color:var(--gray-500);margin-top:4px">这几项是从报价单 ${esc(srcQ.id)} 现读过来的（车间卡片上看到的也是这套），保存后以这里写的为准。</div>` : '';
   showModal(isEdit ? '编辑订单 ' + o.id : '新建订单', `
     <div class="form-grid">
       <div class="form-group"><label class="form-label">客户 *</label><input class="form-input" id="o_customer" value="${esc(d.customer||'')}"></div>
       <div class="form-group"><label class="form-label">产品 / 内容</label><input class="form-input" id="o_product" value="${esc(d.product||'')}"></div>
+      <div class="form-group full"><label class="form-label">生产成品内容 —— 车间收到的工单只看这几项</label>
+        <div class="form-grid" style="margin-top:6px">
+          <div class="form-group"><label class="form-label">产品名称 / 盒型</label>${comboInput('o_boxType', quoteBoxNames(), sv.boxType, '选盒型或直接填写')}</div>
+          <div class="form-group"><label class="form-label">材质</label>${comboInput('o_material', QOPT.papers.map(p => p.name), sv.material, '选纸种或直接填写', 'onchange="swapGsmOptions(\'o_material\',\'o_gsm\')"')}</div>
+          <div class="form-group"><label class="form-label">克重 / 瓦楞</label>${gsmComboHtml('o_gsm', sv.material, sv.gsm)}</div>
+          <div class="form-group"><label class="form-label">尺寸 (mm)</label><input class="form-input" id="o_size" value="${esc(sv.size||'')}" placeholder="如：L166×W35×H200"></div>
+          <div class="form-group"><label class="form-label">数量 (pcs)</label><input class="form-input" type="number" min="1" step="1" id="o_quantity" value="${esc(sv.quantity||'')}" placeholder="如：3000"></div>
+          <div class="form-group"><label class="form-label">印刷</label>${comboInput('o_printing', QOPT.printing, sv.printing, '选色数或直接填写')}</div>
+          <div class="form-group full"><label class="form-label">表面处理（可多选）</label>${finishPickerHtml('o_finishing', sv.finishing)}</div>
+          ${specHint ? `<div class="form-group full">${specHint}</div>` : ''}
+        </div>
+      </div>
       <div class="form-group"><label class="form-label">金额 (RM) *</label><input class="form-input" type="number" min="0" step="0.01" id="o_amount" value="${amount ? money2(amount) : ''}" oninput="orderModalDeposit()"></div>
       <div class="form-group"><label class="form-label">定金比例 (%)</label><input class="form-input" type="number" min="0" max="100" id="o_pct" value="${esc(pct)}" oninput="orderModalDeposit()"></div>
       <div class="form-group"><label class="form-label">定金金额 (RM)</label><input class="form-input" type="number" min="0" step="0.01" id="o_deposit" value="${money2(amount * pct / 100)}"></div>
@@ -3289,15 +3376,21 @@ function openOrderModal(o, prefill) {
     const dep = parseFloat(val('o_deposit')) > 0 ? +parseFloat(val('o_deposit')).toFixed(2) : +(amt * p / 100).toFixed(2);
     const st = PROD_BY_LABEL[val('o_status')] || 'pending_deposit';
     const orders = DM.get('orders');
+    // isEdit 时外层的 o 是弹窗打开那一刻从另一份 DM.get 拷贝里找到的，改它不会跟着写回去的数组走；
+    // 必须在刚读出来的这份里重新找一行来落笔（和 editQuote 同一个坑）。
+    const target = isEdit ? orders.find(x => x.id === o.id) : null;
+    if (isEdit && !target) { toast('这张订单已经被删掉了，刷新一下再看'); return false }
     const fields = {
       customer, product: val('o_product'), amount: +amt.toFixed(2), depositPct: p, depositAmount: dep,
+      boxType: val('o_boxType'), material: val('o_material'), gsm: val('o_gsm'), size: val('o_size'),
+      quantity: qtyNum(val('o_quantity')), printing: val('o_printing'), finishing: readFinish('o_finishing'),
       deliveryDate: val('o_date'), assignee: val('o_assignee'), productionStatus: st,
       zone: val('o_zone'), note: (document.getElementById('o_note') || {}).value?.trim() || ''
     };
     let od;
     if (isEdit) {
-      Object.assign(o, fields);
-      od = o;
+      Object.assign(target, fields);
+      od = target;
       DM.set('orders', orders);
       toast('订单 ' + o.id + ' 已更新');
       writeLog('编辑订单', o.id + ' ' + o.customer);
@@ -3391,6 +3484,13 @@ function viewOrder(id) {
       ${cell('定金 / 已收', 'RM ' + money2(o.depositAmount) + ' / RM ' + money2(got))}
       ${cell('待收', '<span style="color:' + (got >= (Number(o.amount) || 0) ? 'var(--green)' : 'var(--red)') + '">RM ' + money2((Number(o.amount) || 0) - got) + '</span>')}
       ${cell('生产状态', productionBadge(o.productionStatus))}
+      ${cell('车间进度', shopBadge(o) + (o.prodAckAt ? `<div style="font-size:12px;color:var(--gray-500)">确认收到 ${esc(o.prodAckAt)}　${esc(o.prodAckBy || '')}</div>` : '')
+        + (o.prodReject && !o.prodAckAt ? `<div style="font-size:12px;color:var(--red)">车间退回：${esc(o.prodReject)}（${esc(o.prodRejectAt || '')} ${esc(o.prodRejectBy || '')}）</div>` : ''))}
+      ${o.shopNote ? cell('车间备注', `${esc(o.shopNote)}<div style="font-size:12px;color:var(--gray-500)">${esc(o.shopNoteAt || '')}　${esc(o.shopNoteBy || '')}　<span style="color:var(--gray-500)">车间在「生产工单」点开工单纸写的</span></div>`) : ''}
+      ${o.prodDoneAt ? cell('完工登记', `实产 <b>${esc(String(o.prodQty || ''))}</b> pcs`
+        + (o.prodDiff ? `（${Number(o.prodDiff) > 0 ? '超产' : '少产'} ${Math.abs(Number(o.prodDiff))}）` : '')
+        + `<div style="font-size:12px;color:var(--gray-500)">${esc(o.prodDoneAt)}　${esc(o.prodDoneBy || '')}${o.prodFixAt ? `　${esc(o.prodFixAt)} 由 ${esc(o.prodFixBy || '')} 更正` : ''}</div>`) : ''}
+      ${o.prodNote ? cell('生产情况说明', `<span style="white-space:pre-wrap">${esc(o.prodNote)}</span>`) : ''}
       ${cell('预计交货', esc(o.deliveryDate || '—'))}
       ${cell('负责人', esc(o.assignee || '未分配'))}
       ${cell('配送区域', esc(o.zone || '未定'))}
@@ -3416,15 +3516,323 @@ function productionBadge(s) {
   return `<span class="badge ${m[s]||'badge-gray'}">${esc(PROD_LABEL[s]||s||'待付定金')}</span>`;
 }
 
+// ========== 车间工单：下发到生产的只有成品数据，金额和客户资料不进车间 ==========
+// 数量只认正整数。没填就存空串，不存 0——车间看到「应产 0 个」比看到空白更容易被误导。
+function qtyNum(v) { const n = parseInt(v); return n > 0 ? n : '' }
+
+// 老订单当年只存了一句 product 摘要，没有这些结构化字段。缺的从来源报价单现读，
+// 不做数据迁移；报价也查不到就留空，让车间看见「没填」去找跟单员，而不是我们替他猜。
+function orderSpec(o) {
+  const q = o.quoteId ? DM.get('quotes').find(x => x.id === o.quoteId) : null;
+  const pick = (mine, fromQ) => String(mine ?? '').trim() || String((q && fromQ) ?? '').trim();
+  return {
+    name: pick(o.boxType, q && q.product),
+    material: pick(o.material, q && q.material),
+    gsm: pick(o.gsm, q && q.gsm),
+    size: pick(o.size, q && q.size),
+    quantity: pick(o.quantity, q && q.quantity),
+    printing: pick(o.printing, q && q.printing),
+    finishing: pick(o.finishing, q && q.finish),
+    delivery: String(o.deliveryDate || '').trim()
+  };
+}
+
+const SHOP_KEYS = [['name', '产品名称'], ['material', '材质'], ['gsm', '克重'], ['size', '尺寸'],
+  ['quantity', '数量'], ['printing', '印刷'], ['finishing', '表面处理'], ['delivery', '交货时间']];
+
+function shopRowsHtml(s) {
+  return '<div style="display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13px">'
+    + SHOP_KEYS.map(([k, label]) => {
+      const raw = String(s[k] || '').trim();
+      const v = k === 'size' ? sizeLabel(raw) : k === 'quantity' && raw ? raw + ' pcs' : raw;
+      return `<div style="color:var(--gray-500)">${label}</div><div style="font-weight:600;word-break:break-all">`
+        + (v ? esc(v) : '<span style="color:var(--red);font-weight:400">后台没填</span>') + '</div>';
+    }).join('') + '</div>';
+}
+
+const SHOP_STATE = { todo: ['待车间确认', 'badge-yellow'], doing: ['生产中', 'badge-blue'], done: ['生产完成', 'badge-green'] };
+function shopState(o) { return o.prodDoneAt ? 'done' : o.prodAckAt ? 'doing' : 'todo' }
+function shopBadge(o) { const st = SHOP_STATE[shopState(o)]; return `<span class="badge ${st[1]}">${st[0]}</span>` }
+const stepIndex = s => PROD_STEPS.indexOf(s || 'pending_deposit');
+
+// 车间这一页跟「状态看板」用同一套样式：三档一列，卡片只给工单号 / 公司 / 成品 / 交货 / 状态，
+// 点开才是一张报价单同款式的工单纸（不带金额、不带客户联系方式）+ 车间备注。
+function shopKanbanCard(o) {
+  const sp = orderSpec(o), st = shopState(o);
+  const spec = [sp.name, sizeLabel(sp.size), sp.quantity ? sp.quantity + ' pcs' : ''].filter(Boolean).join(' · ');
+  const back = st === 'todo' && o.prodReject ? '<div class="meta" style="color:var(--red)">上次退回，点开看原因</div>' : '';
+  return `<div class="kanban-card" onclick="openWorkOrder('${esc(o.id)}')" style="cursor:pointer"><div class="title">${esc(o.id)}</div><div class="meta">${esc(o.customer)}</div><div class="meta">${esc(spec || '后台没填成品内容')}</div>${sp.delivery ? `<div class="meta">交货 ${esc(sp.delivery)}</div>` : ''}${back}<div class="meta">${shopBadge(o)}</div></div>`;
+}
+
+function prodShopHtml(orders) {
+  if (!orders.length) return '<div class="card"><div class="card-body"><div class="empty"><p>还没有工单。报价在「报价管理 → 报价单」点「转订单」，那边把成品内容填全，这里才发得下去</p></div></div></div>';
+  const cols = [['todo', '待车间确认', '车间核对后点「确认收到工单」'], ['doing', '生产中', '做完点「登记生产完成」'], ['done', '已完工', '点开可看完工登记和备注']];
+  return `<div class="kanban">${cols.map(([st, title, tip]) => {
+    let items = orders.filter(o => shopState(o) === st);
+    if (st === 'done') items = items.slice().sort((a, b) => String(b.prodDoneAt).localeCompare(String(a.prodDoneAt)));
+    return `<div class="kanban-col"><h4>${title} <span class="count">${items.length}</span></h4><div style="font-size:11px;color:var(--gray-500);margin-bottom:8px">${tip}</div>${items.map(shopKanbanCard).join('') || '<div style="text-align:center;color:var(--gray-400);font-size:11px;padding:12px">空</div>'}</div>`;
+  }).join('')}</div>`;
+}
+
+const WO_CSS = `
+.wo-doc{font:13px/1.55 "Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;color:#1f2430;background:#fff}
+.wo-doc .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1f4e79;padding-bottom:14px}
+.wo-doc .co{font-size:20px;font-weight:700;letter-spacing:.3px;color:#1f4e79}
+.wo-doc .co-sub{font-size:11px;color:#5b6472;margin-top:6px;word-break:break-all}
+.wo-doc .logo{display:block;max-height:48px;max-width:200px;margin-bottom:8px;object-fit:contain}
+.wo-doc .doc-type{text-align:right;flex-shrink:0}
+.wo-doc .doc-type b{font-size:22px;letter-spacing:3px;color:#1f4e79}
+.wo-doc .doc-type i{display:block;font-style:normal;font-size:12px;letter-spacing:2px;color:#5b6472;margin-top:2px}
+.wo-doc .meta{font-size:12px;color:#3b4252;margin-top:6px}
+.wo-doc .parties{display:flex;gap:20px;margin:18px 0}
+.wo-doc .party{flex:1;border:1px solid #d9dee7;border-radius:6px;padding:10px 12px;font-size:12px}
+.wo-doc .party h5{margin:0 0 6px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#7a828f}
+.wo-doc .party .nm{font-size:15px;font-weight:700}
+.wo-doc table{width:100%;border-collapse:collapse}
+.wo-doc .spec th{text-align:left;width:180px;background:#f4f6fa;font-weight:600}
+.wo-doc .spec th,.wo-doc .spec td{border:1px solid #d9dee7;padding:7px 10px}
+.wo-doc .miss{color:#c0392b}
+.wo-doc .blk{margin-top:16px;border-left:3px solid #1f4e79;padding:2px 0 2px 10px}
+.wo-doc .blk h4{margin:0 0 3px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#1f4e79}
+.wo-doc .blk p{margin:0;white-space:pre-wrap}
+.wo-doc .foot{margin-top:24px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px}
+.wo-doc .sig{border-top:1px solid #9aa3b1;width:200px;padding-top:5px;font-size:11px;color:#5b6472;text-align:center}
+.wo-doc .note{font-size:11px;color:#7a828f}
+`;
+
+// 工单纸页眉印的是本单负责人的联系方式：车间有疑问要找的是跟这张单的人，
+// 公司总机邮箱留在报价单上，不往下发。负责人取自「全部订单 → 编辑」那个下拉，
+// 号码在「系统设置 → 管理员列表」里补。
+function woOwnerContact(o) {
+  const name = String(o.assignee || '').trim();
+  if (!name) return '跟单负责人 未分配';
+  const u = DM.get('users').find(x => (x.name || '').trim() === name);
+  return ['跟单负责人 ' + name, u && String(u.phone || '').trim(), u && String(u.email || '').trim()].filter(Boolean).join('　·　');
+}
+
+function woDocHtml(o, edit) {
+  const sp = orderSpec(o), tpl = docVal('settings_quote_template'), site = docVal('settings_site');
+  const header = (tpl.header || site.enName || '').trim() || 'WORK ORDER';
+  const contactLine = woOwnerContact(o);
+  const q = o.quoteId ? DM.get('quotes').find(x => x.id === o.quoteId) : null;
+  const day = o.created ? String(o.created).slice(0, 10) : '';
+  const row = (zh, en, v) => `<tr><th>${esc(zh)}<span style="font-weight:400;color:#7a828f;font-size:11px"> ${esc(en)}</span></th><td>${v ? esc(v) : '<span class="miss">后台没填</span>'}</td></tr>`;
+  const rows = [
+    row('QT号', 'Quotation', q ? q.id : (o.quoteId || '手工建单')),
+    row('OD工单号', 'Work order', o.id),
+    row('日期', 'Date', day),
+    row('产品名称', 'Product', sp.name),
+    row('材质', 'Material', sp.material),
+    row('克重', 'Paper weight', sp.gsm),
+    row('尺寸', 'Size (mm)', sizeLabel(sp.size)),
+    row('数量', 'Quantity', sp.quantity ? sp.quantity + ' pcs' : ''),
+    row('印刷工艺', 'Printing', sp.printing),
+    row('表面处理', 'Surface finish', sp.finishing),
+    row('交货时间', 'Delivery', sp.delivery)
+  ].join('');
+  const note = edit ? `<div class="form-group" style="margin-top:16px"><label class="form-label">备注 —— 车间填写：过程中遇到的问题、要反馈给跟单员的</label>
+      <textarea class="form-input" id="wo_note" rows="4" style="min-height:88px;resize:vertical" placeholder="例如：白卡只剩 280 克，问跟单员能不能换；这批能不能晚两天交">${esc(o.shopNote || '')}</textarea>
+      <div style="font-size:12px;color:var(--gray-500);margin-top:6px">${o.shopNoteAt ? '上次更新 ' + esc(o.shopNoteAt) + '　' + esc(o.shopNoteBy || '') + '　改完点下面的「保存备注」' : '写完点下面的「保存备注」，跟单员在「全部订单 → 详情」里看得到'}</div></div>`
+    : `<div class="blk"><h4>备注 / Remarks（车间填写）</h4><p>${o.shopNote ? esc(o.shopNote) : '（空）'}</p></div>`;
+  return `<div class="wo-doc">
+    <div class="head"><div>${tpl.logo ? `<img class="logo" src="${safeHref(tpl.logo)}" alt="">` : ''}<div class="co">${esc(header)}</div>${contactLine ? `<div class="co-sub">${esc(contactLine)}</div>` : ''}</div>
+      <div class="doc-type"><b>WORK ORDER</b><i>生产工单</i><div class="meta"><div>No. ${esc(o.id)}</div><div>Date: ${esc(day)}</div></div></div></div>
+    <div class="parties">
+      <div class="party"><h5>企业名称 / Customer</h5><div class="nm">${esc(o.customer || '—')}</div></div>
+      <div class="party"><h5>车间状态 / Shop status</h5><div class="nm">${SHOP_STATE[shopState(o)][0]}</div>
+        ${o.prodAckAt ? `<div>确认收到 ${esc(o.prodAckAt)}　${esc(o.prodAckBy || '')}</div>` : ''}
+        ${o.prodDoneAt ? `<div>报完工 ${esc(o.prodDoneAt)}　${esc(o.prodDoneBy || '')}　实产 ${esc(String(o.prodQty || ''))} pcs</div>` : ''}
+        ${o.prodNote ? `<div>特殊情况：${esc(o.prodNote)}</div>` : ''}</div></div>
+    <table class="spec"><tbody>${rows}</tbody></table>
+    ${o.prodReject && !o.prodAckAt ? `<div class="blk"><h4>跟单员退回 / Rejected</h4><p>${esc(o.prodReject)}（${esc(o.prodRejectAt || '')} ${esc(o.prodRejectBy || '')}）</p></div>` : ''}
+    ${note}
+    <div class="foot"><div class="note">请严格按以上要求生产。用料、工艺、数量有疑问，先写在备注里，跟单员确认后再开工。</div><div class="sig">车间签收</div></div>
+  </div>`;
+}
+
+function openWorkOrder(id) {
+  const o = DM.get('orders').find(x => x.id === id);
+  if (!o) { toast('找不到这张工单'); return; }
+  const st = shopState(o);
+  const btns = [{ label: '保存备注', cls: 'btn-secondary', fn: () => saveShopNote(id) },
+    { label: '打印 / 存为 PDF', cls: 'btn-secondary', fn: () => printWorkOrder(id) }];
+  if (st === 'todo') btns.push({ label: '核对并确认收到工单', cls: 'btn-primary', fn: () => ackOrder(id) });
+  else btns.push({ label: st === 'doing' ? '登记生产完成' : '更正登记', cls: 'btn-primary', fn: () => openShopDoneModal(id) });
+  btns.push({ label: '关闭', cls: 'btn-secondary', fn: closeModal });
+  showModal('生产工单 ' + id, `<style>${WO_CSS}</style>${woDocHtml(o, true)}`, null, btns);
+}
+
+function saveShopNote(id) {
+  const el = document.getElementById('wo_note');
+  if (!el) { toast('备注栏没找到，关掉重开一次'); return; }
+  const orders = DM.get('orders');
+  const o = orders.find(x => x.id === id);
+  if (!o) { toast('找不到这张工单'); return; }
+  const txt = String(el.value || '').trim();
+  o.shopNote = txt;
+  if (txt) { o.shopNoteAt = DM.now(); o.shopNoteBy = whoami(); }
+  DM.set('orders', orders);
+  writeLog('车间备注', `${o.id}：${txt || '（清空）'}`.slice(0, 120));
+  toast(txt ? '备注已保存，跟单员在「全部订单 → 详情」里看得到' : '备注已清空');
+  openWorkOrder(id);
+}
+
+function printWorkOrder(id) {
+  const o = DM.get('orders').find(x => x.id === id);
+  if (!o) { toast('找不到这张工单'); return; }
+  openQuotePrint(`<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><title>Work Order ${esc(o.id)}</title><style>
+@page { size: A4; margin: 14mm 16mm; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+${WO_CSS}
+.wo-bar { padding: 10px 14px; background: #f4f6fa; border-bottom: 1px solid #d9dee7; font: 12px/1.6 "Helvetica Neue", Arial, "PingFang SC", sans-serif; }
+.wo-bar button { font: inherit; padding: 6px 14px; border: 1px solid #1f4e79; background: #1f4e79; color: #fff; border-radius: 4px; cursor: pointer; margin-right: 8px; }
+.wo-bar button.ghost { background: #fff; color: #1f4e79; }
+@media print { .wo-bar { display: none !important; } }
+</style></head><body>
+<div class="wo-bar">在弹出的打印窗口里选择「<b>另存为 PDF</b>」即可导出。 <button onclick="window.print()">打印 / 存 PDF</button><button class="ghost" onclick="parent.closeQuotePrint()">关闭</button></div>
+${woDocHtml(o, false)}
+</body></html>`);
+}
+
+function prodKanbanHtml(orders) {
+  // 卡片只给工单号 + 公司 + 成品内容 + 交货 + 车间状态，不带金额和负责人；
+  // 点卡片进订单详情另有一道闸：详情里有金额，所以只给看得到「全部订单」的人点得动。
+  const detail = canSee('orders-list');
+  return `<div class="kanban">${PROD_STEPS.map(s => {
+    const items = orders.filter(o => (o.productionStatus || 'pending_deposit') === s);
+    return `<div class="kanban-col" ondragover="kanbanOver(event)" ondragleave="kanbanLeave(event)" ondrop="kanbanDrop(event,'${s}')"><h4>${PROD_LABEL[s]} <span class="count">${items.length}</span></h4>${items.map(o => {
+      const sp = orderSpec(o);
+      const spec = [sp.name, sizeLabel(sp.size), sp.quantity ? sp.quantity + ' pcs' : ''].filter(Boolean).join(' · ');
+      const click = detail ? ` onclick="viewOrder('${esc(o.id)}')" title="点开看这张单的详情"` : '';
+      return `<div class="kanban-card" draggable="true" ondragstart="kanbanStart(event,'${esc(o.id)}')" ondragend="kanbanEnd(event)"${click} style="cursor:grab"><div class="title">${esc(o.id)}</div><div class="meta">${esc(o.customer)}</div><div class="meta">${esc(spec || '后台没填成品内容')}</div>${sp.delivery ? `<div class="meta">交货 ${esc(sp.delivery)}</div>` : ''}<div class="meta">${shopBadge(o)}</div></div>`;
+    }).join('') || '<div style="text-align:center;color:var(--gray-400);font-size:11px;padding:12px">空</div>'}</div>`;
+  }).join('')}</div>`;
+}
+
+function renderOrdersBoard(c) {
+  const orders = DM.get('orders');
+  const tip = canSee('orders-list') ? '点卡片看这张单的详情' : '这张卡点不开详情——详情里有金额，要在角色管理里另外勾上「全部订单」';
+  c.innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">状态看板</h1>
+      <p class="page-desc">整张单走到哪一步了：把卡片拖到下一档就改生产状态，${tip}。卡片上只有工单号、公司和成品内容，金额和客户联系方式在「全部订单」里看。这一页在「系统设置 → 角色管理」里勾给谁、谁才看得到，超级管理员默认全给。</p></div></div>
+    ${prodKanbanHtml(orders)}`;
+}
+
 function renderProduction(c) {
   const orders = DM.get('orders');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">生产工单看板</h1><p class="page-desc">把卡片拖到目标列即可改状态；点卡片看详情</p></div></div>
-    <div class="kanban">${PROD_STEPS.map(s => {
-      const items = orders.filter(o => (o.productionStatus || 'pending_deposit') === s);
-      return `<div class="kanban-col" ondragover="kanbanOver(event)" ondragleave="kanbanLeave(event)" ondrop="kanbanDrop(event,'${s}')"><h4>${PROD_LABEL[s]} <span class="count">${items.length}</span></h4>${items.map(o => `<div class="kanban-card" draggable="true" ondragstart="kanbanStart(event,'${o.id}')" ondragend="kanbanEnd(event)" onclick="viewOrder('${o.id}')" style="cursor:grab"><div class="title">${esc(o.id)}</div><div class="meta">${esc(o.customer)}</div><div class="meta">RM ${money2(o.amount)}</div><div class="meta">${esc(o.assignee || '未分配')}</div></div>`).join('') || '<div style="text-align:center;color:var(--gray-400);font-size:11px;padding:12px">空</div>'}</div>`;
-    }).join('')}</div>`;
+    <div class="page-header"><div><h1 class="page-title">生产工单</h1>
+      <p class="page-desc">车间这一眼只看得懂成品：公司名称 + 产品名称 / 材质 / 克重 / 尺寸 / 数量 / 印刷 / 表面处理 / 交货时间。核对无误点「确认收到工单」，做完填实际生产数量和特殊情况说明再点「确认生产完成」。金额和客户联系方式不下发车间；流程进度在「订单管理 → 状态看板」，那是跟单员的页面。</p></div></div>
+    ${prodShopHtml(orders)}`;
 }
+
+// 车间确认收到：不改金额，只把工单推进到「生产中」
+function ackOrder(id) {
+  const o = DM.get('orders').find(x => x.id === id);
+  if (!o) { toast('找不到这张工单'); return; }
+  const s = orderSpec(o);
+  const miss = SHOP_KEYS.filter(([k]) => !String(s[k] || '').trim()).map(([, label]) => label);
+  showModal('确认收到工单 ' + id, `
+    <p style="margin:0 0 12px;font-size:13px;color:var(--gray-600)">下面就是车间要做的东西。对得上就点确认；对不上把哪里不对写在下面，点「退回跟单员」，别按错数开工。</p>
+    ${shopRowsHtml(s)}
+    ${miss.length ? `<div style="margin-top:12px;font-size:12px;color:var(--red)">这几项后台没填：${esc(miss.join('、'))}。建议退回让跟单员补齐再开工。</div>` : ''}
+    <div class="form-group" style="margin-top:14px"><label class="form-label">退回原因（只有点「退回跟单员」时才要填）</label>
+      <textarea class="form-textarea" id="ack_back" rows="2" placeholder="如：尺寸少了 H、克重跟客户讲的不是同一种"></textarea></div>
+  `, null, [
+    { label: '核对无误，确认收到', cls: 'btn-primary', fn: () => saveOrderAck(id) },
+    { label: '退回跟单员', cls: 'btn-secondary', fn: () => backOrderToSeller(id) },
+    { label: '关闭', cls: 'btn-secondary', fn: closeModal }
+  ]);
+}
+
+function saveOrderAck(id) {
+  const orders = DM.get('orders');
+  const o = orders.find(x => x.id === id);
+  if (!o) { toast('找不到这张工单'); return; }
+  o.prodAckAt = DM.now();
+  o.prodAckBy = whoami();
+  delete o.prodReject; delete o.prodRejectAt; delete o.prodRejectBy;
+  if (stepIndex(o.productionStatus) < stepIndex('producing')) o.productionStatus = 'producing';
+  DM.set('orders', orders);
+  writeLog('车间接工单', `${o.id} ${o.customer}`);
+  closeModal();
+  toast(`工单 ${o.id} 已确认收到，进入生产中`);
+  renderPage(currentPageId);
+}
+
+function backOrderToSeller(id) {
+  const reason = String((document.getElementById('ack_back') || {}).value || '').trim();
+  if (!reason) { toast('退回请先写明哪里不对'); return; }
+  const orders = DM.get('orders');
+  const o = orders.find(x => x.id === id);
+  if (!o) { toast('找不到这张工单'); return; }
+  o.prodReject = reason;
+  o.prodRejectAt = DM.now();
+  o.prodRejectBy = whoami();
+  DM.set('orders', orders);
+  writeLog('车间退回工单', `${o.id} ${reason}`);
+  closeModal();
+  toast(`工单 ${o.id} 已退回跟单员`);
+  renderPage(currentPageId);
+}
+
+// 完工登记：实际数量必填；和应产对不上就必须写明原因，不然这张单回头说不清
+function openShopDoneModal(id) {
+  const o = DM.get('orders').find(x => x.id === id);
+  if (!o) { toast('找不到这张工单'); return; }
+  if (!o.prodAckAt) { toast('先点「确认收到工单」，核对完数据再登记完成'); return; }
+  const s = orderSpec(o);
+  showModal(o.prodDoneAt ? '更正完工登记 ' + id : '生产完成登记 ' + id, `
+    ${shopRowsHtml(s)}
+    <div class="form-grid" style="margin-top:14px">
+      <div class="form-group full"><label class="form-label">实际生产数量 (pcs) *</label>
+        <input class="form-input" type="number" min="1" step="1" id="sd_qty" value="${esc(o.prodQty || '')}" placeholder="如：2980" oninput="shopDoneHint('${esc(id)}')">
+        <div id="sd_diff" style="margin-top:6px;font-size:12px;color:var(--gray-500)">—</div></div>
+      <div class="form-group full"><label class="form-label">特殊情况说明</label>
+        <textarea class="form-textarea" id="sd_note" rows="3" placeholder="少产 / 超产 / 报废 / 换料 / 色差 / 客户改单……数量对不上就一定要写">${esc(o.prodNote || '')}</textarea></div>
+    </div>
+    ${o.prodDoneAt ? `<div style="margin-top:6px;font-size:12px;color:var(--gray-500)">这张单 ${esc(o.prodDoneAt)} 由 ${esc(o.prodDoneBy || '')} 报过完工${o.prodFixAt ? `，${esc(o.prodFixAt)} 由 ${esc(o.prodFixBy || '')} 更正过一次` : ''}。这里改的是登记内容，状态不再往后推。</div>`
+      : `<div style="margin-top:6px;font-size:12px;color:var(--gray-500)">确认后这张单进入「${esc(PROD_LABEL.shipping)}」，同事在「订单管理 → 发货」里安排出货。</div>`}
+  `, () => saveShopDone(id));
+  shopDoneHint(id);
+}
+
+function shopDoneHint(id) {
+  const o = DM.get('orders').find(x => x.id === id);
+  const el = document.getElementById('sd_diff');
+  if (!o || !el) return;
+  const plan = parseInt(orderSpec(o).quantity);
+  const got = parseInt((document.getElementById('sd_qty') || {}).value);
+  if (!plan) { el.textContent = '后台没填应产数量，比不了'; return; }
+  if (!got) { el.textContent = `应产 ${plan} pcs，填了实际数量才看得出差额`; return; }
+  const d = got - plan;
+  el.innerHTML = d === 0 ? `<span style="color:var(--green)">应产 ${plan} pcs · 数量一致</span>`
+    : `<span style="color:var(--red)">应产 ${plan} pcs · ${d > 0 ? '超产' : '少产'} ${Math.abs(d)} pcs（${(Math.abs(d) / plan * 100).toFixed(1)}%）</span>`;
+}
+
+function saveShopDone(id) {
+  const orders = DM.get('orders');
+  const o = orders.find(x => x.id === id);
+  if (!o) { toast('找不到这张工单'); return false }
+  const qty = parseInt((document.getElementById('sd_qty') || {}).value);
+  if (!(qty > 0)) { toast('请填写实际生产数量'); return false }
+  const note = String((document.getElementById('sd_note') || {}).value || '').trim();
+  const plan = parseInt(orderSpec(o).quantity);
+  if (plan && qty !== plan && !note) { toast(`实产 ${qty} 和应产 ${plan} 对不上，请把原因写进特殊情况说明`); return false }
+  const wasDone = !!o.prodDoneAt;
+  o.prodQty = qty;
+  o.prodNote = note;
+  o.prodDiff = plan ? qty - plan : '';
+  if (wasDone) { o.prodFixAt = DM.now(); o.prodFixBy = whoami(); }
+  else { o.prodDoneAt = DM.now(); o.prodDoneBy = whoami(); }
+  if (!wasDone && stepIndex(o.productionStatus) < stepIndex('shipping')) o.productionStatus = 'shipping';
+  DM.set('orders', orders);
+  writeLog(wasDone ? '更正完工登记' : '车间报完工', `${o.id} 实产 ${qty}` + (note ? '｜' + note : ''));
+  toast(wasDone ? `工单 ${o.id} 的完工登记已更正` : `工单 ${o.id} 已确认生产完成（实产 ${qty} pcs）`);
+  renderPage(currentPageId);
+}
+
 
 let kanbanDrag = null;
 function kanbanStart(e, id) {
@@ -6055,6 +6463,16 @@ function markSelfConfirmed() {
   DM.set('users', users);
 }
 
+// 车间那档角色：云端早就建过 roles，seedDict 不会再灌新条目，所以开机时单独补一次。
+// 只认名字，他自己改过名或已经手工建过的不动。
+function ensureProductionRole() {
+  const roles = DM.get('roles');
+  if (roles.some(r => String(r.name || '').trim() === '生产')) return 0;
+  roles.push({ id: 'R-06', name: '生产', perms: ['订单管理(生产工单)'] });
+  DM.set('roles', roles);
+  return 1;
+}
+
 // 「设计」这一档已改成「主管」（外勤那一摊归主管管），老数据里叫「设计」的角色和账号开机时统一换名。
 // 只认精确等于「设计」的行，他自己改过名的不动。
 function migrateRoleDesignerToSupervisor() {
@@ -6077,11 +6495,11 @@ function migrateRoleDesignerToSupervisor() {
 
 function renderUsers(c) {
   const users = DM.get('users');
-  const rows = users.map(u=>`<tr><td class="td-name">${esc(u.name)}</td><td>${esc(u.email||'—')}</td><td><span class="badge badge-blue">${esc(u.role)}</span></td><td>${u.needsConfirm?'<span class="badge badge-red">待验证邮箱</span>':(u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">已禁用</span>')}</td><td>${esc(u.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button>${u.email ? ` <button class="btn btn-sm btn-secondary" onclick="sendPasswordReset('${u.email}')">重发密码</button>` : ''}${u.needsConfirm && u.email ? ` <button class="btn btn-sm btn-secondary" onclick="resendConfirmEmail('${esc(u.email)}')">重发验证邮件</button>` : ''} <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">删除</button></td></tr>`).join('');
+  const rows = users.map(u=>`<tr><td class="td-name">${esc(u.name)}</td><td>${esc(u.phone||'—')}</td><td>${esc(u.email||'—')}</td><td><span class="badge badge-blue">${esc(u.role)}</span></td><td>${u.needsConfirm?'<span class="badge badge-red">待验证邮箱</span>':(u.active?'<span class="badge badge-green">启用</span>':'<span class="badge badge-red">已禁用</span>')}</td><td>${esc(u.created)}</td><td><button class="btn btn-sm btn-secondary" onclick="openUserModal('${u.id}')">编辑</button>${u.email ? ` <button class="btn btn-sm btn-secondary" onclick="sendPasswordReset('${u.email}')">重发密码</button>` : ''}${u.needsConfirm && u.email ? ` <button class="btn btn-sm btn-secondary" onclick="resendConfirmEmail('${esc(u.email)}')">重发验证邮件</button>` : ''} <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">删除</button></td></tr>`).join('');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">管理员列表</h1><p class="page-desc">${Sync.ready ? '登录账号由 Supabase 托管，密码不写在这份代码里' : '未连接后端，当前只是本机演示名单'}</p></div><button class="btn btn-primary" onclick="openUserModal()">+ 新建账号</button></div>
     ${users.length
-      ? `<div class="card"><div class="table-wrap"><table><thead><tr><th>姓名</th><th>登录邮箱</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div>`
+      ? `<div class="card"><div class="table-wrap"><table><thead><tr><th>姓名</th><th>联系电话</th><th>登录邮箱</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div>`
       : `<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-500);padding:32px">还没有任何账号。点右上角「新建账号」给同事开一个。</div></div>`}
     ${Sync.ready ? `<div style="margin-top:16px;font-size:12px;color:var(--gray-500);line-height:1.8">「重发密码」会给对方邮箱发一封重置邮件。标着<strong>待验证邮箱</strong>的号，对方必须先点邮件里的确认链接才登得进去，收不到就点该行的「重发验证邮件」；他一旦登录成功，这一行会自动变成「启用」。「删除」只把这一行从名单里移除；让对方彻底登不进来，还需到 Supabase 控制台 Authentication → Users 里删掉同名邮箱。</div>` : ''}`;
 }
@@ -6107,6 +6525,7 @@ function openUserModal(id) {
     <div class="form-grid">
       <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${esc(user ? user.name : '')}"></div>
       <div class="form-group"><label class="form-label">角色</label><select class="form-select" id="f_role">${roleList.map(r=>`<option ${user && user.role===r?'selected':''}>${esc(r)}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">联系电话</label><input class="form-input" id="f_phone" value="${esc(user ? (user.phone || '') : '')}" placeholder="车间有疑问时打这个号"><div style="font-size:12px;color:var(--gray-500);margin-top:4px">印在生产工单纸的页眉上，不填就只显示姓名和邮箱</div></div>
       ${user
         ? `<div class="form-group"><label class="form-label">登录邮箱</label><div style="padding:8px 0;color:var(--gray-600)">${esc(user.email||'—')}</div></div>
            <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_active"><option value="true" ${user.active?'selected':''}>启用</option><option value="false" ${!user.active?'selected':''}>禁用</option></select></div>`
@@ -6129,9 +6548,11 @@ function openUserModal(id) {
   `, async () => {
     const name = val('f_name');
     if (!name) { toast('请填写姓名'); return false }
+    const phone = (val('f_phone') || '').trim();
     if (user) {
       user.name = name;
       user.role = val('f_role');
+      user.phone = phone;
       const activeEl = document.getElementById('f_active');
       if (activeEl) user.active = activeEl.value === 'true';
       DM.set('users', users);
@@ -6148,7 +6569,7 @@ function openUserModal(id) {
       const uid = (val('f_uid') || '').trim().toLowerCase();
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(uid)) { toast('UID 要粘控制台里那串 36 位用户 ID（认证 → 用户 → 该行 ⋮ → Copy UUID）'); return false }
       if (users.some(u => String(u.id).toLowerCase() === uid)) { toast('名单里已经有这个 UID 了'); return false }
-      users.push({id:uid, name, email, role:val('f_role'), active:true, created:DM.now()});
+      users.push({id:uid, name, email, phone, role:val('f_role'), active:true, created:DM.now()});
       DM.set('users', users);
       writeLog('补录账号', `${name} <${email}> UID ${uid.slice(0,8)}…`);
       renderPage(currentPageId);
@@ -6157,7 +6578,7 @@ function openUserModal(id) {
     }
     if (!password || password.length < 6) { toast('密码至少 6 位'); return false }
     if (!Sync.ready) {
-      users.push({id:DM.genId('U'), name, email, role:val('f_role'), active:true, created:DM.now()});
+      users.push({id:DM.genId('U'), name, email, phone, role:val('f_role'), active:true, created:DM.now()});
       DM.set('users', users);
       toast('已记录到本机（未连接后端，同事无法登录）'); renderPage(currentPageId);
       return;
@@ -6166,7 +6587,7 @@ function openUserModal(id) {
     try {
       const r = await Sync.signUp(email, password, name);
       if (!r.user) throw new Error('Supabase 没有返回账号');
-      users.push({id:r.user.id, name, email, role:val('f_role'), active:true, needsConfirm:!r.loginable, created:DM.now()});
+      users.push({id:r.user.id, name, email, phone, role:val('f_role'), active:true, needsConfirm:!r.loginable, created:DM.now()});
       DM.set('users', users);
       renderPage(currentPageId);
       if (r.loginable) { toast(email + ' 已可登录'); }
@@ -6226,34 +6647,104 @@ function resetUserPassword(id) {
   });
 }
 
+function permText(p) {
+  const x = parsePerm(p);
+  return x.page && x.page !== '全部' ? x.group + ' → ' + x.page : x.group;
+}
+function rolePermsText(r) {
+  const perms = Array.isArray(r.perms) ? r.perms : [];
+  if (perms.some(p => String(p).trim() === '全部权限')) return '全部权限';
+  return perms.map(permText).join('、') || '（没分配）';
+}
+
 function renderRoles(c) {
-  const roles = DM.get('roles');
+  const roles = DM.get('roles'), users = DM.get('users');
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">角色管理</h1><p class="page-desc">权限角色配置</p></div></div>
-    <div class="card"><div class="table-wrap"><table><thead><tr><th>角色</th><th>权限范围</th><th>操作</th></tr></thead>
-    <tbody>${roles.map(r=>`<tr><td class="td-name">${esc(r.name)}</td><td>${r.perms.join('、')}</td><td><button class="btn btn-sm btn-secondary" onclick="editRole('${r.id}')">编辑权限</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    <div class="page-header"><div><h1 class="page-title">角色管理</h1><p class="page-desc">角色决定这个人登录后左侧能看到哪些菜单：勾整组＝这一组页面全能看，只勾一页＝只看得到这一页。
+      「生产」这一档只给了 订单管理 → 生产工单，车间同事看不到金额和客户联系方式。<strong>这是后台菜单层的限制，不是数据库隔离</strong>——要防人到库里翻数据，得在 Supabase 上按角色配权限。</p></div>
+      <div style="white-space:nowrap;flex-shrink:0"><button class="btn btn-primary" onclick="editRole('')">新增角色</button></div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>角色</th><th>权限范围</th><th>在用账号</th><th>操作</th></tr></thead>
+    <tbody>${roles.map(r=>`<tr><td class="td-name">${esc(r.name)}</td><td>${esc(rolePermsText(r))}</td><td style="white-space:nowrap">${users.filter(u => (u.role||'').trim() === String(r.name||'').trim()).length} 个</td><td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="editRole('${r.id}')">编辑权限</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 function editRole(id) {
   const roles = DM.get('roles');
-  const r = roles.find(x => x.id === id);
+  const r = id ? roles.find(x => x.id === id) : { id: '', name: '', perms: [] };
   if (!r) return;
-  const allPerms = ['线索管理','外勤管理','报价管理','订单管理','商品管理','内容管理','媒体库','表单管理','案例','政策','数据看板','系统设置','管理员管理'];
-  showModal('编辑权限 - ' + r.name, `
-    <div class="form-group"><label class="form-label">角色名称</label><input class="form-input" id="f_role_name" value="${esc(r.name)}"></div>
-    <div class="form-group full"><label class="form-label">权限范围</label>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">
-        ${allPerms.map(p=>`<label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" class="role-perm-cb" value="${esc(p)}" ${r.perms.includes(p)||r.perms[0]==='全部权限'?'checked':''}> ${esc(p)}</label>`).join('')}
-      </div>
+  const perms = Array.isArray(r.perms) ? r.perms : [];
+  const full = perms.some(p => String(p).trim() === '全部权限');
+  const hasGroup = g => perms.some(p => { const x = parsePerm(p); return x.group === g && (!x.page || x.page === '全部'); });
+  const hasPage = (g, l) => perms.some(p => { const x = parsePerm(p); return x.group === g && x.page === l; });
+  showModal(r.id ? '编辑权限 - ' + r.name : '新增角色', `
+    <div class="form-group"><label class="form-label">角色名称 *</label><input class="form-input" id="f_role_name" value="${esc(r.name || '')}" placeholder="如：生产"></div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
+      <input type="checkbox" id="f_role_all" ${full ? 'checked' : ''} onchange="roleAllToggle(this)"> 全部权限（超级管理员用，勾了这条下面不用再逐个勾）</label>
+    <div id="rolePermBox" style="margin-top:12px${full ? ';opacity:.45;pointer-events:none' : ''}">
+      ${MENU.map((g, i) => {
+        const whole = full || hasGroup(g.label);
+        return `<div class="card" style="margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <label style="flex:1;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700">
+              <input type="checkbox" class="role-group-cb" data-group="${esc(g.label)}" ${whole ? 'checked' : ''} onchange="roleGroupToggle(this)"> ${esc(g.label)}
+              <span style="font-weight:400;color:var(--gray-500);font-size:12px">${whole ? '整组' : g.children.length + ' 页'}</span>
+            </label>
+            <button class="btn btn-sm btn-secondary" id="role-fold-${i}" onclick="roleGroupFold(${i})">展开</button>
+          </div>
+          <div class="role-pages" id="role-pages-${i}" style="display:none;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:8px">
+            ${g.children.map(ch => `<label style="display:flex;align-items:center;gap:6px;font-size:13px">
+              <input type="checkbox" class="role-page-cb" data-group="${esc(g.label)}" value="${esc(ch.label)}" ${(whole || hasPage(g.label, ch.label)) ? 'checked' : ''} ${whole ? 'disabled' : ''}> ${esc(ch.label)}
+            </label>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
     </div>
-  `, () => {
-    const name = val('f_role_name');
-    if (!name) { toast('请填写角色名称'); return; }
-    const checked = [...document.querySelectorAll('.role-perm-cb:checked')].map(cb=>cb.value);
-    r.name = name; r.perms = checked.length ? checked : ['无'];
-    DM.set('roles', roles);
-    toast('权限已更新'); renderPage(currentPageId);
+  `, () => saveRole(r, roles));
+}
+
+function roleAllToggle(cb) {
+  const box = document.getElementById('rolePermBox');
+  box.style.opacity = cb.checked ? '.45' : '';
+  box.style.pointerEvents = cb.checked ? 'none' : '';
+}
+function roleGroupToggle(cb) {
+  document.querySelectorAll('.role-page-cb[data-group="' + cb.dataset.group + '"]').forEach(x => {
+    x.checked = cb.checked; x.disabled = cb.checked;
   });
+}
+function roleGroupFold(i) {
+  const box = document.getElementById('role-pages-' + i);
+  const btn = document.getElementById('role-fold-' + i);
+  const open = box.style.display !== 'none';
+  box.style.display = open ? 'none' : 'grid';
+  btn.textContent = open ? '展开' : '收起';
+}
+
+function saveRole(r, roles) {
+  const name = String(val('f_role_name') || '').trim();
+  if (!name) { toast('请填写角色名称'); return false }
+  if (roles.some(x => x !== r && String(x.name || '').trim() === name)) { toast('已经有同名角色了'); return false }
+  const perms = [];
+  if (document.getElementById('f_role_all').checked) perms.push('全部权限');
+  else MENU.forEach(g => {
+    const gb = document.querySelector('.role-group-cb[data-group="' + g.label + '"]');
+    if (gb && gb.checked) { perms.push(g.label); return }
+    [...document.querySelectorAll('.role-page-cb[data-group="' + g.label + '"]:checked')]
+      .forEach(cb => perms.push(g.label + '(' + cb.value + ')'));
+  });
+  const isNew = !r.id;
+  if (isNew) { r.id = DM.genId('R'); roles.push(r) }
+  r.name = name;
+  r.perms = perms.length ? perms : ['无'];
+  DM.set('roles', roles);
+  writeLog(isNew ? '新增角色' : '改角色权限', name + '｜' + rolePermsText(r));
+  renderSidebar();
+  if (!canSee(currentPageId)) {
+    const land = firstAllowedPage();
+    if (land) navigateTo(land.id, land.group, land.label); else showNoPerm();
+  }
+  toast(!perms.length ? '已存为「' + name + '」，但这个角色没勾任何页面，登录后什么都看不到'
+    : (isNew ? '已新增角色「' + name + '」' : '「' + name + '」权限已更新'));
+  renderPage(currentPageId);
 }
 
 function renderLogs(c) {
@@ -6684,6 +7175,8 @@ async function bootAdmin() {
   // 「设计」这一档已并入「主管」，老数据里的名字开机时统一换掉（改过就是空转）
   const roleFixed = migrateRoleDesignerToSupervisor();
   if (roleFixed) toast(`角色「设计」已改名为「主管」，动了 ${roleFixed} 处`);
+  // 车间那档角色（只看生产工单）——老库里没有就补一条
+  if (ensureProductionRole()) toast('已新增角色「生产」：只给 订单管理 → 生产工单');
   // 云端还没人建过的字典（盒型/材质/印刷/工艺…）刚被 seedData 补上默认值，
   // 现在静音已解除，把它们推上服务器，同事登录后拿到的就是同一份选项。
   if (ok && DICT_HEALED.length) {
@@ -6691,8 +7184,8 @@ async function bootAdmin() {
     DICT_HEALED.length = 0;
   }
   renderSidebar();
-  navigateTo('dashboard-overview', '数据看板', '概览');
-  toggleGroup('dashboard');
+  const land = firstAllowedPage();
+  if (land) { navigateTo(land.id, land.group, land.label); toggleGroup(land.groupId) } else showNoPerm();
   Sync.badge();
   paintUser();
   startSessionGuard();
