@@ -1652,6 +1652,26 @@ function localDate(d) {
   return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
 }
 
+// 单号统一格式（他 2026-10-23 定）：前缀-JL + 本地年月日时 + 4 位防伪码，例 QT-JL26102309-4KX8。
+// 时分不进号里（他说带分钟太长）：精确时间看单据自己的「日期/时间」栏，列表也按那栏排，号只管唯一和好看。
+// 防伪码同时兼作防撞：同一小时里两台电脑各建一张，号也不会撞——同号的话后存的会把先存的顶掉，
+// 而且按号找单只返回第一张，第二张等于悄悄丢了，那种事故查起来最费劲。
+// 码里不用 0/O/1/I：电话里念单号不会念错；字母表正好 32 个，取模不偏。
+const DOC_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+function docCode(n) {
+  let rnd;
+  try { rnd = new Uint32Array(n); crypto.getRandomValues(rnd) } catch (e) { rnd = Array.from({ length: n }, () => Math.floor(Math.random() * 4294967296)) }
+  return Array.from(rnd, v => DOC_CODE_CHARS[v % DOC_CODE_CHARS.length]).join('');
+}
+function genDocId(prefix, coll) {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const base = prefix + '-JL' + String(d.getFullYear()).slice(2) + p(d.getMonth() + 1) + p(d.getDate()) + p(d.getHours());
+  const used = new Set(DM.get(coll).map(x => String(x.id || '')));
+  let id;
+  do { id = base + '-' + docCode(4) } while (used.has(id));
+  return id;
+}
+
 function dayCounts(items, days, getDate) {
   const out = [];
   const base = new Date(); base.setHours(0, 0, 0, 0);
@@ -1937,7 +1957,7 @@ function convertLeadToQuote(l) {
   }
   const t = quoteTotals(l.quantity, unitPrice);
   const quotes = DM.get('quotes');
-  const q = {id:DM.genId('QT'), leadId:l.id, customer:l.company||l.name, contact:[l.name,l.email||l.phone].filter(Boolean).join(' / '),
+  const q = {id:genDocId('QT', 'quotes'), leadId:l.id, customer:l.company||l.name, contact:[l.name,l.email||l.phone].filter(Boolean).join(' / '),
              product:bt, size:l.size, material:l.material, gsm:l.gsm, printing:l.printing, finish:l.finishing,
              note:l.notes||'', quantity:l.quantity, unitPrice, subtotal:t.subtotal, sst:t.sst, total:t.total,
              status:'draft', date:localDate(),
@@ -2624,7 +2644,7 @@ function generateQuote(status) {
   if (own.bad) { toast('本单的 SST 税率 / 定金比例请填 0 到 100 之间的数字'); return; }
   const t = quoteTotals(quantity, unitPrice, { die: val('q_die'), plate: val('q_plate') }, own.sstRate);
   const q = {
-    id: DM.genId('QT'),
+    id: genDocId('QT', 'quotes'),
     leadId: (val('q_lead') || '').split(' - ')[0],
     customer, contact: val('q_contact'), product,
     size: val('q_size'), material: val('q_material'), gsm: val('q_gsm'), printing: val('q_printing'), finish: readFinish('q_finish'),
@@ -3117,7 +3137,7 @@ function contractFromQuote(q) {
   const dep = +(total * pct / 100).toFixed(2);
   const cust = DM.get('customers').find(c => normCompany(c.company) === normCompany(q.customer));
   return {
-    id: DM.genId('CT'), quoteId: q.id, status: 'draft',
+    id: genDocId('CT', 'contracts'), quoteId: q.id, status: 'draft',
     customer: q.customer || '', contact: q.contact || '', addr: (cust && cust.addr) || '',
     product: q.product || '', size: q.size || '', material: q.material || '', gsm: q.gsm || '',
     printing: q.printing || '', finish: q.finish || '', note: q.note || '',
@@ -3412,7 +3432,7 @@ function openOrderModal(o, prefill) {
       writeLog('编辑订单', o.id + ' ' + o.customer);
     } else {
       od = Object.assign({
-        id: DM.genId('OD'), quoteId: d.quoteId || '', depositPaid: false, productionStatus: st,
+        id: genDocId('OD', 'orders'), quoteId: d.quoteId || '', depositPaid: false, productionStatus: st,
         creator: whoami(), created: DM.now()
       }, fields);
       orders.push(od);
@@ -3452,7 +3472,7 @@ function addPendingPayments(od) {
   const payments = DM.get('payments');
   const site = docVal('settings_site');
   const mk = (type, typeLabel, amount) => ({
-    id: DM.genId('PAY'), orderId: od.id, orderNo: od.id, customer: od.customer,
+    id: genDocId('PAY', 'payments'), orderId: od.id, orderNo: od.id, customer: od.customer,
     type, typeLabel, amount: +amount.toFixed(2), method: '银行转账',
     bankName: '', accountNo: '', accountName: site.enName || '', date: '', receiptNo: '',
     status: 'pending', note: '待客户付款', creator: whoami(), created: DM.now()
@@ -4050,7 +4070,7 @@ function openPaymentModal(orderId, type, payId) {
       note: (document.getElementById('p_note') || {}).value?.trim() || ''
     };
     if (p) Object.assign(p, data);
-    else payments.push(Object.assign({ id: DM.genId('PAY'), creator: whoami(), created: DM.now() }, data));
+    else payments.push(Object.assign({ id: genDocId('PAY', 'payments'), creator: whoami(), created: DM.now() }, data));
     DM.set('payments', payments);
     syncOrderMoney(order);
     writeLog('登记收款', `${order.id} ${typeLabel} RM ${money2(amount)}（${val('p_status')}）`);
