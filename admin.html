@@ -2246,7 +2246,7 @@ function renderQuotesList(c) {
       const handoff = od
         ? `<button class="btn btn-sm btn-secondary" onclick="viewOrder('${od.id}')">查看订单</button>`
         : (q.status === 'draft' || q.status === 'rejected' ? '' : `<button class="btn btn-sm btn-primary" onclick="convertQuoteToOrder('${q.id}')">转订单</button>`);
-      return `<tr><td class="td-id">${esc(q.id)}${hasCustomTerms(q) ? ' ' + customTermsBadge() : ''}</td><td class="td-name">${esc(q.customer)}</td><td>${esc(q.product)}</td><td>${esc(q.quantity)}</td><td>${money2(q.total)}</td><td>${money2(q.sst)}${rate !== quoteFinance().sstRate ? ` <span style="font-size:11px;color:var(--gray-500)">@${rate}%</span>` : ''}</td><td style="white-space:nowrap">${statusBadge(q.status)}</td><td style="white-space:nowrap">${ctCell}</td><td style="white-space:nowrap">${esc(q.validUntil)}</td><td style="white-space:nowrap">${q.status==='draft'?`<button class="btn btn-sm btn-primary" onclick="markQuoteSent('${q.id}')">发出</button> `:''}${accept}<button class="btn btn-sm btn-secondary" onclick="viewQuote('${q.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="editQuote('${q.id}')">编辑</button> <button class="btn btn-sm btn-secondary" onclick="printQuote('${q.id}')">打印</button> ${handoff}</td></tr>`;
+      return `<tr><td class="td-id">${esc(q.id)}${hasCustomTerms(q) ? ' ' + customTermsBadge() : ''}</td><td class="td-name">${esc(q.customer)}</td><td>${esc(q.product)}</td><td>${esc(q.quantity)}</td><td>${money2(q.total)}</td><td>${money2(q.sst)}${rate !== quoteFinance().sstRate ? ` <span style="font-size:11px;color:var(--gray-500)">@${rate}%</span>` : ''}</td><td style="white-space:nowrap">${statusBadge(q.status)}</td><td style="white-space:nowrap">${ctCell}</td><td style="white-space:nowrap">${esc(q.validUntil)}</td><td style="white-space:nowrap">${q.status==='draft'?`<button class="btn btn-sm btn-primary" onclick="markQuoteSent('${q.id}')">发出</button> `:''}${accept}<button class="btn btn-sm btn-secondary" onclick="viewQuote('${q.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="editQuote('${q.id}')">编辑</button> <button class="btn btn-sm btn-secondary" onclick="printQuote('${q.id}')">打印</button> ${handoff} <button class="btn btn-sm btn-danger" onclick="delQuote('${q.id}')">删除</button></td></tr>`;
     }).join('')}</tbody></table></div></div>`;
 }
 
@@ -3151,6 +3151,78 @@ function contractFromQuote(q) {
 }
 const liveContractOf = qid => DM.get('contracts').find(c => c.quoteId === qid && c.status !== 'void') || null;
 
+// 报价 → 合同 → 订单/工单 → 收款是一条链：删上面的一定带走下面的。
+// 所以确认框里必须把「会一起删掉哪几张单、里面有多少已经到账的钱」列全，
+// 不能只问一句「确定删除？」——测试单和真单长得一模一样，靠人脑记不住这条链。
+const chainMoney = list => money2(list.reduce((s, x) => s + (Number(x.amount != null ? x.amount : x.total) || 0), 0));
+function quoteChain(qid) {
+  const cts = DM.get('contracts').filter(c => c.quoteId === qid);
+  const ods = DM.get('orders').filter(o => o.quoteId === qid);
+  const ids = ods.map(o => o.id);
+  const pays = DM.get('payments').filter(p => ids.includes(p.orderId));
+  return { cts, ods, pays };
+}
+function paidWarnLine(pays) {
+  const paid = pays.filter(p => p.status === 'confirmed');
+  if (!paid.length) return '';
+  return `\n\n⚠ 其中 ${paid.length} 笔是「已到账」，共 RM ${chainMoney(paid)}。这是客户真付过的钱就别删；只想清掉重复登记的话，去「订单管理 → 全部订单 → 详情 → 收款记录」里把那几笔删掉，别删整张单。`;
+}
+function delQuote(id) {
+  const quotes = DM.get('quotes');
+  const q = quotes.find(x => x.id === id);
+  if (!q) { toast('找不到这张报价单'); return }
+  const { cts, ods, pays } = quoteChain(id);
+  let m = `确定删除报价单 ${q.id}？\n${q.customer || '—'} · ${q.product || '—'} · RM ${money2(q.total)}`;
+  if (!cts.length && !ods.length && !pays.length) m += '\n\n这张单还没生成过合同或订单，删掉就没了。';
+  else {
+    m += '\n\n这张单下面还挂着，会一起删掉、不留底：';
+    if (cts.length) m += `\n· 合同 ${cts.length} 份（${cts.map(c => c.id).join('、')}）`;
+    if (ods.length) m += `\n· 订单/工单 ${ods.length} 张（${ods.map(o => o.id).join('、')}）`;
+    if (pays.length) m += `\n· 收款 ${pays.length} 笔，共 RM ${chainMoney(pays)}`;
+    const assetN = ods.reduce((s, o) => s + ((o.assets || []).length), 0);
+    if (assetN) m += `\n· 客户素材 ${assetN} 个文件（文件本身还留在服务器上，要连文件一起清得先进每张单把素材「摘除」）`;
+    m += paidWarnLine(pays);
+  }
+  if (!confirm(m)) return;
+  const orderIds = ods.map(o => o.id);
+  DM.set('contracts', DM.get('contracts').filter(c => c.quoteId !== id));
+  DM.set('orders', DM.get('orders').filter(o => o.quoteId !== id));
+  DM.set('payments', DM.get('payments').filter(p => !orderIds.includes(p.orderId)));
+  DM.set('quotes', quotes.filter(x => x.id !== id));
+  writeLog('删除报价', `${q.id} ${q.customer || '—'} RM ${money2(q.total)}（连带 ${cts.length} 合同 / ${ods.length} 订单 / ${pays.length} 收款）`);
+  closeModal(); toast('已删除'); renderPage(currentPageId);
+}
+function delContract(id) {
+  const contracts = DM.get('contracts');
+  const ct = contracts.find(x => x.id === id);
+  if (!ct) { toast('找不到这份合同'); return }
+  const od = DM.get('orders').find(o => o.quoteId === ct.quoteId);
+  let m = `确定删除合同 ${ct.id}？\n${ct.customer || '—'} · RM ${money2(ct.total)}（${CT_STATUS[ct.status] || ct.status}）`;
+  if (od) m += `\n\n这张单已经转过订单 ${od.id}：删合同不动订单，但「已签合同」这张凭证就没了。`;
+  if (ct.status === 'signed') m += `\n\n这份是「已签署」的，客户签回的文件链接也一起没了。已签的合同一般别删。`;
+  if (!confirm(m)) return;
+  DM.set('contracts', contracts.filter(x => x.id !== id));
+  writeLog('删除合同', `${ct.id} ${ct.customer || '—'} RM ${money2(ct.total)}（${CT_STATUS[ct.status] || ct.status}）`);
+  closeModal(); toast('已删除'); renderPage(currentPageId);
+}
+function delOrder(id) {
+  const orders = DM.get('orders');
+  const o = orders.find(x => x.id === id);
+  if (!o) { toast('找不到这张订单'); return }
+  const pays = DM.get('payments').filter(p => p.orderId === id);
+  let m = `确定删除订单/工单 ${o.id}？\n${o.customer || '—'} · ${o.product || '—'} · RM ${money2(o.amount)}`;
+  if (pays.length) m += `\n\n这张单下面有 ${pays.length} 笔收款（共 RM ${chainMoney(pays)}），会一起删掉。` + paidWarnLine(pays);
+  if (o.shipDate) m += `\n⚠ 这张已经发货（${o.shipDate}${o.trackingNo ? '，快递单号 ' + o.trackingNo : ''}）。`;
+  if (o.prodAckAt) m += `\n⚠ 生产部 ${o.prodAckBy || ''} 已经接过这张单（${o.prodAckAt}），删了工单纸就没了。`;
+  const assetN = (o.assets || []).length;
+  if (assetN) m += `\n这张单挂了 ${assetN} 个客户素材文件：删订单不会删服务器上的那份文件。要连文件一起清，先在这张单的详情里把它们逐个「摘除」（那一步才删得掉文件），再回来删订单。`;
+  if (!confirm(m)) return;
+  DM.set('orders', orders.filter(x => x.id !== id));
+  DM.set('payments', DM.get('payments').filter(p => p.orderId !== id));
+  writeLog('删除订单', `${o.id} ${o.customer || '—'} RM ${money2(o.amount)}（连带 ${pays.length} 笔收款）`);
+  closeModal(); toast('已删除'); renderPage(currentPageId);
+}
+
 function newContractFromQuote(qid) {
   const q = DM.get('quotes').find(x => x.id === qid);
   if (!q) { toast('找不到这张报价单'); return }
@@ -3215,7 +3287,7 @@ function renderContracts(c) {
       <td style="white-space:nowrap">${x.signFile ? `<a href="${safeHref(x.signFile)}" target="_blank" rel="noopener">查看</a> <button class="btn btn-sm btn-secondary" onclick="uploadContractSign('${esc(x.id)}')">替换</button>` : `<button class="btn btn-sm btn-secondary" onclick="uploadContractSign('${esc(x.id)}')">上传</button>`}</td>
       <td style="white-space:nowrap">${esc(x.signDate || '—')}</td>
       <td class="td-id">${od ? esc(od.id) : '—'}</td>
-      <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="openContractView('${esc(x.id)}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="previewContract('${esc(x.id)}')">预览</button> ${handoff}</td></tr>`;
+      <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="openContractView('${esc(x.id)}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="previewContract('${esc(x.id)}')">预览</button> ${handoff} <button class="btn btn-sm btn-danger" onclick="delContract('${esc(x.id)}')">删除</button></td></tr>`;
     }).join('') : `<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--gray-400)">${all.length ? '没有符合条件的合同' : '还没有合同。到「报价管理 → 报价单」，客户接受报价后点「生成合同」'}</td></tr>`}</tbody></table></div>
     <div class="pagination"><span>共 ${rows.length} 份${rows.length !== all.length ? `（已筛选，总计 ${all.length} 份）` : ''} · 已签署 ${all.filter(x => x.status === 'signed').length} 份</span></div></div>`;
 }
@@ -3356,7 +3428,7 @@ function renderOrdersList(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">全部订单</h1><p class="page-desc">${orders.length ? `共 ${orders.length} 张，金额合计 RM ${money2(total)}。报价客户确认后到「报价管理 → 报价单」点「转订单」` : '还没有订单。到「报价管理 → 报价单」把已发出的报价点「转订单」，或直接点右上角新建'}</p></div><button class="btn btn-primary" onclick="openOrderModal()">+ 新建订单</button></div>
     <div class="card"><div class="table-wrap"><table style="min-width:1060px"><thead><tr><th>订单号</th><th>客户</th><th>产品</th><th>金额(RM)</th><th>已收(RM)</th><th>生产状态</th><th>预计交货</th><th>负责人</th><th>操作</th></tr></thead>
-    <tbody>${orders.length ? orders.map(o => `<tr><td class="td-id" style="white-space:nowrap">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${esc(o.product||'')}</td><td style="white-space:nowrap">${money2(o.amount)}</td><td style="white-space:nowrap">${money2(orderReceived(o))}</td><td style="white-space:nowrap">${productionBadge(o.productionStatus)}</td><td style="white-space:nowrap">${esc(o.deliveryDate||'')}</td><td style="white-space:nowrap">${esc(o.assignee)||'<span style="color:var(--gray-400)">未分配</span>'}</td><td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button> <button class="btn btn-sm btn-secondary" onclick="editOrder('${o.id}')">编辑</button> ${o.shipDate ? `<button class="btn btn-sm btn-secondary" onclick="shipOrder('${o.id}')">物流</button>` : `<button class="btn btn-sm btn-primary" onclick="shipOrder('${o.id}')">发货</button>`}</td></tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--gray-400)">暂无订单</td></tr>'}</tbody></table></div></div>`;
+    <tbody>${orders.length ? orders.map(o => `<tr><td class="td-id" style="white-space:nowrap">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${esc(o.product||'')}</td><td style="white-space:nowrap">${money2(o.amount)}</td><td style="white-space:nowrap">${money2(orderReceived(o))}</td><td style="white-space:nowrap">${productionBadge(o.productionStatus)}</td><td style="white-space:nowrap">${esc(o.deliveryDate||'')}</td><td style="white-space:nowrap">${esc(o.assignee)||'<span style="color:var(--gray-400)">未分配</span>'}</td><td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button> <button class="btn btn-sm btn-secondary" onclick="editOrder('${o.id}')">编辑</button> ${o.shipDate ? `<button class="btn btn-sm btn-secondary" onclick="shipOrder('${o.id}')">物流</button>` : `<button class="btn btn-sm btn-primary" onclick="shipOrder('${o.id}')">发货</button>`} <button class="btn btn-sm btn-danger" onclick="delOrder('${o.id}')">删除</button></td></tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--gray-400)">暂无订单</td></tr>'}</tbody></table></div></div>`;
 }
 
 function editOrder(id) {
