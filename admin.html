@@ -1101,6 +1101,29 @@ function canSee(pageId) {
   const a = allowedPages();
   return !a || a.has(pageId);
 }
+// 能力权限：不给页面，只放开某个动作。「删除单据」＝报价单/合同/订单列表上那个红色「删除」，
+// 还有收款记录里的「删除这笔收款」——点一下会连带把下面的单子、已经记到账的钱一起带走，
+// 所以单独列一项、默认谁都不勾。
+const ROLE_CAPS = [{
+  key: '删除单据',
+  hint: '报价单 / 合同 / 订单列表上那个红色「删除」按钮，还有收款记录里的「删除这笔收款」。不勾的角色看不到这几个按钮。'
+}];
+const isCapPerm = p => ROLE_CAPS.some(c => c.key === String(p).trim());
+// 这里故意和上面的 allowedPages 反着来：账号在「管理员列表」里没挂角色＝不给删。
+// 这一项防的就是误操作，漏配角色时宁可按钮消失，也别让谁都点得动。
+// 还是界面层的闸——按 F12 直接调 delQuote() 拦不住，真隔离得在 Supabase 上按角色配 RLS。
+function hasPerm(cap) {
+  const role = myRoleRow();
+  if (!role) return false;
+  const perms = Array.isArray(role.perms) ? role.perms : [];
+  return perms.some(p => { const s = String(p).trim(); return s === '全部权限' || s === cap; });
+}
+function canDeleteDocs() { return hasPerm('删除单据'); }
+// 按钮没了得告诉他去哪儿开，别让人以为系统坏了
+function delGuardHint() {
+  return canDeleteDocs() ? ''
+    : ' <span style="color:var(--gray-500)">你的角色没勾「删除单据」，所以这张列表上看不到红色「删除」。要放开请让超级管理员到「系统设置 → 角色管理 → 编辑权限」里的「能力权限」勾给你，或在「管理员列表」把你的账号挂到对的角色上。</span>';
+}
 function firstAllowedPage() {
   const a = allowedPages();
   for (const g of MENU) for (const c of g.children) {
@@ -2231,8 +2254,9 @@ function renderFollowUp(c) {
 function renderQuotesList(c) {
   const quotes = DM.get('quotes');
   const orders = DM.get('orders');
+  const canDel = canDeleteDocs();
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">报价单</h1><p class="page-desc">流程：报价发出 → 客户接受 → 签合同 → 转订单 → 生产工单。客户点头后点「客户接受」，再点「生成合同」出电子档合同</p></div><button class="btn btn-primary" onclick="navigateTo('quotes-new','报价管理','新建报价')">+ 新建报价</button></div>
+    <div class="page-header"><div><h1 class="page-title">报价单</h1><p class="page-desc">流程：报价发出 → 客户接受 → 签合同 → 转订单 → 生产工单。客户点头后点「客户接受」，再点「生成合同」出电子档合同${delGuardHint()}</p></div><button class="btn btn-primary" onclick="navigateTo('quotes-new','报价管理','新建报价')">+ 新建报价</button></div>
     <div class="card"><div class="table-wrap"><table style="min-width:1240px"><thead><tr><th>报价单号</th><th>客户</th><th>产品</th><th>数量</th><th>合计(RM)</th><th>SST</th><th>状态</th><th>合同</th><th>有效期</th><th>操作</th></tr></thead>
     <tbody>${quotes.map(q=>{
       const od = orders.find(o => o.quoteId === q.id);
@@ -2246,7 +2270,7 @@ function renderQuotesList(c) {
       const handoff = od
         ? `<button class="btn btn-sm btn-secondary" onclick="viewOrder('${od.id}')">查看订单</button>`
         : (q.status === 'draft' || q.status === 'rejected' ? '' : `<button class="btn btn-sm btn-primary" onclick="convertQuoteToOrder('${q.id}')">转订单</button>`);
-      return `<tr><td class="td-id">${esc(q.id)}${hasCustomTerms(q) ? ' ' + customTermsBadge() : ''}</td><td class="td-name">${esc(q.customer)}</td><td>${esc(q.product)}</td><td>${esc(q.quantity)}</td><td>${money2(q.total)}</td><td>${money2(q.sst)}${rate !== quoteFinance().sstRate ? ` <span style="font-size:11px;color:var(--gray-500)">@${rate}%</span>` : ''}</td><td style="white-space:nowrap">${statusBadge(q.status)}</td><td style="white-space:nowrap">${ctCell}</td><td style="white-space:nowrap">${esc(q.validUntil)}</td><td style="white-space:nowrap">${q.status==='draft'?`<button class="btn btn-sm btn-primary" onclick="markQuoteSent('${q.id}')">发出</button> `:''}${accept}<button class="btn btn-sm btn-secondary" onclick="viewQuote('${q.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="editQuote('${q.id}')">编辑</button> <button class="btn btn-sm btn-secondary" onclick="printQuote('${q.id}')">打印</button> ${handoff} <button class="btn btn-sm btn-danger" onclick="delQuote('${q.id}')">删除</button></td></tr>`;
+      return `<tr><td class="td-id">${esc(q.id)}${hasCustomTerms(q) ? ' ' + customTermsBadge() : ''}</td><td class="td-name">${esc(q.customer)}</td><td>${esc(q.product)}</td><td>${esc(q.quantity)}</td><td>${money2(q.total)}</td><td>${money2(q.sst)}${rate !== quoteFinance().sstRate ? ` <span style="font-size:11px;color:var(--gray-500)">@${rate}%</span>` : ''}</td><td style="white-space:nowrap">${statusBadge(q.status)}</td><td style="white-space:nowrap">${ctCell}</td><td style="white-space:nowrap">${esc(q.validUntil)}</td><td style="white-space:nowrap">${q.status==='draft'?`<button class="btn btn-sm btn-primary" onclick="markQuoteSent('${q.id}')">发出</button> `:''}${accept}<button class="btn btn-sm btn-secondary" onclick="viewQuote('${q.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="editQuote('${q.id}')">编辑</button> <button class="btn btn-sm btn-secondary" onclick="printQuote('${q.id}')">打印</button> ${handoff}${canDel ? ` <button class="btn btn-sm btn-danger" onclick="delQuote('${q.id}')">删除</button>` : ''}</td></tr>`;
     }).join('')}</tbody></table></div></div>`;
 }
 
@@ -3168,11 +3192,14 @@ function paidWarnLine(pays) {
   return `\n\n⚠ 其中 ${paid.length} 笔是「已到账」，共 RM ${chainMoney(paid)}。这是客户真付过的钱就别删；只想清掉重复登记的话，去「订单管理 → 全部订单 → 详情 → 收款记录」里把那几笔删掉，别删整张单。`;
 }
 function delQuote(id) {
+  if (!canDeleteDocs()) { toast('你的角色没有「删除单据」权限'); return }
   const quotes = DM.get('quotes');
   const q = quotes.find(x => x.id === id);
   if (!q) { toast('找不到这张报价单'); return }
   const { cts, ods, pays } = quoteChain(id);
   let m = `确定删除报价单 ${q.id}？\n${q.customer || '—'} · ${q.product || '—'} · RM ${money2(q.total)}`;
+  // 客户签认与否只当第二道提醒，不当门禁——有没有权删由「删除单据」那一项说了算
+  if (q.status === 'accepted' || q.status === 'approved') m += `\n⚠ 这是客户已签认的单（${statusLabel(q.status)}），删了客户那边不会有任何提醒。`;
   if (!cts.length && !ods.length && !pays.length) m += '\n\n这张单还没生成过合同或订单，删掉就没了。';
   else {
     m += '\n\n这张单下面还挂着，会一起删掉、不留底：';
@@ -3193,6 +3220,7 @@ function delQuote(id) {
   closeModal(); toast('已删除'); renderPage(currentPageId);
 }
 function delContract(id) {
+  if (!canDeleteDocs()) { toast('你的角色没有「删除单据」权限'); return }
   const contracts = DM.get('contracts');
   const ct = contracts.find(x => x.id === id);
   if (!ct) { toast('找不到这份合同'); return }
@@ -3206,6 +3234,7 @@ function delContract(id) {
   closeModal(); toast('已删除'); renderPage(currentPageId);
 }
 function delOrder(id) {
+  if (!canDeleteDocs()) { toast('你的角色没有「删除单据」权限'); return }
   const orders = DM.get('orders');
   const o = orders.find(x => x.id === id);
   if (!o) { toast('找不到这张订单'); return }
@@ -3265,10 +3294,11 @@ function setCtFilter(v) { ctFs = v; renderPage(currentPageId) }
 function renderContracts(c) {
   const all = DM.get('contracts');
   const quotes = DM.get('quotes'), orders = DM.get('orders');
+  const canDel = canDeleteDocs();
   const rows = all.filter(x => (!ctQ || `${x.id} ${x.customer || ''} ${x.quoteId || ''} ${x.product || ''}`.toLowerCase().includes(ctQ)) && (!ctFs || x.status === ctFs));
   const wait = quotesAwaitingContract().length;
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">合同</h1><p class="page-desc">客户同意价格后生成电子档合同，签回再转订单走生产工单${wait ? `。现在有 <b style="color:var(--primary)">${wait}</b> 张报价待签合同` : ''}</p></div>
+    <div class="page-header"><div><h1 class="page-title">合同</h1><p class="page-desc">客户同意价格后生成电子档合同，签回再转订单走生产工单${wait ? `。现在有 <b style="color:var(--primary)">${wait}</b> 张报价待签合同` : ''}${delGuardHint()}</p></div>
       <div style="display:flex;gap:8px"><button class="btn btn-secondary" onclick="pickQuoteForContract()">从报价单生成</button><button class="btn btn-primary" onclick="navigateTo('quotes-list','报价管理','报价单')">去报价单</button></div></div>
     <div class="toolbar"><div class="search"><input placeholder="搜索合同号/客户/报价号..." oninput="setCtSearch(this.value)" value="${esc(ctQ)}"></div>
       <select onchange="setCtFilter(this.value)"><option value="">全部状态</option>${Object.keys(CT_STATUS).map(s => `<option value="${s}"${s === ctFs ? ' selected' : ''}>${CT_STATUS[s]}</option>`).join('')}</select>
@@ -3287,7 +3317,7 @@ function renderContracts(c) {
       <td style="white-space:nowrap">${x.signFile ? `<a href="${safeHref(x.signFile)}" target="_blank" rel="noopener">查看</a> <button class="btn btn-sm btn-secondary" onclick="uploadContractSign('${esc(x.id)}')">替换</button>` : `<button class="btn btn-sm btn-secondary" onclick="uploadContractSign('${esc(x.id)}')">上传</button>`}</td>
       <td style="white-space:nowrap">${esc(x.signDate || '—')}</td>
       <td class="td-id">${od ? esc(od.id) : '—'}</td>
-      <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="openContractView('${esc(x.id)}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="previewContract('${esc(x.id)}')">预览</button> ${handoff} <button class="btn btn-sm btn-danger" onclick="delContract('${esc(x.id)}')">删除</button></td></tr>`;
+      <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="openContractView('${esc(x.id)}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="previewContract('${esc(x.id)}')">预览</button> ${handoff}${canDel ? ` <button class="btn btn-sm btn-danger" onclick="delContract('${esc(x.id)}')">删除</button>` : ''}</td></tr>`;
     }).join('') : `<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--gray-400)">${all.length ? '没有符合条件的合同' : '还没有合同。到「报价管理 → 报价单」，客户接受报价后点「生成合同」'}</td></tr>`}</tbody></table></div>
     <div class="pagination"><span>共 ${rows.length} 份${rows.length !== all.length ? `（已筛选，总计 ${all.length} 份）` : ''} · 已签署 ${all.filter(x => x.status === 'signed').length} 份</span></div></div>`;
 }
@@ -3425,10 +3455,11 @@ function orderReceived(od) {
 function renderOrdersList(c) {
   const orders = DM.get('orders');
   const total = orders.reduce((s, o) => s + (Number(o.amount) || 0), 0);
+  const canDel = canDeleteDocs();
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">全部订单</h1><p class="page-desc">${orders.length ? `共 ${orders.length} 张，金额合计 RM ${money2(total)}。报价客户确认后到「报价管理 → 报价单」点「转订单」` : '还没有订单。到「报价管理 → 报价单」把已发出的报价点「转订单」，或直接点右上角新建'}</p></div><button class="btn btn-primary" onclick="openOrderModal()">+ 新建订单</button></div>
+    <div class="page-header"><div><h1 class="page-title">全部订单</h1><p class="page-desc">${orders.length ? `共 ${orders.length} 张，金额合计 RM ${money2(total)}。报价客户确认后到「报价管理 → 报价单」点「转订单」` : '还没有订单。到「报价管理 → 报价单」把已发出的报价点「转订单」，或直接点右上角新建'}${delGuardHint()}</p></div><button class="btn btn-primary" onclick="openOrderModal()">+ 新建订单</button></div>
     <div class="card"><div class="table-wrap"><table style="min-width:1060px"><thead><tr><th>订单号</th><th>客户</th><th>产品</th><th>金额(RM)</th><th>已收(RM)</th><th>生产状态</th><th>预计交货</th><th>负责人</th><th>操作</th></tr></thead>
-    <tbody>${orders.length ? orders.map(o => `<tr><td class="td-id" style="white-space:nowrap">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${esc(o.product||'')}</td><td style="white-space:nowrap">${money2(o.amount)}</td><td style="white-space:nowrap">${money2(orderReceived(o))}</td><td style="white-space:nowrap">${productionBadge(o.productionStatus)}</td><td style="white-space:nowrap">${esc(o.deliveryDate||'')}</td><td style="white-space:nowrap">${esc(o.assignee)||'<span style="color:var(--gray-400)">未分配</span>'}</td><td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button> <button class="btn btn-sm btn-secondary" onclick="editOrder('${o.id}')">编辑</button> ${o.shipDate ? `<button class="btn btn-sm btn-secondary" onclick="shipOrder('${o.id}')">物流</button>` : `<button class="btn btn-sm btn-primary" onclick="shipOrder('${o.id}')">发货</button>`} <button class="btn btn-sm btn-danger" onclick="delOrder('${o.id}')">删除</button></td></tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--gray-400)">暂无订单</td></tr>'}</tbody></table></div></div>`;
+    <tbody>${orders.length ? orders.map(o => `<tr><td class="td-id" style="white-space:nowrap">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${esc(o.product||'')}</td><td style="white-space:nowrap">${money2(o.amount)}</td><td style="white-space:nowrap">${money2(orderReceived(o))}</td><td style="white-space:nowrap">${productionBadge(o.productionStatus)}</td><td style="white-space:nowrap">${esc(o.deliveryDate||'')}</td><td style="white-space:nowrap">${esc(o.assignee)||'<span style="color:var(--gray-400)">未分配</span>'}</td><td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button> <button class="btn btn-sm btn-secondary" onclick="editOrder('${o.id}')">编辑</button> ${o.shipDate ? `<button class="btn btn-sm btn-secondary" onclick="shipOrder('${o.id}')">物流</button>` : `<button class="btn btn-sm btn-primary" onclick="shipOrder('${o.id}')">发货</button>`}${canDel ? ` <button class="btn btn-sm btn-danger" onclick="delOrder('${o.id}')">删除</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--gray-400)">暂无订单</td></tr>'}</tbody></table></div></div>`;
 }
 
 function editOrder(id) {
@@ -3607,7 +3638,7 @@ function viewOrder(id) {
       ${o.note ? cell('备注', `<span style="white-space:pre-wrap">${esc(o.note)}</span>`) : ''}
     </div>
     <div style="margin-top:14px"><div class="card-header" style="padding:0 0 8px"><span class="card-title">收款记录</span></div>
-    <div style="font-size:11px;color:var(--gray-400);margin-bottom:6px">「待确认」是钱还没核到 / 水单还没拿到，核到了点那一行的「确认到账」即计入已收；记错了点「修改」改状态或删掉。</div>
+    <div style="font-size:11px;color:var(--gray-400);margin-bottom:6px">「待确认」是钱还没核到 / 水单还没拿到，核到了点那一行的「确认到账」即计入已收；记错了点「修改」改状态${canDeleteDocs() ? '或删掉' : '（要删这一笔，得让超级管理员在「系统设置 → 角色管理」里给你的角色勾上「删除单据」）'}。</div>
     ${pays.length ? `<div class="table-wrap"><table><thead><tr><th>类型</th><th>金额(RM)</th><th>状态</th><th>到账日期</th><th>凭证</th><th></th></tr></thead><tbody>${pays.map(p => `<tr><td>${esc(p.typeLabel)}</td><td>${money2(p.amount)}</td><td>${payStatusBadge(p, 1)}</td><td>${esc(p.date || '—')}</td><td>${esc(payReceipt(p) || '—')}</td><td><button class="btn btn-sm btn-secondary" onclick="closeModal();openPaymentModal('${o.id}','${p.type}','${p.id}')">${p.status === 'confirmed' ? '修改' : p.status === 'rejected' ? '重登' : '登记'}</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>尚未生成收款项</p></div>'}
     </div>
     ${o.shipDate ? `<div style="margin-top:14px;text-align:right"><button class="btn btn-sm btn-danger" onclick="unshipOrder('${o.id}')">撤销发货</button></div>` : ''}
@@ -4154,7 +4185,7 @@ function openPaymentModal(orderId, type, payId) {
       <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="p_note" rows="2">${esc((p && p.note) || '')}</textarea></div>
     </div>
     <div style="margin-top:10px;font-size:12px;color:var(--gray-500)">标成「已到账」会同步更新订单的已收金额；定金到账后订单自动进入「已付定金」。${filling ? '这一笔是转订单时自动生成的待收项，收到钱直接填进来，不会再多出第二条。' : ''}</div>
-    ${p ? `<div style="margin-top:10px"><button class="btn btn-sm btn-danger" onclick="deletePayment('${p.id}')">删除这笔收款</button><span style="font-size:12px;color:var(--gray-500);margin-left:8px">记错了、或同一笔款多出一条才删；删掉后订单的已收金额跟着重算。</span></div>` : ''}
+    ${p && canDeleteDocs() ? `<div style="margin-top:10px"><button class="btn btn-sm btn-danger" onclick="deletePayment('${p.id}')">删除这笔收款</button><span style="font-size:12px;color:var(--gray-500);margin-left:8px">记错了、或同一笔款多出一条才删；删掉后订单的已收金额跟着重算。</span></div>` : ''}
   `, () => {
     const oid = val('p_order');
     const order = orders.find(x => x.id === oid);
@@ -4192,6 +4223,7 @@ function openPaymentModal(orderId, type, payId) {
 // 收款记错了、或者老版本重复登记出来的那一条，得能自己清掉——不然它一直占着「待确认」，
 // 已到账的那条也一起算进订单已收金额。删除只动这一笔，订单金额当场重算。
 function deletePayment(id) {
+  if (!canDeleteDocs()) { toast('你的角色没有「删除单据」权限'); return }
   const payments = DM.get('payments');
   const p = payments.find(x => x.id === id);
   if (!p) { toast('找不到这笔收款'); return }
@@ -6951,14 +6983,16 @@ function permText(p) {
 function rolePermsText(r) {
   const perms = Array.isArray(r.perms) ? r.perms : [];
   if (perms.some(p => String(p).trim() === '全部权限')) return '全部权限';
-  return perms.map(permText).join('、') || '（没分配）';
+  const caps = perms.filter(isCapPerm).map(p => '可' + String(p).trim());
+  const pages = perms.filter(p => !isCapPerm(p)).map(permText);
+  return [...pages, ...caps].join('、') || '（没分配）';
 }
 
 function renderRoles(c) {
   const roles = DM.get('roles'), users = DM.get('users');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">角色管理</h1><p class="page-desc">角色决定这个人登录后左侧能看到哪些菜单：勾整组＝这一组页面全能看，只勾一页＝只看得到这一页。
-      「生产」这一档只给了 订单管理 → 生产工单，生产部同事看不到金额和客户联系方式。<strong>这是后台菜单层的限制，不是数据库隔离</strong>——要防人到库里翻数据，得在 Supabase 上按角色配权限。</p></div>
+      「生产」这一档只给了 订单管理 → 生产工单，生产部同事看不到金额和客户联系方式。除了页面，每档角色还能勾一项<strong>能力权限</strong>——「删除单据」就是这一类：勾了才在报价单/合同/订单列表上看得到那个红色「删除」，默认谁都不勾（只有挂了「全部权限」的超级管理员一直有）。<strong>这是后台菜单层的限制，不是数据库隔离</strong>——要防人到库里翻数据，得在 Supabase 上按角色配权限。</p></div>
       <div style="white-space:nowrap;flex-shrink:0"><button class="btn btn-primary" onclick="editRole('')">新增角色</button></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>角色</th><th>权限范围</th><th>在用账号</th><th>操作</th></tr></thead>
     <tbody>${roles.map(r=>`<tr><td class="td-name">${esc(r.name)}</td><td>${esc(rolePermsText(r))}</td><td style="white-space:nowrap">${users.filter(u => (u.role||'').trim() === String(r.name||'').trim()).length} 个</td><td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="editRole('${r.id}')">编辑权限</button></td></tr>`).join('')}</tbody></table></div></div>`;
@@ -6977,6 +7011,13 @@ function editRole(id) {
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
       <input type="checkbox" id="f_role_all" ${full ? 'checked' : ''} onchange="roleAllToggle(this)"> 全部权限（超级管理员用，勾了这条下面不用再逐个勾）</label>
     <div id="rolePermBox" style="margin-top:12px${full ? ';opacity:.45;pointer-events:none' : ''}">
+      <div class="card" style="margin-bottom:8px;padding:10px 12px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px">能力权限 <span style="font-weight:400;color:var(--gray-500);font-size:12px">（不给页面，只放开某个动作；默认谁都不勾）</span></div>
+        ${ROLE_CAPS.map(cp => `<label style="display:flex;align-items:flex-start;gap:6px;font-size:13px;font-weight:600">
+          <input type="checkbox" class="role-cap-cb" value="${esc(cp.key)}" ${(full || perms.some(p => String(p).trim() === cp.key)) ? 'checked' : ''} style="margin-top:2px"> ${esc(cp.key)}
+          <span style="font-weight:400;color:var(--gray-500);font-size:12px">${esc(cp.hint)}</span>
+        </label>`).join('')}
+      </div>
       ${MENU.map((g, i) => {
         const whole = full || hasGroup(g.label);
         return `<div class="card" style="margin-bottom:8px">
@@ -7021,13 +7062,18 @@ function saveRole(r, roles) {
   if (!name) { toast('请填写角色名称'); return false }
   if (roles.some(x => x !== r && String(x.name || '').trim() === name)) { toast('已经有同名角色了'); return false }
   const perms = [];
-  if (document.getElementById('f_role_all').checked) perms.push('全部权限');
-  else MENU.forEach(g => {
-    const gb = document.querySelector('.role-group-cb[data-group="' + g.label + '"]');
-    if (gb && gb.checked) { perms.push(g.label); return }
-    [...document.querySelectorAll('.role-page-cb[data-group="' + g.label + '"]:checked')]
-      .forEach(cb => perms.push(g.label + '(' + cb.value + ')'));
-  });
+  const all = document.getElementById('f_role_all').checked;
+  if (all) perms.push('全部权限');
+  else {
+    MENU.forEach(g => {
+      const gb = document.querySelector('.role-group-cb[data-group="' + g.label + '"]');
+      if (gb && gb.checked) { perms.push(g.label); return }
+      [...document.querySelectorAll('.role-page-cb[data-group="' + g.label + '"]:checked')]
+        .forEach(cb => perms.push(g.label + '(' + cb.value + ')'));
+    });
+    document.querySelectorAll('.role-cap-cb:checked').forEach(cb => perms.push(cb.value));
+  }
+  const noPage = !all && !perms.some(p => permPages(p).length);
   const isNew = !r.id;
   if (isNew) { r.id = DM.genId('R'); roles.push(r) }
   r.name = name;
@@ -7039,7 +7085,7 @@ function saveRole(r, roles) {
     const land = firstAllowedPage();
     if (land) navigateTo(land.id, land.group, land.label); else showNoPerm();
   }
-  toast(!perms.length ? '已存为「' + name + '」，但这个角色没勾任何页面，登录后什么都看不到'
+  toast(noPage ? '已存为「' + name + '」，但这个角色没勾任何页面，登录后什么都看不到 —— 要让他能删单，得先勾上报价单/合同/订单那几页'
     : (isNew ? '已新增角色「' + name + '」' : '「' + name + '」权限已更新'));
   renderPage(currentPageId);
 }
