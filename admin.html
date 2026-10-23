@@ -3535,7 +3535,8 @@ function viewOrder(id) {
       ${o.note ? cell('备注', `<span style="white-space:pre-wrap">${esc(o.note)}</span>`) : ''}
     </div>
     <div style="margin-top:14px"><div class="card-header" style="padding:0 0 8px"><span class="card-title">收款记录</span></div>
-    ${pays.length ? `<div class="table-wrap"><table><thead><tr><th>类型</th><th>金额(RM)</th><th>状态</th><th>到账日期</th><th>凭证</th><th></th></tr></thead><tbody>${pays.map(p => `<tr><td>${esc(p.typeLabel)}</td><td>${money2(p.amount)}</td><td><span class="badge ${p.status === 'confirmed' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${p.status === 'confirmed' ? '已到账' : p.status === 'rejected' ? '已退回' : '待确认'}</span></td><td>${esc(p.date || '—')}</td><td>${esc(p.receiptNo || '—')}</td><td><button class="btn btn-sm btn-secondary" onclick="closeModal();openPaymentModal('${o.id}','${p.type}','${p.id}')">${p.status === 'confirmed' ? '修改' : p.status === 'rejected' ? '重登' : '登记'}</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>尚未生成收款项</p></div>'}
+    <div style="font-size:11px;color:var(--gray-400);margin-bottom:6px">「待确认」是钱还没核到 / 水单还没拿到，核到了点那一行的「确认到账」即计入已收；记错了点「修改」改状态或删掉。</div>
+    ${pays.length ? `<div class="table-wrap"><table><thead><tr><th>类型</th><th>金额(RM)</th><th>状态</th><th>到账日期</th><th>凭证</th><th></th></tr></thead><tbody>${pays.map(p => `<tr><td>${esc(p.typeLabel)}</td><td>${money2(p.amount)}</td><td>${payStatusBadge(p, 1)}</td><td>${esc(p.date || '—')}</td><td>${esc(payReceipt(p) || '—')}</td><td><button class="btn btn-sm btn-secondary" onclick="closeModal();openPaymentModal('${o.id}','${p.type}','${p.id}')">${p.status === 'confirmed' ? '修改' : p.status === 'rejected' ? '重登' : '登记'}</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>尚未生成收款项</p></div>'}
     </div>
     ${o.shipDate ? `<div style="margin-top:14px;text-align:right"><button class="btn btn-sm btn-danger" onclick="unshipOrder('${o.id}')">撤销发货</button></div>` : ''}
   `, null, [
@@ -4025,7 +4026,24 @@ function renderPayments(c) {
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">收款记录</h1><p class="page-desc">已确认到账 RM ${money2(confirmed.reduce((s, p) => s + (Number(p.amount) || 0), 0))}，待确认 ${pending.length} 笔</p></div><button class="btn btn-primary" onclick="openPaymentModal()">+ 登记收款</button></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户</th><th>类型</th><th>金额(RM)</th><th>付款方式</th><th>到账日期</th><th>状态</th><th>操作</th></tr></thead>
-    <tbody>${payments.length ? payments.map(p => `<tr><td class="td-id">${esc(p.orderNo || p.orderId)}</td><td class="td-name">${esc(p.customer)}</td><td><span class="badge badge-blue">${esc(p.typeLabel)}</span></td><td>${money2(p.amount)}</td><td>${esc(p.method || '—')}</td><td>${esc(p.date || '—')}</td><td><span class="badge ${p.status === 'confirmed' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${p.status === 'confirmed' ? '已到账' : p.status === 'rejected' ? '已退回' : '待确认'}</span></td><td><button class="btn btn-sm btn-secondary" onclick="viewPayment('${p.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="openPaymentModal('${p.orderId}','${p.type}','${p.id}')">编辑</button></td></tr>`).join('') : `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--gray-400)">还没有收款记录。转订单后会自动生成定金/尾款两笔待收，收到钱点「登记」${orders.length ? '' : '（当前也还没有订单）'}</td></tr>`}</tbody></table></div></div>`;
+    <tbody>${payments.length ? payments.map(p => `<tr><td class="td-id">${esc(p.orderNo || p.orderId)}</td><td class="td-name">${esc(p.customer)}</td><td><span class="badge badge-blue">${esc(p.typeLabel)}</span></td><td>${money2(p.amount)}</td><td>${esc(p.method || '—')}</td><td>${esc(p.date || '—')}</td><td>${payStatusBadge(p)}</td><td><button class="btn btn-sm btn-secondary" onclick="viewPayment('${p.id}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="openPaymentModal('${p.orderId}','${p.type}','${p.id}')">编辑</button></td></tr>`).join('') : `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--gray-400)">还没有收款记录。转订单后会自动生成定金/尾款两笔待收，收到钱点「登记」${orders.length ? '' : '（当前也还没有订单）'}</td></tr>`}</tbody></table></div></div>`;
+}
+
+// 凭证号只认「他真填了银行/客户水单号」这一种。老界面上弹窗标题挂着系统编号，
+// 有人会把那串 PAY-JL… 抄进凭证号栏，于是这一笔永远填不完、点登记又多出一条。
+// 所以：等于本笔系统编号的凭证号一律当作没填（不改他库里的数据，只是不再当真）。
+function payReceipt(x) {
+  const v = String((x && x.receiptNo) || '').trim();
+  return v && v !== String(x.id || '') ? v : '';
+}
+
+// 「待确认 / 已退回」就地点一下标成已到账（2026-10-23 他圈着收款记录的状态栏说「待确认这里可以改为已确认」）。
+// 「已到账」不给点：要改回去走「修改」里那个状态下拉，免得手滑一下把订单已收金额点没了。
+function payStatusBadge(p, backToOrder) {
+  const label = p.status === 'confirmed' ? '已到账' : p.status === 'rejected' ? '已退回' : '待确认';
+  const cls = p.status === 'confirmed' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow';
+  if (p.status === 'confirmed') return `<span class="badge ${cls}">${label}</span>`;
+  return `<span class="badge ${cls}">${label}</span><br><button class="btn btn-sm btn-secondary" style="padding:2px 8px;font-size:11px;margin-top:3px" onclick="confirmPayment('${p.id}',${backToOrder ? 1 : 0})">确认到账</button>`;
 }
 
 function openPaymentModal(orderId, type, payId) {
@@ -4037,10 +4055,10 @@ function openPaymentModal(orderId, type, payId) {
     orderId = orders[0].id;
   }
   // 转订单时自动生成的定金/尾款那两笔待收，本来就是留给收到钱时填的：没点名要改哪一笔时，
-  // 先把同订单、同类型、凭证和到账日期都还空着的那笔拿出来用，别再压一条新的进去。
-  // 老版本每次「登记」都新增一条，于是一笔款在表里出现两回，已到账的那条还顶着「待确认」。
-  // 只认「没填过」的：填过的说明那一笔已经记过账了，再收一次就该是新的第二条。
-  const isBlank = x => x && x.status === 'pending' && !(x.receiptNo || '').trim() && !(x.date || '').trim();
+  // 先把同订单、同类型、还没填过凭证的那笔拿出来用，别再压一条新的进去。
+  // 到账日期不算「填过」——那个栏位表单自己会填今天，拿它当证据的话每一笔都算填过，登记就永远多出一条。
+  // 只有已经填了真凭证的，才说明那一笔记过账了，再收一次（分期）才该是新的第二条。
+  const isBlank = x => !!x && x.status === 'pending' && !payReceipt(x);
   if (!p) {
     const want = type === 'final' ? 'final' : 'deposit';
     const blank = payments.find(x => x.orderId === orderId && x.type === want && isBlank(x));
@@ -4049,7 +4067,7 @@ function openPaymentModal(orderId, type, payId) {
   const filling = isBlank(p);
   const od = p ? (orders.find(x => x.id === p.orderId) || {}) : (orders.find(x => x.id === orderId) || {});
   const suggest = p ? p.amount : (type === 'final' ? +((Number(od.amount) || 0) - (Number(od.depositAmount) || 0)).toFixed(2) : (Number(od.depositAmount) || 0));
-  showModal(p ? (filling ? '登记收款 ' : '编辑收款 ') + (p.receiptNo || p.id) : '登记收款', `
+  showModal(p ? (filling ? '登记收款 · ' : '修改收款 · ') + (p.typeLabel || (p.type === 'final' ? '尾款' : '定金')) : '登记收款', `
     <div class="form-grid">
       <div class="form-group"><label class="form-label">订单 *</label><select class="form-select" id="p_order" onchange="paymentPickOrder()">${orders.map(o => `<option value="${esc(o.id)}"${(p ? p.orderId : orderId) === o.id ? ' selected' : ''}>${esc(o.id)} — ${esc(o.customer)}</option>`).join('')}</select></div>
       <div class="form-group"><label class="form-label">款项类型</label><select class="form-select" id="p_type" onchange="paymentSuggest()">${selOpts(['定金', '尾款', '全额', '刀模费', '打样费', '运费'], p ? p.typeLabel : (type === 'final' ? '尾款' : '定金'))}</select></div>
@@ -4058,7 +4076,7 @@ function openPaymentModal(orderId, type, payId) {
       <div class="form-group"><label class="form-label">银行</label><input class="form-input" id="p_bank" value="${esc(p ? p.bankName : (docVal('settings_site').bank || ''))}" placeholder="e.g. Maybank"></div>
       <div class="form-group"><label class="form-label">收款账号</label><input class="form-input" id="p_account" value="${esc(p ? p.accountNo : (docVal('settings_site').bankAccount || ''))}"></div>
       <div class="form-group"><label class="form-label">收款户名</label><input class="form-input" id="p_holder" value="${esc(p ? p.accountName : (docVal('settings_site').enName || ''))}"></div>
-      <div class="form-group"><label class="form-label">凭证号</label><input class="form-input" id="p_receipt" value="${esc(p ? p.receiptNo : '')}" placeholder="e.g. RCT-2026-001"></div>
+      <div class="form-group"><label class="form-label">凭证号</label><input class="form-input" id="p_receipt" value="${esc(p ? payReceipt(p) : '')}" placeholder="e.g. RCT-2026-001"><div style="font-size:11px;color:var(--gray-400);margin-top:4px">填银行水单 / 客户汇款单上的号。${p ? '这一笔在本系统里的编号是 ' + esc(p.id) + '，那是系统自己起的，不用填进这里。' : ''}</div></div>
       <div class="form-group"><label class="form-label">到账日期</label><input class="form-input" type="date" id="p_date" value="${esc((p && p.date) || today())}"></div>
       <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="p_status">${selOpts(['已到账', '待确认', '已退回'], p ? { confirmed: '已到账', pending: '待确认', rejected: '已退回' }[p.status] : '已到账')}</select></div>
       <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="p_note" rows="2">${esc((p && p.note) || '')}</textarea></div>
@@ -4073,19 +4091,27 @@ function openPaymentModal(orderId, type, payId) {
     if (amount <= 0) { toast('请填写金额'); return false }
     const typeLabel = val('p_type');
     const st = { '已到账': 'confirmed', '待确认': 'pending', '已退回': 'rejected' }[val('p_status')] || 'pending';
+    let rc = val('p_receipt').trim();
+    if (p && rc && rc === p.id) { rc = ''; toast('凭证号那一栏抄的是本系统编号，已清空：那一栏要填的是银行水单 / 客户汇款单上的号') }
     const data = {
       orderId: oid, orderNo: order.id, customer: order.customer,
       type: /尾/.test(typeLabel) ? 'final' : (/定/.test(typeLabel) ? 'deposit' : (typeLabel === '全额' ? 'final' : 'other')),
       typeLabel, amount: +amount.toFixed(2), method: val('p_method'),
       bankName: val('p_bank'), accountNo: val('p_account'), accountName: val('p_holder'),
-      date: val('p_date'), receiptNo: val('p_receipt'), status: st,
+      date: val('p_date'), receiptNo: rc, status: st,
       note: (document.getElementById('p_note') || {}).value?.trim() || ''
     };
+    // 最后一道闸：这一类型已经记过「已到账」了，还要再凭空加一条，先问一句——
+    // 同一笔款记两次，订单的已收金额会直接翻倍，这种错账最难查。
+    if (!p) {
+      const same = payments.filter(x => x.orderId === oid && x.type === data.type && x.status === 'confirmed');
+      if (same.length && !confirm(`这张单的${typeLabel}已经记了 ${same.length} 笔「已到账」，共 RM ${money2(same.reduce((s, x) => s + (Number(x.amount) || 0), 0))}。\n再记一条会把订单的已收金额加上去——只有客户真的分几次付才需要再记。\n确定要再记一条吗？`)) return false;
+    }
     if (p) Object.assign(p, data);
     else payments.push(Object.assign({ id: genDocId('PAY', 'payments'), creator: whoami(), created: DM.now() }, data));
     DM.set('payments', payments);
     syncOrderMoney(order);
-    writeLog(p && !filling ? '修改收款' : '登记收款', `${order.id} ${typeLabel} RM ${money2(amount)}（${val('p_status')}${p ? ' · ' + (p.receiptNo || p.id) : ''}）`);
+    writeLog(p && !filling ? '修改收款' : '登记收款', `${order.id} ${typeLabel} RM ${money2(amount)}（${val('p_status')}${p ? ' · ' + p.id : ''}）`);
     toast('已保存');
     renderPage(currentPageId);
   });
@@ -4135,7 +4161,7 @@ function viewPayment(id) {
   const statusMap = {confirmed:'badge-green',pending:'badge-yellow',rejected:'badge-red'};
   const statusLabels = {confirmed:'已到账',pending:'待确认',rejected:'已退回'};
   const cell = (k, v) => `<div class="form-group"><label class="form-label">${esc(k)}</label><div style="padding:8px 0">${v}</div></div>`;
-  showModal('收款凭证 ' + (p.receiptNo || p.id), `
+  showModal('收款 ' + (p.typeLabel || '') + ' · ' + (p.orderNo || p.orderId), `
     <div class="form-grid">
       ${cell('订单号', `<strong>${esc(p.orderNo || p.orderId)}</strong>`)}
       ${cell('客户', esc(p.customer))}
@@ -4147,6 +4173,8 @@ function viewPayment(id) {
       ${cell('收款户名', esc(p.accountName || '—'))}
       ${cell('到账日期', esc(p.date || '—'))}
       ${cell('状态', `<span class="badge ${statusMap[p.status]||'badge-gray'}">${esc(statusLabels[p.status]||p.status)}</span>`)}
+      ${cell('凭证号', esc(payReceipt(p) || '未填'))}
+      ${cell('本系统编号', `<span style="font-size:12px;color:var(--gray-500)">${esc(p.id)}（系统自己给的，不是银行凭证号）</span>`)}
       ${cell('备注', esc(p.note || '—'))}
     </div>
   `, null, [
@@ -4157,18 +4185,27 @@ function viewPayment(id) {
   document.getElementById('modalSaveBtn')?.remove();
 }
 
-function confirmPayment(id) {
+function confirmPayment(id, backToOrder) {
   const payments = DM.get('payments');
   const p = payments.find(x => x.id === id);
-  if (!p) return;
+  if (!p) { toast('找不到这笔收款'); return }
+  // 确认到账＝把这笔加进订单已收，所以先把他可能踩的坑摆在他眼前：
+  // 同一类型已经有「已到账」的，八成是老版本重复登记出来的那一条，该删的不是这条。
+  const dup = payments.filter(x => x.id !== p.id && x.orderId === p.orderId && x.type === p.type && x.status === 'confirmed');
+  let msg = `把这笔${p.typeLabel || ''} RM ${money2(p.amount)} 标成「已到账」？\n订单 ${p.orderNo || p.orderId} 的已收金额会加上这一笔。`;
+  if (dup.length) msg += `\n\n这张单的${p.typeLabel || '这一类款'}已经有 ${dup.length} 笔「已到账」，共 RM ${money2(dup.reduce((s, x) => s + (Number(x.amount) || 0), 0))}。\n要是那笔就是这一笔（老版本重复登记出来的），该删的是这一条而不是确认——确认了已收会翻倍。`;
+  if (!payReceipt(p)) msg += `\n凭证号还空着，确认后点「修改」把银行水单号补上。`;
+  if (!confirm(msg)) return;
   p.status = 'confirmed';
   if (!p.date) p.date = today();
   DM.set('payments', payments);
   const orders = DM.get('orders');
   const od = orders.find(x => x.id === p.orderId);
   if (od) { syncOrderMoney(od); DM.set('orders', orders); }
-  writeLog('确认收款', `${p.orderNo} ${p.typeLabel} RM ${money2(p.amount)}`);
+  writeLog('确认收款', `${p.orderNo || p.orderId} ${p.typeLabel} RM ${money2(p.amount)}（${p.id}）`);
   toast('已确认到账');
+  // 从订单详情那张表里点的：原地把弹窗重开一次刷新，别把他甩回页面丢掉上下文
+  if (backToOrder && od) { viewOrder(p.orderId); return }
   closeModal();
   renderPage(currentPageId);
 }
