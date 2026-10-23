@@ -302,7 +302,7 @@ const DM = {
   },
   raw(key, val) { localStorage.setItem('jl_'+key, JSON.stringify(val)) },
   genId(prefix) { return prefix + '-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2,3).toUpperCase() },
-  now() { return new Date().toISOString().slice(0,16).replace('T',' ') }
+  now() { const d = new Date(), p = n => String(n).padStart(2, '0'); return localDate(d) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) }
 };
 
 // DM.get 的缺省值是数组，往数组上挂具名属性会被 JSON.stringify 静默丢掉，
@@ -574,7 +574,7 @@ async function cloudUpload(file, dir) {
   if (!file) throw new Error('请先选择文件');
   if (file.size > 20 * 1024 * 1024) throw new Error('文件超过 20MB');
   const safe = String(file.name || 'file').replace(/[^\w.\-]+/g, '_').slice(-80);
-  const path = dir + '/' + new Date().toISOString().slice(0,10) + '-' + Date.now().toString(36) + '-' + safe;
+  const path = dir + '/' + localDate() + '-' + Date.now().toString(36) + '-' + safe;
   const { data, error } = await Sync.client.storage.from('jl-uploads')
     .upload(path, file, { upsert: false, contentType: file.type || 'application/octet-stream' });
   if (error) throw new Error(error.message);
@@ -1940,8 +1940,8 @@ function convertLeadToQuote(l) {
   const q = {id:DM.genId('QT'), leadId:l.id, customer:l.company||l.name, contact:[l.name,l.email||l.phone].filter(Boolean).join(' / '),
              product:bt, size:l.size, material:l.material, gsm:l.gsm, printing:l.printing, finish:l.finishing,
              note:l.notes||'', quantity:l.quantity, unitPrice, subtotal:t.subtotal, sst:t.sst, total:t.total,
-             status:'draft', date:new Date().toISOString().slice(0,10),
-             validUntil:new Date(Date.now()+quoteFinance().validDays*864e5).toISOString().slice(0,10),
+             status:'draft', date:localDate(),
+             validUntil:inDays(quoteFinance().validDays),
              creator:whoami(), created:DM.now()};
   quotes.push(q);
   DM.set('quotes', quotes);
@@ -2280,7 +2280,7 @@ function markQuoteSent(id) {  const quotes = DM.get('quotes');
   const q = quotes.find(x => x.id === id);
   if (!q) return;
   q.status = 'sent';
-  if (!q.date) q.date = new Date().toISOString().slice(0, 10);
+  if (!q.date) q.date = localDate();
   DM.set('quotes', quotes);
   const leads = DM.get('leads');
   const l = leads.find(x => x.id === q.leadId);
@@ -2508,8 +2508,8 @@ function readQuoteTerms(p) {
 function renderQuoteNew(c) {
   const leads = DM.get('leads');
   const { validDays, sstRate } = quoteFinance();
-  const today = new Date().toISOString().slice(0, 10);
-  const defValid = new Date(Date.now() + validDays * 864e5).toISOString().slice(0, 10);
+  const today = localDate();
+  const defValid = localDate(new Date(Date.now() + validDays * 864e5));
   const opts = (arr, ph) => `<option value="">-- ${ph} --</option>` + arr.map(x => `<option value="${esc(x.name !== undefined ? x.name : x)}">${esc(x.name !== undefined ? x.name : x)}</option>`).join('');
 
   c.innerHTML = `
@@ -2632,8 +2632,8 @@ function generateQuote(status) {
     sstRate: own.sstRate, depositPct: own.depositPct, termsNote: own.termsNote, deliveryNote: own.deliveryNote, sstNote: own.sstNote,
     quantity, unitPrice, die: t.die, plate: t.plate, oneTime: t.oneTime, subtotal: t.subtotal, sst: t.sst, total: t.total,
     status: status || 'draft',
-    validUntil: val('q_validUntil') || new Date(Date.now() + quoteFinance().validDays * 864e5).toISOString().slice(0, 10),
-    date: val('q_date') || new Date().toISOString().slice(0, 10),
+    validUntil: val('q_validUntil') || inDays(quoteFinance().validDays),
+    date: val('q_date') || localDate(),
     creator: whoami(), created: DM.now()
   };
   const quotes = DM.get('quotes');
@@ -3323,8 +3323,8 @@ const PAY_METHODS = ['银行转账','现金','TT 电汇','支票','线上支付'
 const DELIVERY_ZONES = ['Kuala Lumpur','Selangor','Pulau Pinang','Johor','Melaka','Perak','Sabah','Sarawak'];
 
 function depositPercent() { const p = parseInt(docVal('settings_finance').depositPercent); return p > 0 && p <= 100 ? p : 50 }
-function inDays(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10) }
-function today() { return new Date().toISOString().slice(0, 10) }
+function inDays(n) { return localDate(new Date(Date.now() + n * 864e5)) }
+function today() { return localDate() }
 function orderPay(od, type) { return DM.get('payments').find(p => p.orderId === od.id && p.type === type) }
 function orderReceived(od) {
   return +DM.get('payments').filter(p => p.orderId === od.id && p.status === 'confirmed').reduce((s, p) => s + (Number(p.amount) || 0), 0).toFixed(2);
@@ -3613,7 +3613,8 @@ const WO_CSS = `
 .wo-doc .blk h4{margin:0 0 3px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#1f4e79}
 .wo-doc .blk p{margin:0;white-space:pre-wrap}
 .wo-doc .foot{margin-top:24px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px}
-.wo-doc .sig{border-top:1px solid #9aa3b1;width:200px;padding-top:5px;font-size:11px;color:#5b6472;text-align:center}
+.wo-doc .sig{border-top:1px solid #9aa3b1;width:220px;padding-top:5px;font-size:11px;color:#5b6472;text-align:center}
+.wo-doc .sig .sgn{font-size:15px;font-weight:700;color:#1f2430;letter-spacing:1px;margin-bottom:2px}
 .wo-doc .note{font-size:11px;color:#7a828f}
 .wo-doc .assets{display:flex;flex-direction:column;gap:6px;margin-top:4px}
 .wo-doc .arow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid #d9dee7;border-radius:6px;padding:6px 9px;font-size:12px}
@@ -3781,7 +3782,7 @@ function woDocHtml(o, edit) {
     ${woAssetsHtml(o, edit)}
     ${o.prodReject && !o.prodAckAt ? `<div class="blk"><h4>跟单员退回 / Rejected</h4><p>${esc(o.prodReject)}（${esc(o.prodRejectAt || '')} ${esc(o.prodRejectBy || '')}）</p></div>` : ''}
     ${note}
-    <div class="foot"><div class="note">请严格按以上要求生产。用料、工艺、数量有疑问，先写在备注里，跟单员确认后再开工。</div><div class="sig">生产部签收</div></div>
+    <div class="foot"><div class="note">请严格按以上要求生产。用料、工艺、数量有疑问，先写在备注里，跟单员确认后再开工。</div><div class="sig">${o.prodAckAt ? `<div class="sgn">${esc(o.prodAckBy || '生产部')}</div>生产部签收 · ${esc(o.prodAckAt)}` : '生产部签收'}</div></div>
   </div>`;
 }
 
@@ -4999,9 +5000,9 @@ function openArticleModal(id) {
     if (!title) { toast('请填写标题'); return; }
     if (a) {
       a.title = title; a.category = val('f_art_cat'); a.status = val('f_art_status');
-      a.excerpt = val('f_art_excerpt'); a.content = val('f_art_content'); a.updated = new Date().toISOString().slice(0,10);
+      a.excerpt = val('f_art_excerpt'); a.content = val('f_art_content'); a.updated = localDate();
     } else {
-      articles.push({id:DM.genId('ART'),title,category:val('f_art_cat'),status:val('f_art_status'),excerpt:val('f_art_excerpt'),content:val('f_art_content'),created:new Date().toISOString().slice(0,10),updated:''});
+      articles.push({id:DM.genId('ART'),title,category:val('f_art_cat'),status:val('f_art_status'),excerpt:val('f_art_excerpt'),content:val('f_art_content'),created:localDate(),updated:''});
     }
     DM.set('articles', articles);
     toast(a ? '文章已更新' : '文章已创建'); renderPage(currentPageId);
@@ -6025,7 +6026,7 @@ function openMediaUpload() {
     try {
       const up = await cloudUpload(file, 'media');
       const files = DM.get('mediaFiles');
-      files.unshift({id:DM.genId('MED'),name:val('f_media_name') || file.name,type,size:fmtSize(file.size),uploaded:new Date().toISOString().slice(0,10),url:up.url,path:up.path,uploader:whoami()});
+      files.unshift({id:DM.genId('MED'),name:val('f_media_name') || file.name,type,size:fmtSize(file.size),uploaded:localDate(),url:up.url,path:up.path,uploader:whoami()});
       DM.set('mediaFiles', files);
       toast('已上传到云端'); renderPage(currentPageId);
     } catch (e) { toast('上传失败：' + e.message) }
@@ -6076,7 +6077,7 @@ function openCaseModal(id) {
     const title = val('f_case_title');
     if (!title) { toast('请填写标题'); return; }
     if (ca) { ca.title=title; ca.category=val('f_case_cat'); ca.client=val('f_case_client'); ca.status=val('f_case_status'); ca.desc=val('f_case_desc'); }
-    else { cases.push({id:DM.genId('CASE'),title,category:val('f_case_cat'),client:val('f_case_client'),status:val('f_case_status'),desc:val('f_case_desc'),created:new Date().toISOString().slice(0,10)}); }
+    else { cases.push({id:DM.genId('CASE'),title,category:val('f_case_cat'),client:val('f_case_client'),status:val('f_case_status'),desc:val('f_case_desc'),created:localDate()}); }
     DM.set('cases', cases);
     toast(ca ? '案例已更新' : '案例已创建'); renderPage(currentPageId);
   });
@@ -6164,9 +6165,9 @@ function openPolicyModal(id) {
       p.title = titleVal;
       p.slug = val('f_slug') || titleVal.toLowerCase().replace(/\s+/g,'-');
       p.content = content;
-      p.updated = new Date().toISOString().slice(0,10);
+      p.updated = localDate();
     } else {
-      policies.push({id:DM.genId('P'),title:titleVal,slug:val('f_slug')||titleVal.toLowerCase().replace(/\s+/g,'-'),content,updated:new Date().toISOString().slice(0,10)});
+      policies.push({id:DM.genId('P'),title:titleVal,slug:val('f_slug')||titleVal.toLowerCase().replace(/\s+/g,'-'),content,updated:localDate()});
     }
     DM.set('policies', policies);
     toast(p ? '政策已更新' : '政策已创建'); renderPage(currentPageId);
@@ -7050,7 +7051,7 @@ function exportCSV(type) {
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = type + '_export_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.href = url; a.download = type + '_export_' + localDate() + '.csv';
   a.click(); URL.revokeObjectURL(url);
   toast('已导出 ' + data.length + ' 条记录');
 }
