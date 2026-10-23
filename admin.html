@@ -1929,7 +1929,7 @@ function openLeadModal(lead) {
   `, () => {
     const leads = DM.get('leads');
     const data = {
-      id: lead?.id || DM.genId('LD'),
+      id: lead?.id || genDocId('LD', 'leads'),
       name: val('f_name'), company: val('f_company'), phone: val('f_phone'), email: val('f_email'),
       source: val('f_source'), sourceNote: val('f_sourceNote'), assignee: val('f_assignee'), boxType: val('f_boxType'), material: val('f_material'), gsm: val('f_gsm'), size: val('f_size'),
       quantity: parseInt(val('f_quantity'))||0, printing: val('f_printing'), finishing: readFinish('f_finishing'), specialReq: val('f_specialReq'),
@@ -2013,6 +2013,19 @@ let cuQ = '', cuIntent = '', cuTier = '';
 const intentLetter = lv => /^[A-Ea-e]/.test(String(lv || '').trim()) ? String(lv).trim()[0].toUpperCase() : '';
 // 公司名归一化：外勤手打的「XX（马）有限公司」和订单里的「XX 有限公司」要认成同一家
 const normCompany = s => String(s || '').toLowerCase().replace(/[（）]/g, '').replace(/[\s.,、\-—()&]/g, '');
+
+// 按名字模糊查重：归一化之后互为包含就算相近——「ABC SDN BHD」和「ABC Trading Sdn. Bhd.」、
+// 「XX（马）有限公司」和「XX有限公司」都能捞出来。只比「一模一样」的话，同一家公司抄两种写法
+// 就各建一条档案，累计下单量被拆成两半，分档跟着全错。
+function similarCustomers(name, exceptId) {
+  const n = normCompany(name);
+  if (!n) return [];
+  return DM.get('customers').filter(x => {
+    if (exceptId && String(x.id) === String(exceptId)) return false;
+    const k = normCompany(x.company);
+    return !!k && (k === n || k.includes(n) || n.includes(k));
+  });
+}
 
 // 累计下单量一律从「订单管理」实时汇总，不再手填——分档要的就是这个数
 function customerStats(company) {
@@ -2144,7 +2157,7 @@ function applyFieldIntake() {
     if (hit) { Object.assign(customers.find(x => String(x.id) === String(hit.id)), patch); updated++ }
     else {
       customers.unshift(Object.assign({
-        id: DM.genId('C'), company: f.company, email: '', level: '', coop: '',
+        id: genDocId('C', 'customers'), company: f.company, email: '', level: '', coop: '',
         source: '外勤客户库', sourceNote: '', notes: '', created: DM.now()
       }, patch));
       added++;
@@ -2214,7 +2227,7 @@ function openCustomerModal(id) {
   const c = id ? DM.get('customers').find(x => String(x.id) === String(id)) : null;
   showModal(c ? '编辑客户 · ' + c.company : '新建客户', `
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">公司名 *</label><input class="form-input" id="f_company" value="${esc(c ? c.company : '')}"></div>
+      <div class="form-group"><label class="form-label">公司名 *</label><input class="form-input" id="f_company" value="${esc(c ? c.company : '')}"><div id="f_dup_hint" style="font-size:11px;color:var(--gray-500);margin-top:4px"></div></div>
       <div class="form-group"><label class="form-label">联系人</label><input class="form-input" id="f_contact" value="${esc(c ? c.contact : '')}"></div>
       <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="f_phone" value="${esc(c ? c.phone : '')}"></div>
       <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="f_email" value="${esc(c ? c.email : '')}"></div>
@@ -2235,12 +2248,28 @@ function openCustomerModal(id) {
       addr: val('f_addr'), business: val('f_business'), coop: val('f_coop'), need: val('f_need'),
       source: val('f_source'), sourceNote: val('f_sourceNote'), notes: val('f_notes')
     };
+    // 只提醒不拦（和转订单那道一样的口径）：同一家公司建两条，累计单量会被拆开、分级跟着错，
+    // 但真有两家名字像的独立公司，硬不让建就把人堵死了。
+    const dup = similarCustomers(fields.company, c ? c.id : '');
+    if (dup.length && !confirm(`客户库里已经有 ${dup.length} 条名字相近的档案：\n\n${dup.slice(0, 6).map(x => '· ' + (x.company || '（没填公司名）') + '（' + x.id + '）').join('\n')}${dup.length > 6 ? `\n（还有 ${dup.length - 6} 条没列出来）` : ''}\n\n如果是同一家，点「取消」回去编辑那条已有的，别另开一条。\n确定不是同一家，点「确定」照建（不拦你）。`)) return false;
     if (c) { Object.assign(customers.find(x => String(x.id) === String(c.id)), fields); writeLog('编辑客户', c.id + ' ' + fields.company) }
-    else { customers.unshift(Object.assign({ id: DM.genId('C'), level: '', created: DM.now() }, fields)); writeLog('新建客户', fields.company) }
+    else { customers.unshift(Object.assign({ id: genDocId('C', 'customers'), level: '', created: DM.now() }, fields)); writeLog('新建客户', fields.company) }
     DM.set('customers', customers);
     toast(c ? '客户已更新' : '客户已创建'); renderPage(currentPageId);
   });
   syncSourceNote();
+  const cmp = document.getElementById('f_company');
+  if (cmp) { cmp.addEventListener('input', () => custDupHint(c ? c.id : '')); custDupHint(c ? c.id : '') }
+}
+
+// 公司名一改动就在旁边提示有没有撞上的档案，让人在填的过程中就发现，而不是保存那一刻才弹窗。
+function custDupHint(exceptId) {
+  const el = document.getElementById('f_dup_hint');
+  if (!el) return;
+  const dup = similarCustomers(val('f_company'), exceptId);
+  el.innerHTML = !String(val('f_company')).trim() ? ''
+    : dup.length ? `<span style="color:var(--red)">客户库里已有 ${dup.length} 条名字相近的：${dup.slice(0, 3).map(x => esc(x.company || '（没填公司名）')).join('、')}${dup.length > 3 ? ' 等' : ''}。同一家就回去改那条，别另开。</span>`
+      : '<span style="color:var(--green)">没有相近的档案，这是一条新客户。</span>';
 }
 
 function renderFollowUp(c) {
@@ -2296,13 +2325,20 @@ function convertQuoteToOrder(id) {
   if (!ct) {
     // 只提醒不强制（他 2026-10-22 拍的）：取消就等于回到报价单那一行自己点「生成合同」，
     // 这里不能替他建记录——取消一个「转订单」却多出一份合同，生产环境还会跟着上传
-    if (!confirm(`这张报价还没有合同。\n\n按流程应先出电子档合同、客户签回再开生产工单。\n\n点「确定」仍要先转订单（不拦你），点「取消」回这一行点「生成合同」。`)) {
-      toast('那先到这一行的「生成合同」出电子档合同，签回后再转订单');
+    if (!confirm(`这张报价还没有合同。\n\n按流程应先出电子档合同、凭证回传（签回的合同或对方的下单表 / PO）再开生产工单。\n\n点「确定」仍要先转订单（不拦你），点「取消」回这一行点「生成合同」。`)) {
+      toast('那先到这一行的「生成合同」出电子档合同，凭证回传后再转订单');
       return;
     }
   } else if (ct.status !== 'signed') {
     if (!confirm(`合同 ${ct.id} 目前状态是「${CT_STATUS[ct.status]}」，客户还没签回。\n\n点「确定」先转订单（不拦你），点「取消」回去处理合同。`)) {
-      toast(`先到「报价管理 → 合同」把 ${ct.id} 的客户签回件上传，再转订单`);
+      toast(`先到「报价管理 → 合同」把 ${ct.id} 的凭证（签回的合同或对方的下单表）上传，再转订单`);
+      return;
+    }
+  } else if (ctNoEvidence(ct)) {
+    // 状态是「已签署」但一份凭证都没有：这种多半是手改状态下拉改的，钱和规格都还没落到纸面。
+    // 同样只提醒不拦（他定的口径：门禁不当门禁），但这句话必须让他看见。
+    if (!confirm(`合同 ${ct.id} 标了「已签署」，但凭证还没回传——既没有签回的合同，也没有对方的下单表 / PO。\n\n现在转订单，这张单就没有任何成交凭证，事后对不上口供没处翻。\n点「确定」仍要转（不拦你），点「取消」先到「报价管理 → 合同」传凭证。`)) {
+      toast(`先到「报价管理 → 合同」把 ${ct.id} 的凭证传上来（签回的合同或对方的下单表都算），再转订单`);
       return;
     }
   }
@@ -2373,7 +2409,7 @@ function viewQuote(id) {
       <div class="form-group full"><label class="form-label">备注</label><div style="padding:8px 0;white-space:pre-wrap">${esc(q.note||'无')}</div></div>
       ${customRows.length ? `<div class="form-group full"><label class="form-label">本单另定的口径（没列出来的仍跟全局）</label><div style="padding:8px 0;white-space:pre-wrap;font-size:13px">${customRows.map(r => `${r[0]}：${esc(r[1])}`).join('\n')}</div></div>` : ''}
       ${od ? `<div class="form-group full"><label class="form-label">已转订单</label><div style="padding:8px 0">${esc(od.id)} — 当前状态 ${productionBadge(od.productionStatus)}</div></div>` : ''}
-      ${ct ? `<div class="form-group full"><label class="form-label">合同</label><div style="padding:8px 0">${contractBadge(ct.status)} <span style="font-size:12px;color:var(--gray-500)">${esc(ct.id)}${ct.signDate ? ' · 签订 ' + esc(ct.signDate) : ''}${ct.signFile ? ' · 已有签回件' : ''}</span></div></div>` : ''}
+      ${ct ? `<div class="form-group full"><label class="form-label">合同</label><div style="padding:8px 0">${contractBadge(ct.status)} <span style="font-size:12px;color:var(--gray-500)">${esc(ct.id)}${ct.signDate ? ' · 签订 ' + esc(ct.signDate) : ''}${ct.signFile ? ' · 凭证已回传' : (ct.status === 'signed' ? ' · <span style="color:var(--red)">⚠ 凭证未回传</span>' : '')}</span></div></div>` : ''}
     </div>
   `, null, btns);
   document.getElementById('modalSaveBtn')?.remove();
@@ -2986,6 +3022,11 @@ const CT_STATUS = { draft:'草稿', sent:'已发出', signed:'已签署', void:'
 const CT_BADGE = { draft:'badge-gray', sent:'badge-blue', signed:'badge-green', void:'badge-red' };
 const contractBadge = s => `<span class="${CT_BADGE[s] || 'badge-gray'}">${esc(CT_STATUS[s] || s || '—')}</span>`;
 
+// 凭证不一定是一张签回的合同：现场常常是对方公司发来一张自己的下单表 / PO 截图，那也算凭证。
+// 但不管是哪一种，回传了才算有——状态标成「已签署」却没有任何文件，就是口头成交，
+// 出问题翻不到证据，所以这一种要单独标红提醒（只提醒，不拦转订单）。
+function ctNoEvidence(ct) { return !!ct && !String(ct.signFile || '').trim() }
+
 // 正文骨架只写他已拍板的口径（30/70、交期、SST、不做原创设计）；
 // 验收期限/违约/争议这些天数和罚则归他定，没定的用「待补充」顶着，不替他编数字。
 const CONTRACT_DEFAULT = `一、标的
@@ -3227,7 +3268,7 @@ function delContract(id) {
   const od = DM.get('orders').find(o => o.quoteId === ct.quoteId);
   let m = `确定删除合同 ${ct.id}？\n${ct.customer || '—'} · RM ${money2(ct.total)}（${CT_STATUS[ct.status] || ct.status}）`;
   if (od) m += `\n\n这张单已经转过订单 ${od.id}：删合同不动订单，但「已签合同」这张凭证就没了。`;
-  if (ct.status === 'signed') m += `\n\n这份是「已签署」的，客户签回的文件链接也一起没了。已签的合同一般别删。`;
+  if (ct.status === 'signed') m += `\n\n这份是「已签署」的，${ct.signFile ? '已回传的凭证（签回的合同或客户的下单表）那份文件链接也一起没了' : '但它一份凭证都没回传，删了连个线索都不剩'}。已签的合同一般别删。`;
   if (!confirm(m)) return;
   DM.set('contracts', contracts.filter(x => x.id !== id));
   writeLog('删除合同', `${ct.id} ${ct.customer || '—'} RM ${money2(ct.total)}（${CT_STATUS[ct.status] || ct.status}）`);
@@ -3297,13 +3338,15 @@ function renderContracts(c) {
   const canDel = canDeleteDocs();
   const rows = all.filter(x => (!ctQ || `${x.id} ${x.customer || ''} ${x.quoteId || ''} ${x.product || ''}`.toLowerCase().includes(ctQ)) && (!ctFs || x.status === ctFs));
   const wait = quotesAwaitingContract().length;
+  const signed = all.filter(x => x.status === 'signed');
+  const noEv = signed.filter(ctNoEvidence).length;
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">合同</h1><p class="page-desc">客户同意价格后生成电子档合同，签回再转订单走生产工单${wait ? `。现在有 <b style="color:var(--primary)">${wait}</b> 张报价待签合同` : ''}${delGuardHint()}</p></div>
+    <div class="page-header"><div><h1 class="page-title">合同</h1><p class="page-desc">客户同意价格后生成电子档合同，凭证回传再转订单走生产工单。凭证可以是签回的合同，也可以是<b>对方公司的下单表 / PO</b>，回传一样算数${wait ? `。现在有 <b style="color:var(--primary)">${wait}</b> 张报价待签合同` : ''}${noEv ? `。有 <b style="color:var(--red)">${noEv}</b> 份标了「已签署」但凭证还没回传，那种等于口头成交` : ''}${delGuardHint()}</p></div>
       <div style="display:flex;gap:8px"><button class="btn btn-secondary" onclick="pickQuoteForContract()">从报价单生成</button><button class="btn btn-primary" onclick="navigateTo('quotes-list','报价管理','报价单')">去报价单</button></div></div>
     <div class="toolbar"><div class="search"><input placeholder="搜索合同号/客户/报价号..." oninput="setCtSearch(this.value)" value="${esc(ctQ)}"></div>
       <select onchange="setCtFilter(this.value)"><option value="">全部状态</option>${Object.keys(CT_STATUS).map(s => `<option value="${s}"${s === ctFs ? ' selected' : ''}>${CT_STATUS[s]}</option>`).join('')}</select>
     </div>
-    <div class="card"><div class="table-wrap"><table style="min-width:1420px"><thead><tr><th>合同号</th><th>客户</th><th>关联报价</th><th>产品</th><th>总价(RM)</th><th>定金(RM)</th><th>尾款(RM)</th><th>状态</th><th>签回件</th><th>签订日期</th><th>关联订单</th><th>操作</th></tr></thead>
+    <div class="card"><div class="table-wrap"><table style="min-width:1420px"><thead><tr><th>合同号</th><th>客户</th><th>关联报价</th><th>产品</th><th>总价(RM)</th><th>定金(RM)</th><th>尾款(RM)</th><th>状态</th><th>凭证回传</th><th>签订日期</th><th>关联订单</th><th>操作</th></tr></thead>
     <tbody>${rows.length ? rows.map(x => {
       const od = orders.find(o => o.quoteId === x.quoteId);
       const handoff = od
@@ -3314,12 +3357,14 @@ function renderContracts(c) {
       <td>${esc(x.product || '—')}${x.quantity ? ' / ' + esc(x.quantity) + ' pcs' : ''}</td>
       <td style="white-space:nowrap">${money2(x.total)}</td><td style="white-space:nowrap">${money2(x.deposit)}</td><td style="white-space:nowrap">${money2(x.balance)}</td>
       <td><select style="min-width:96px;padding:4px 8px;font-size:12px;border:1px solid var(--gray-200);border-radius:6px" onchange="setContractStatus('${esc(x.id)}',this.value)">${Object.keys(CT_STATUS).map(s => `<option value="${s}"${s === x.status ? ' selected' : ''}>${CT_STATUS[s]}</option>`).join('')}</select></td>
-      <td style="white-space:nowrap">${x.signFile ? `<a href="${safeHref(x.signFile)}" target="_blank" rel="noopener">查看</a> <button class="btn btn-sm btn-secondary" onclick="uploadContractSign('${esc(x.id)}')">替换</button>` : `<button class="btn btn-sm btn-secondary" onclick="uploadContractSign('${esc(x.id)}')">上传</button>`}</td>
+      <td style="white-space:nowrap">${x.signFile ? `<a href="${safeHref(x.signFile)}" target="_blank" rel="noopener">查看凭证</a> <button class="btn btn-sm btn-secondary" onclick="uploadContractSign('${esc(x.id)}')">替换</button>`
+        : (x.status === 'signed' ? `<span style="color:var(--red);font-weight:600">⚠ 凭证未回传</span> <button class="btn btn-sm btn-secondary" onclick="uploadContractSign('${esc(x.id)}')">上传</button>`
+          : `<button class="btn btn-sm btn-secondary" onclick="uploadContractSign('${esc(x.id)}')">上传</button>`)}</td>
       <td style="white-space:nowrap">${esc(x.signDate || '—')}</td>
       <td class="td-id">${od ? esc(od.id) : '—'}</td>
       <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="openContractView('${esc(x.id)}')">查看</button> <button class="btn btn-sm btn-secondary" onclick="previewContract('${esc(x.id)}')">预览</button> ${handoff}${canDel ? ` <button class="btn btn-sm btn-danger" onclick="delContract('${esc(x.id)}')">删除</button>` : ''}</td></tr>`;
     }).join('') : `<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--gray-400)">${all.length ? '没有符合条件的合同' : '还没有合同。到「报价管理 → 报价单」，客户接受报价后点「生成合同」'}</td></tr>`}</tbody></table></div>
-    <div class="pagination"><span>共 ${rows.length} 份${rows.length !== all.length ? `（已筛选，总计 ${all.length} 份）` : ''} · 已签署 ${all.filter(x => x.status === 'signed').length} 份</span></div></div>`;
+    <div class="pagination"><span>共 ${rows.length} 份${rows.length !== all.length ? `（已筛选，总计 ${all.length} 份）` : ''} · 已签署 ${signed.length} 份${noEv ? `<span style="color:var(--red)">（其中 ${noEv} 份凭证未回传）</span>` : ''}</span></div></div>`;
 }
 
 function setContractStatus(id, st) {
@@ -3331,7 +3376,11 @@ function setContractStatus(id, st) {
   ct.signDate = st === 'signed' ? (ct.signDate || today()) : '';
   DM.set('contracts', list);
   writeLog('合同状态', `${id} ${CT_STATUS[from] || from} → ${CT_STATUS[st]}`);
-  toast(`合同 ${id}：${CT_STATUS[from] || '—'} → ${CT_STATUS[st]}`);
+  // 手动改成「已签署」但一份凭证都没传（签回的合同 / 客户下单表都算）——状态本身照他的改，
+  // 只补一句提醒，别让人以为标了签署就有凭证了。
+  toast(st === 'signed' && ctNoEvidence(ct)
+    ? `合同 ${id} 已标「已签署」，但凭证还没回传：请把签回的合同或对方的下单表 / PO 拍照上传，别只改状态`
+    : `合同 ${id}：${CT_STATUS[from] || '—'} → ${CT_STATUS[st]}`);
   renderPage(currentPageId);
 }
 
@@ -3349,7 +3398,7 @@ function openContractView(id) {
   const v = contractVars(ct);
   const cq = DM.get('quotes').find(x => x.id === ct.quoteId);
   const btns = [{ label: '预览 / 打印', cls: 'btn-primary', fn: () => { closeModal(); previewContract(id) } },
-    { label: '上传签回件', cls: 'btn-secondary', fn: () => { closeModal(); uploadContractSign(id) } }];
+    { label: '上传凭证', cls: 'btn-secondary', fn: () => { closeModal(); uploadContractSign(id) } }];
   if (od) btns.push({ label: '查看订单', cls: 'btn-secondary', fn: () => { closeModal(); viewOrder(od.id) } });
   else if (ct.status === 'signed' && ct.quoteId) btns.push({ label: '转订单', cls: 'btn-secondary', fn: () => { closeModal(); convertQuoteToOrder(ct.quoteId) } });
   btns.push({ label: '关闭', cls: 'btn-secondary', fn: closeModal });
@@ -3370,7 +3419,8 @@ function openContractView(id) {
       ${cell('定金', `RM ${money2(ct.deposit)}（${esc(ct.depositPct)}%）`)}
       ${cell('尾款', `RM ${money2(ct.balance)}（发货前付清）`)}
       ${cell('签订日期', esc(ct.signDate))}${cell('生成人 / 时间', `${esc(ct.creator || '')} · ${esc(ct.created || '')}`)}
-      ${cell('客户签回件', ct.signFile ? `<a href="${safeHref(ct.signFile)}" target="_blank" rel="noopener">查看已上传的签回件</a>` : '<span style="color:var(--gray-400)">还没上传</span>')}
+      ${cell('凭证（合同签回 / 客户下单表）', ct.signFile ? `<a href="${safeHref(ct.signFile)}" target="_blank" rel="noopener">查看已上传的凭证</a>`
+        : (ct.status === 'signed' ? '<span style="color:var(--red);font-weight:600">⚠ 已签署但凭证未回传——签回的合同或对方公司的下单表 / PO，拍张照传上来</span>' : '<span style="color:var(--gray-400)">还没上传</span>'))}
       ${ct.note ? `<div class="form-group full"><label class="form-label">备注</label><div style="padding:8px 0;white-space:pre-wrap">${esc(ct.note)}</div></div>` : ''}
     </div>
   `, null, btns);
@@ -3380,13 +3430,14 @@ function openContractView(id) {
 function uploadContractSign(id) {
   const ct = DM.get('contracts').find(x => x.id === id);
   if (!ct) { toast('找不到这份合同'); return }
-  showModal('上传客户签回件 · ' + ct.id, `
-    <div class="form-group"><label class="form-label">签字/盖章后的合同（照片或 PDF，20MB 内）</label>
+  showModal('上传凭证 · ' + ct.id, `
+    <div class="form-group"><label class="form-label">签回 / 盖章的合同，或对方公司的下单表 / PO（照片、截图或 PDF，20MB 内）</label>
       <input class="form-input" type="file" id="fct_file" accept="image/*,.pdf">
       ${ct.signFile ? `<p style="margin:8px 0 0;font-size:12px;color:var(--gray-500)">已有一份：<a href="${safeHref(ct.signFile)}" target="_blank" rel="noopener">查看</a>，选新文件即替换</p>` : ''}
+      <p style="margin:8px 0 0;font-size:12px;color:var(--gray-500)">不一定非要一张签回的合同：客户那边习惯发自己的下单表 / PO 过来，那张截图就是凭证，一样传这里。</p>
     </div>
     <div class="form-group"><label class="form-label">签订日期</label><input class="form-input" type="date" id="fct_date" value="${esc(ct.signDate || today())}"></div>
-    <p style="margin:10px 0 0;font-size:12px;color:var(--gray-500)">上传成功后合同自动标记「已签署」，之后点「转订单」就进生产工单。</p>
+    <p style="margin:10px 0 0;font-size:12px;color:var(--gray-500)">上传成功后合同自动标记「已签署」，之后点「转订单」就进生产工单。只在列表里把状态改成「已签署」而不传文件，会一直挂着「⚠ 凭证未回传」。</p>
   `, async () => {
     const f = document.getElementById('fct_file').files[0];
     if (!f) { toast('请先选择文件'); return false }
@@ -3398,8 +3449,8 @@ function uploadContractSign(id) {
       t.signDate = val('fct_date') || today();
       t.status = 'signed';
       DM.set('contracts', list);
-      writeLog('上传合同签回件', id + ' ' + (f.name || ''));
-      toast('签回件已上传，合同已标记「已签署」');
+      writeLog('上传合同凭证', id + ' ' + (f.name || ''));
+      toast('凭证已上传，合同已标记「已签署」');
       renderPage(currentPageId);
     } catch (e) {
       toast('上传失败：' + e.message);
@@ -3441,6 +3492,7 @@ const PROD_STEPS = ['pending_deposit','deposit_paid','artwork','proofing','confi
 const PROD_LABEL = {pending_deposit:'待付定金',deposit_paid:'已付定金',artwork:'刀模/Artwork',proofing:'打样中',confirming:'待客户确认',producing:'生产中',shipping:'待发货',shipped:'已发货',done:'完成'};
 const PROD_BY_LABEL = Object.keys(PROD_LABEL).reduce((m, k) => { m[PROD_LABEL[k]] = k; return m }, {});
 const COURIERS = ['自送','J&T Express','Pos Laju','Ninja Van','DHL eCommerce','GDEX','Lalamove','货代 / 海运'];
+const FREIGHT_BY = ['我们包运费', '客户出运费'];
 const PAY_METHODS = ['银行转账','现金','TT 电汇','支票','线上支付'];
 const DELIVERY_ZONES = ['Kuala Lumpur','Selangor','Pulau Pinang','Johor','Melaka','Perak','Sabah','Sarawak'];
 
@@ -3452,14 +3504,49 @@ function orderReceived(od) {
   return +DM.get('payments').filter(p => p.orderId === od.id && p.status === 'confirmed').reduce((s, p) => s + (Number(p.amount) || 0), 0).toFixed(2);
 }
 
+// 运费谁出：我们包的话这钱是我们自己出的，不该出现在客户的应收里；
+// 客户出的话它就是一笔要收的钱，得和定金/尾款一样在收款记录里挂一行，不然单子上永远少这一笔。
+// 到付、客户直接付给快递公司的，选「客户出运费」但金额留 0 —— 那笔钱不过我们账，不挂应收。
+function freightReceivable(od) { return /客户/.test(String(od.freightBy || '')) ? +(Number(od.freight) || 0).toFixed(2) : 0 }
+function orderReceivable(od) { return +((Number(od.amount) || 0) + freightReceivable(od)).toFixed(2) }
+function freightPaid(od) {
+  return +DM.get('payments').filter(p => p.orderId === od.id && p.type === 'freight' && p.status === 'confirmed')
+    .reduce((s, p) => s + (Number(p.amount) || 0), 0).toFixed(2);
+}
+
+// 把运费那一笔待收对齐到订单上当前的运费。只在发货弹窗保存时调用（撤销发货不动它）。
+// 已经标成「已到账」的那几笔是核过的钱，金额和状态都不许被这里改回去；
+// 所以要收的数 = 应收运费 − 已到账运费，减到 0 就把没到账的运费行撤掉。
+function syncFreightPayment(od) {
+  const rest = +(freightReceivable(od) - freightPaid(od)).toFixed(2);
+  const all = DM.get('payments');
+  const out = [];
+  let placed = false;
+  all.forEach(p => {
+    if (p.orderId !== od.id || p.type !== 'freight') { out.push(p); return }
+    if (p.status === 'confirmed') { out.push(p); return }
+    if (rest > 0 && !placed) { placed = true; out.push(Object.assign({}, p, { typeLabel: '运费', customer: od.customer || p.customer, amount: rest })) }
+  });
+  if (rest > 0 && !placed) {
+    const site = docVal('settings_site');
+    out.push({ id: genDocId('PAY', 'payments'), orderId: od.id, orderNo: od.id, customer: od.customer,
+      type: 'freight', typeLabel: '运费', amount: rest, method: '银行转账',
+      bankName: '', accountNo: '', accountName: site.enName || '', date: '', receiptNo: '',
+      status: 'pending', note: '客户出运费，发货时挂在收款里', creator: whoami(), created: DM.now() });
+  }
+  DM.set('payments', out);
+  return rest;
+}
+
 function renderOrdersList(c) {
   const orders = DM.get('orders');
   const total = orders.reduce((s, o) => s + (Number(o.amount) || 0), 0);
+  const freightTotal = +orders.reduce((s, o) => s + freightReceivable(o), 0).toFixed(2);
   const canDel = canDeleteDocs();
   c.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">全部订单</h1><p class="page-desc">${orders.length ? `共 ${orders.length} 张，金额合计 RM ${money2(total)}。报价客户确认后到「报价管理 → 报价单」点「转订单」` : '还没有订单。到「报价管理 → 报价单」把已发出的报价点「转订单」，或直接点右上角新建'}${delGuardHint()}</p></div><button class="btn btn-primary" onclick="openOrderModal()">+ 新建订单</button></div>
+    <div class="page-header"><div><h1 class="page-title">全部订单</h1><p class="page-desc">${orders.length ? `共 ${orders.length} 张，金额合计 RM ${money2(total)}${freightTotal ? `；另有客户出运费 RM ${money2(freightTotal)}，已挂在各单的应收里（运费没到账，单子上方还是「已发货」不会自己变「完成」）` : ''}。报价客户确认后到「报价管理 → 报价单」点「转订单」` : '还没有订单。到「报价管理 → 报价单」把已发出的报价点「转订单」，或直接点右上角新建'}${delGuardHint()}</p></div><button class="btn btn-primary" onclick="openOrderModal()">+ 新建订单</button></div>
     <div class="card"><div class="table-wrap"><table style="min-width:1060px"><thead><tr><th>订单号</th><th>客户</th><th>产品</th><th>金额(RM)</th><th>已收(RM)</th><th>生产状态</th><th>预计交货</th><th>负责人</th><th>操作</th></tr></thead>
-    <tbody>${orders.length ? orders.map(o => `<tr><td class="td-id" style="white-space:nowrap">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${esc(o.product||'')}</td><td style="white-space:nowrap">${money2(o.amount)}</td><td style="white-space:nowrap">${money2(orderReceived(o))}</td><td style="white-space:nowrap">${productionBadge(o.productionStatus)}</td><td style="white-space:nowrap">${esc(o.deliveryDate||'')}</td><td style="white-space:nowrap">${esc(o.assignee)||'<span style="color:var(--gray-400)">未分配</span>'}</td><td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button> <button class="btn btn-sm btn-secondary" onclick="editOrder('${o.id}')">编辑</button> ${o.shipDate ? `<button class="btn btn-sm btn-secondary" onclick="shipOrder('${o.id}')">物流</button>` : `<button class="btn btn-sm btn-primary" onclick="shipOrder('${o.id}')">发货</button>`}${canDel ? ` <button class="btn btn-sm btn-danger" onclick="delOrder('${o.id}')">删除</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--gray-400)">暂无订单</td></tr>'}</tbody></table></div></div>`;
+    <tbody>${orders.length ? orders.map(o => `<tr><td class="td-id" style="white-space:nowrap">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${esc(o.product||'')}</td><td style="white-space:nowrap">${money2(o.amount)}${freightReceivable(o) > 0 ? `<div style="font-size:11px;color:var(--gray-500);white-space:nowrap">应收含运费 RM ${money2(orderReceivable(o))}</div>` : ''}</td><td style="white-space:nowrap">${money2(orderReceived(o))}</td><td style="white-space:nowrap">${productionBadge(o.productionStatus)}</td><td style="white-space:nowrap">${esc(o.deliveryDate||'')}</td><td style="white-space:nowrap">${esc(o.assignee)||'<span style="color:var(--gray-400)">未分配</span>'}</td><td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button> <button class="btn btn-sm btn-secondary" onclick="editOrder('${o.id}')">编辑</button> ${o.shipDate ? `<button class="btn btn-sm btn-secondary" onclick="shipOrder('${o.id}')">物流</button>` : `<button class="btn btn-sm btn-primary" onclick="shipOrder('${o.id}')">发货</button>`}${canDel ? ` <button class="btn btn-sm btn-danger" onclick="delOrder('${o.id}')">删除</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--gray-400)">暂无订单</td></tr>'}</tbody></table></div></div>`;
 }
 
 function editOrder(id) {
@@ -3600,7 +3687,12 @@ function syncOrderMoney(od) {
   };
   next.productionStatus = od.productionStatus || 'pending_deposit';
   if (next.depositPaid && next.productionStatus === 'pending_deposit') next.productionStatus = 'deposit_paid';
-  if (next.finalPaid && next.productionStatus === 'shipped') next.productionStatus = 'done';
+  // 「已发货 + 尾款到账」还不够算完成：客户出的运费也是这笔单的应收，
+  // 运费还挂在收款里没到账，就先停在「已发货」，别一边显示完成一边差一笔钱。
+  if (next.finalPaid && next.productionStatus === 'shipped' && received + 0.005 >= orderReceivable(od)) next.productionStatus = 'done';
+  // 反过来也一样：已完成的单又冒出没到账的应收（常见于发货时才补上「客户出运费」），
+  // 那个「完成」本来就是钱到账挣来的，钱又差上了就得退回「已发货」，不能一边完成一边欠着。
+  if (next.productionStatus === 'done' && received + 0.005 < orderReceivable(od)) next.productionStatus = 'shipped';
   Object.assign(od, next);
   const orders = DM.get('orders');
   const cur = orders.find(x => x.id === od.id);
@@ -3614,14 +3706,22 @@ function viewOrder(id) {
   const q = DM.get('quotes').find(x => x.id === o.quoteId);
   const cell = (k, v) => `<div class="form-group"><label class="form-label">${esc(k)}</label><div style="padding:8px 0">${v}</div></div>`;
   const got = orderReceived(o);
+  const frDue = freightReceivable(o);
+  const due = orderReceivable(o);
   showModal('订单详情 ' + o.id, `
     <div class="form-grid">
       ${cell('客户', `<strong>${esc(o.customer)}</strong>`)}
       ${cell('产品 / 内容', esc(o.product || '—'))}
       ${cell('来源报价单', q ? `<a href="javascript:void(0)" onclick="closeModal();viewQuote('${q.id}')">${esc(q.id)}</a>` : (o.quoteId ? esc(o.quoteId) : '手工建单'))}
       ${cell('金额', 'RM ' + money2(o.amount))}
+      ${cell('运费', o.freightBy
+        ? 'RM ' + money2(o.freight) + '（' + esc(o.freightBy) + '）'
+          + (frDue > 0 ? `<div style="font-size:12px;color:var(--gray-500)">这一笔挂进收款，等客户付</div>`
+            : (/客户/.test(o.freightBy) ? '<div style="font-size:12px;color:var(--gray-500)">金额 0 = 到付或客户直接付给快递，不进我们应收</div>' : '<div style="font-size:12px;color:var(--gray-500)">我们自己出，不进客户应收</div>'))
+        : '<span style="color:var(--gray-400)">未填</span>')}
+      ${cell('应收合计', 'RM ' + money2(due) + (frDue > 0 ? ` <span style="font-size:12px;color:var(--gray-500)">= 单额 RM ${money2(o.amount)} + 运费 RM ${money2(frDue)}</span>` : ''))}
       ${cell('定金 / 已收', 'RM ' + money2(o.depositAmount) + ' / RM ' + money2(got))}
-      ${cell('待收', '<span style="color:' + (got >= (Number(o.amount) || 0) ? 'var(--green)' : 'var(--red)') + '">RM ' + money2((Number(o.amount) || 0) - got) + '</span>')}
+      ${cell('待收', '<span style="color:' + (got >= due ? 'var(--green)' : 'var(--red)') + '">RM ' + money2(due - got) + '</span>')}
       ${cell('生产状态', productionBadge(o.productionStatus))}
       ${cell('生产部进度', shopBadge(o) + (o.prodAckAt ? `<div style="font-size:12px;color:var(--gray-500)">确认收到 ${esc(o.prodAckAt)}　${esc(o.prodAckBy || '')}</div>` : '')
         + (o.prodReject && !o.prodAckAt ? `<div style="font-size:12px;color:var(--red)">生产部退回：${esc(o.prodReject)}（${esc(o.prodRejectAt || '')} ${esc(o.prodRejectBy || '')}）</div>` : ''))}
@@ -3638,7 +3738,7 @@ function viewOrder(id) {
       ${o.note ? cell('备注', `<span style="white-space:pre-wrap">${esc(o.note)}</span>`) : ''}
     </div>
     <div style="margin-top:14px"><div class="card-header" style="padding:0 0 8px"><span class="card-title">收款记录</span></div>
-    <div style="font-size:11px;color:var(--gray-400);margin-bottom:6px">「待确认」是钱还没核到 / 水单还没拿到，核到了点那一行的「确认到账」即计入已收；记错了点「修改」改状态${canDeleteDocs() ? '或删掉' : '（要删这一笔，得让超级管理员在「系统设置 → 角色管理」里给你的角色勾上「删除单据」）'}。</div>
+    <div style="font-size:11px;color:var(--gray-400);margin-bottom:6px">「待确认」是钱还没核到 / 水单还没拿到，核到了点那一行的「确认到账」即计入已收；记错了点「修改」改状态${canDeleteDocs() ? '或删掉' : '（要删这一笔，得让超级管理员在「系统设置 → 角色管理」里给你的角色勾上「删除单据」）'}。${frDue > 0 ? `这一单客户出运费 RM ${money2(frDue)}，已单独挂了一行「运费」，运费没到账前这张单停在「已发货」不算完成。` : ''}</div>
     ${pays.length ? `<div class="table-wrap"><table><thead><tr><th>类型</th><th>金额(RM)</th><th>状态</th><th>到账日期</th><th>凭证</th><th></th></tr></thead><tbody>${pays.map(p => `<tr><td>${esc(p.typeLabel)}</td><td>${money2(p.amount)}</td><td>${payStatusBadge(p, 1)}</td><td>${esc(p.date || '—')}</td><td>${esc(payReceipt(p) || '—')}</td><td><button class="btn btn-sm btn-secondary" onclick="closeModal();openPaymentModal('${o.id}','${p.type}','${p.id}')">${p.status === 'confirmed' ? '修改' : p.status === 'rejected' ? '重登' : '登记'}</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>尚未生成收款项</p></div>'}
     </div>
     ${o.shipDate ? `<div style="margin-top:14px;text-align:right"><button class="btn btn-sm btn-danger" onclick="unshipOrder('${o.id}')">撤销发货</button></div>` : ''}
@@ -4198,7 +4298,7 @@ function openPaymentModal(orderId, type, payId) {
     if (p && rc && rc === p.id) { rc = ''; toast('凭证号那一栏抄的是本系统编号，已清空：那一栏要填的是银行水单 / 客户汇款单上的号') }
     const data = {
       orderId: oid, orderNo: order.id, customer: order.customer,
-      type: /尾/.test(typeLabel) ? 'final' : (/定/.test(typeLabel) ? 'deposit' : (typeLabel === '全额' ? 'final' : 'other')),
+      type: /尾/.test(typeLabel) ? 'final' : (/定/.test(typeLabel) ? 'deposit' : (typeLabel === '全额' ? 'final' : (typeLabel === '运费' ? 'freight' : 'other'))),
       typeLabel, amount: +amount.toFixed(2), method: val('p_method'),
       bankName: val('p_bank'), accountNo: val('p_account'), accountName: val('p_holder'),
       date: val('p_date'), receiptNo: rc, status: st,
@@ -4318,8 +4418,8 @@ function renderDelivery(c) {
   const orders = DM.get('orders');
   const todo = orders.filter(o => !o.shipDate);
   const shipped = orders.filter(o => o.shipDate).slice().reverse();
-  const row = (o, done) => `<tr><td class="td-id" style="white-space:nowrap">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${esc(o.zone || '未定')}</td><td style="white-space:nowrap">${Number(o.freight) > 0 ? 'RM ' + money2(o.freight) : (o.freight === 0 ? '免费' : '—')}</td><td>${esc(o.courier || (done ? '—' : '未填'))}</td><td style="white-space:nowrap">${o.trackingNo ? esc(o.trackingNo) : (done ? '—' : '<span style="color:var(--gray-400)">未填</span>')}</td><td style="white-space:nowrap">${esc(o.shipDate || '—')}</td><td style="white-space:nowrap">${esc(o.etaDate || o.deliveryDate || '—')}</td><td style="white-space:nowrap">${o.shipDate ? '<span class="badge badge-green">已发货</span>' : productionBadge(o.productionStatus)}</td><td style="white-space:nowrap"><button class="btn btn-sm ${done ? 'btn-secondary' : 'btn-primary'}" onclick="shipOrder('${o.id}')">${done ? '修改' : '发货'}</button> <button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button></td></tr>`;
-  const head = '<thead><tr><th>订单号</th><th>客户</th><th>配送区域</th><th>运费</th><th>快递</th><th>快递单号</th><th>发货日期</th><th>预计送达</th><th>状态</th><th>操作</th></tr></thead>';
+  const row = (o, done) => `<tr><td class="td-id" style="white-space:nowrap">${esc(o.id)}</td><td class="td-name">${esc(o.customer)}</td><td>${esc(o.zone || '未定')}</td><td style="white-space:nowrap">${o.freightBy ? `RM ${money2(o.freight)}<span style="color:var(--gray-500)">（${/客户/.test(o.freightBy) ? '客户出' : '我们包'}）</span>` : (Number(o.freight) > 0 ? 'RM ' + money2(o.freight) : '—')}</td><td>${esc(o.courier || (done ? '—' : '未填'))}</td><td style="white-space:nowrap">${o.trackingNo ? esc(o.trackingNo) : (done ? '—' : '<span style="color:var(--gray-400)">未填</span>')}</td><td style="white-space:nowrap">${esc(o.shipDate || '—')}</td><td style="white-space:nowrap">${esc(o.etaDate || o.deliveryDate || '—')}</td><td style="white-space:nowrap">${o.shipDate ? '<span class="badge badge-green">已发货</span>' : productionBadge(o.productionStatus)}</td><td style="white-space:nowrap"><button class="btn btn-sm ${done ? 'btn-secondary' : 'btn-primary'}" onclick="shipOrder('${o.id}')">${done ? '修改' : '发货'}</button> <button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">详情</button></td></tr>`;
+  const head = '<thead><tr><th>订单号</th><th>客户</th><th>配送区域</th><th>运费 / 谁出</th><th>快递</th><th>快递单号</th><th>发货日期</th><th>预计送达</th><th>状态</th><th>操作</th></tr></thead>';
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">发货管理</h1><p class="page-desc">数据来自订单管理。生产到「待发货」的订单一律显示在这里，点「发货」填快递单号即完成出库</p></div><button class="btn btn-secondary" onclick="navigateTo('orders-list','订单管理','全部订单')">去全部订单</button></div>
     <div class="card mb-20"><div class="card-header"><span class="card-title">🚚 待发货 <span class="badge badge-yellow">${todo.length}</span></span></div>
@@ -4334,13 +4434,15 @@ function unshipOrder(id) {
   const orders = DM.get('orders');
   const o = orders.find(x => x.id === id);
   if (!o) return;
+  // 快递单号不跟着清：退回「待发货」九成是改日期、补收货人，不是换一票货；
+  // 号填一次不容易，抹掉了下次还得翻聊天记录找。真要改号，去发货弹窗里改那栏就行。
+  if (!confirm(`要把订单 ${o.id}（${o.customer}）退回「待发货」吗？\n\n会改的：发货日期清空、生产状态回到「待发货」。\n不会动的：快递单号 ${o.trackingNo || '（这单没填）'}、运费和收款记录、已收金额。\n\n（只是填错日期 / 想补收货人的话，直接点「修改发货」改就行，不用退单。）`)) return;
+  const keptNo = o.trackingNo || '';
   o.shipDate = '';
-  o.trackingNo = '';
-  o.courier = '';
   o.productionStatus = 'shipping';
   DM.set('orders', orders);
-  writeLog('撤销发货', o.id + ' ' + o.customer);
-  toast('已退回「待发货」');
+  writeLog('撤销发货', `${o.id} ${o.customer}｜${o.courier || '—'} ${keptNo || '无单号'} 保留`);
+  toast(keptNo ? `已退回「待发货」，快递单号 ${keptNo} 还留着` : '已退回「待发货」');
   closeModal();
   renderPage(currentPageId);
 }
@@ -4354,7 +4456,8 @@ function shipOrder(id) {
       <div class="form-group"><label class="form-label">客户</label><div style="padding:8px 0;font-weight:600">${esc(o.customer)}</div></div>
       <div class="form-group"><label class="form-label">产品 / 内容</label><div style="padding:8px 0">${esc(o.product || '—')}</div></div>
       <div class="form-group"><label class="form-label">配送区域</label><select class="form-select" id="s_zone">${selOpts(DELIVERY_ZONES.concat(DM.get('shippingZones').map(z => z.region)), o.zone, '未定')}</select></div>
-      <div class="form-group"><label class="form-label">运费 (RM，0 = 免费)</label><input class="form-input" type="number" min="0" step="0.01" id="s_freight" value="${o.freight === undefined || o.freight === '' ? '' : money2(o.freight)}" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label">运费谁出</label><select class="form-select" id="s_freight_by" onchange="shipFreightHint()">${selOpts(FREIGHT_BY, o.freightBy, '未填')}</select></div>
+      <div class="form-group"><label class="form-label">运费 (RM)</label><input class="form-input" type="number" min="0" step="0.01" id="s_freight" value="${o.freight === undefined || o.freight === '' ? '' : money2(o.freight)}" placeholder="0.00" oninput="shipFreightHint()"><div id="s_freight_hint" style="font-size:11px;color:var(--gray-500);margin-top:4px"></div></div>
       <div class="form-group"><label class="form-label">快递 / 物流</label><select class="form-select" id="s_courier">${selOpts(COURIERS, o.courier, '未定')}</select></div>
       <div class="form-group"><label class="form-label">快递单号</label><input class="form-input" id="s_tracking" placeholder="e.g. JTCT0012345678" value="${esc(o.trackingNo || '')}"></div>
       <div class="form-group"><label class="form-label">发货日期</label><input class="form-input" type="date" id="s_date" value="${esc(o.shipDate || today())}"></div>
@@ -4365,6 +4468,7 @@ function shipOrder(id) {
     ${o.shipDate ? `<div style="margin-top:12px"><button class="btn btn-sm btn-danger" onclick="unshipOrder('${o.id}')">撤销发货，退回待发货</button></div>` : ''}
   `, () => {
     o.zone = val('s_zone');
+    o.freightBy = val('s_freight_by');
     const fr = parseFloat(val('s_freight'));
     o.freight = isNaN(fr) ? 0 : +fr.toFixed(2);
     o.courier = val('s_courier');
@@ -4375,12 +4479,27 @@ function shipOrder(id) {
     o.shipNote = (document.getElementById('s_note') || {}).value?.trim() || '';
     if (!o.trackingNo && o.courier !== '自送') { toast('请填写快递单号，或把物流选成「自送」'); return false }
     if (o.productionStatus !== 'done') o.productionStatus = 'shipped';
+    const freightDue = syncFreightPayment(o);
     syncOrderMoney(o);
     DM.set('orders', orders);
-    writeLog(o.shipDate ? '登记发货' : '更新发货信息', `${o.id} ${o.customer}｜${o.courier || '—'} ${o.trackingNo || '无单号'}｜${o.shipDate}`);
-    toast(`订单 ${o.id} 已标记为已发货`);
+    writeLog(o.shipDate ? '登记发货' : '更新发货信息', `${o.id} ${o.customer}｜${o.courier || '—'} ${o.trackingNo || '无单号'}｜${o.shipDate}｜运费 ${o.freightBy || '未填'} RM ${money2(o.freight)}`);
+    toast(`订单 ${o.id} 已标记为已发货${freightDue > 0 ? `，收款里挂了一笔 RM ${money2(freightDue)} 运费待收` : ''}`);
     renderPage(currentPageId);
   });
+  shipFreightHint();
+}
+
+// 发货弹窗里那两栏运费的实时说明：选「客户出」又填了钱，收款记录才会多一行运费；
+// 到付这类不过我们账的，金额留 0 就不挂应收——这个区别光看栏名猜不出来，写在旁边。
+function shipFreightHint() {
+  const el = document.getElementById('s_freight_hint');
+  if (!el) return;
+  const by = val('s_freight_by');
+  const fr = parseFloat(val('s_freight')) || 0;
+  el.innerHTML = /客户/.test(by)
+    ? (fr > 0 ? `收款记录里会挂一行「运费 RM ${money2(fr)}」等客户付。这一笔算进这张单的应收，没到账前订单不会自己标「完成」。`
+      : '金额留 0 = 到付或客户直接付给快递 / 货代，那笔钱不过我们账，收款里不挂这一行。')
+    : (/包/.test(by) ? '包运费：这笔运费我们自己出，不进客户应收。' : '先选谁出，才知道这笔运费要不要挂进收款。老订单没选过的，默认不进应收。');
 }
 
 function renderDieline(c) {
