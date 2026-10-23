@@ -2360,7 +2360,7 @@ function editQuote(id) {
       <div class="form-group full"><label class="form-label">表面处理（可多选）</label>${finishPickerHtml('fq_finish', q.finish)}</div>
       <div class="form-group full"><label class="form-label">备注（会印在报价单上）</label><textarea class="form-textarea" id="fq_note" rows="2" placeholder="选填，例如箱子粘口处打5枚钉固定">${esc(q.note)}</textarea></div>
       ${quoteTermsFormHtml('fq', q, 'recalcEditQuote()')}
-      <div class="form-group full" style="font-size:12px;color:var(--gray-500);line-height:1.7">这几项和「新建报价」用的是同一套清单，下拉里没有的可以直接手打，手打的不会被下拉框抹掉。<strong>这张报价如果已经转过订单，车间工单上看到的成品内容以「订单管理 → 全部订单 → 编辑」为准</strong>，改这里不会倒回去改那张工单。</div>
+      <div class="form-group full" style="font-size:12px;color:var(--gray-500);line-height:1.7">这几项和「新建报价」用的是同一套清单，下拉里没有的可以直接手打，手打的不会被下拉框抹掉。<strong>这张报价如果已经转过订单，生产部工单上看到的成品内容以「订单管理 → 全部订单 → 编辑」为准</strong>，改这里不会倒回去改那张工单。</div>
       <div class="form-group full" style="padding:10px 12px;background:var(--gray-50);border-radius:8px;font-size:13px" id="fq_sum"></div>
     </div>
   `, () => {
@@ -3356,12 +3356,12 @@ function openOrderModal(o, prefill) {
     finishing: sp ? sp.finishing : d.finishing };
   const srcQ = sp && o.quoteId ? DM.get('quotes').find(x => x.id === o.quoteId) : null;
   const specHint = srcQ && !String(o.boxType || '').trim()
-    ? `<div style="font-size:12px;color:var(--gray-500);margin-top:4px">这几项是从报价单 ${esc(srcQ.id)} 现读过来的（车间卡片上看到的也是这套），保存后以这里写的为准。</div>` : '';
+    ? `<div style="font-size:12px;color:var(--gray-500);margin-top:4px">这几项是从报价单 ${esc(srcQ.id)} 现读过来的（生产部卡片上看到的也是这套），保存后以这里写的为准。</div>` : '';
   showModal(isEdit ? '编辑订单 ' + o.id : '新建订单', `
     <div class="form-grid">
       <div class="form-group"><label class="form-label">客户 *</label><input class="form-input" id="o_customer" value="${esc(d.customer||'')}"></div>
       <div class="form-group"><label class="form-label">产品 / 内容</label><input class="form-input" id="o_product" value="${esc(d.product||'')}"></div>
-      <div class="form-group full"><label class="form-label">生产成品内容 —— 车间收到的工单只看这几项</label>
+      <div class="form-group full"><label class="form-label">生产成品内容 —— 生产部收到的工单只看这几项</label>
         <div class="form-grid" style="margin-top:6px">
           <div class="form-group"><label class="form-label">产品名称 / 盒型</label>${comboInput('o_boxType', quoteBoxNames(), sv.boxType, '选盒型或直接填写')}</div>
           <div class="form-group"><label class="form-label">材质</label>${comboInput('o_material', QOPT.papers.map(p => p.name), sv.material, '选纸种或直接填写', 'onchange="swapGsmOptions(\'o_material\',\'o_gsm\')"')}</div>
@@ -3500,9 +3500,9 @@ function viewOrder(id) {
       ${cell('定金 / 已收', 'RM ' + money2(o.depositAmount) + ' / RM ' + money2(got))}
       ${cell('待收', '<span style="color:' + (got >= (Number(o.amount) || 0) ? 'var(--green)' : 'var(--red)') + '">RM ' + money2((Number(o.amount) || 0) - got) + '</span>')}
       ${cell('生产状态', productionBadge(o.productionStatus))}
-      ${cell('车间进度', shopBadge(o) + (o.prodAckAt ? `<div style="font-size:12px;color:var(--gray-500)">确认收到 ${esc(o.prodAckAt)}　${esc(o.prodAckBy || '')}</div>` : '')
-        + (o.prodReject && !o.prodAckAt ? `<div style="font-size:12px;color:var(--red)">车间退回：${esc(o.prodReject)}（${esc(o.prodRejectAt || '')} ${esc(o.prodRejectBy || '')}）</div>` : ''))}
-      ${o.shopNote ? cell('车间备注', `${esc(o.shopNote)}<div style="font-size:12px;color:var(--gray-500)">${esc(o.shopNoteAt || '')}　${esc(o.shopNoteBy || '')}　<span style="color:var(--gray-500)">车间在「生产工单」点开工单纸写的</span></div>`) : ''}
+      ${cell('生产部进度', shopBadge(o) + (o.prodAckAt ? `<div style="font-size:12px;color:var(--gray-500)">确认收到 ${esc(o.prodAckAt)}　${esc(o.prodAckBy || '')}</div>` : '')
+        + (o.prodReject && !o.prodAckAt ? `<div style="font-size:12px;color:var(--red)">生产部退回：${esc(o.prodReject)}（${esc(o.prodRejectAt || '')} ${esc(o.prodRejectBy || '')}）</div>` : ''))}
+      ${o.shopNote ? cell('生产部备注', `${esc(o.shopNote)}<div style="font-size:12px;color:var(--gray-500)">${esc(o.shopNoteAt || '')}　${esc(o.shopNoteBy || '')}　<span style="color:var(--gray-500)">生产部在「生产工单」点开工单纸写的</span></div>`) : ''}
       ${o.prodDoneAt ? cell('完工登记', `实产 <b>${esc(String(o.prodQty || ''))}</b> pcs`
         + (o.prodDiff ? `（${Number(o.prodDiff) > 0 ? '超产' : '少产'} ${Math.abs(Number(o.prodDiff))}）` : '')
         + `<div style="font-size:12px;color:var(--gray-500)">${esc(o.prodDoneAt)}　${esc(o.prodDoneBy || '')}${o.prodFixAt ? `　${esc(o.prodFixAt)} 由 ${esc(o.prodFixBy || '')} 更正` : ''}</div>`) : ''}
@@ -3678,7 +3678,7 @@ function viewAsset(orderId, idx) {
 function woAssetsHtml(o, edit) {
   const files = orderAssets(o);
   if (!edit) return files.length
-    ? `<div class="blk"><h4>客户素材 / Artwork</h4><p>${files.map(f => esc(f.name || '文件')).join('、')}<span style="display:block;font-size:11px;color:#7a828f;margin-top:3px">附件在本系统的工单里预览和下载，打印件不带文件</span></p></div>`
+    ? `<div class="blk"><h4>客户素材 / Artwork</h4><p>${files.map(f => esc(f.name || '文件')).join('、')}<span style="display:block;font-size:11px;color:#7a828f;margin-top:3px">设计稿以电子版为准</span></p></div>`
     : '';
   const manage = canSee('orders-list');
   return `<div class="blk"><h4>客户素材 / Artwork（${files.length}）</h4>${files.length
@@ -3687,8 +3687,8 @@ function woAssetsHtml(o, edit) {
         ${assetKind(f) === 'file' ? '<span class="mt">源文件，下载后用 AI / CDR 打开</span>' : `<button class="btn btn-sm btn-secondary" onclick="viewAsset('${esc(o.id)}',${i})">预览</button>`}
         <a class="btn btn-sm btn-secondary" href="${assetDownloadHref(f)}" target="_blank" rel="noopener" download>下载</a>
         ${manage ? `<button class="btn btn-sm btn-secondary" onclick="removeOrderAsset('${esc(o.id)}',${i})">摘除</button>` : ''}</div>`).join('')}</div>`
-    : `<p class="none">${manage ? '还没挂素材。收到客户设计稿后点下面的「上传素材」，车间在这张工单上就能直接看。' : '这张单还没挂素材。要设计稿请找跟单员——让他在「生产工单 → 点开这张工单 → 上传素材」传上来。'}</p>`}
-    ${manage ? '<p class="none">改版请再传一份新的，别摘除车间已经在用的旧版。</p>' : ''}</div>`;
+    : `<p class="none">${manage ? '还没挂素材。收到客户设计稿后点下面的「上传素材」，生产部在这张工单上就能直接看。' : '这张单还没挂素材。要设计稿请找跟单员——让他在「生产工单 → 点开这张工单 → 上传素材」传上来。'}</p>`}
+    ${manage ? '<p class="none">改版请再传一份新的，别摘除生产部已经在用的旧版。</p>' : ''}</div>`;
 }
 
 function uploadOrderAsset(id) {
@@ -3734,7 +3734,7 @@ function removeOrderAsset(id, idx) {
   if (!o) return;
   const f = orderAssets(o)[idx];
   if (!f) return;
-  if (!confirm('把「' + (f.name || '这个文件') + '」从这张工单上摘掉？车间就下载不到它了。')) return;
+  if (!confirm('把「' + (f.name || '这个文件') + '」从这张工单上摘掉？生产部就下载不到它了。')) return;
   o.assets = orderAssets(o).filter((_, i) => i !== idx);
   DM.set('orders', orders);
   if (f.path && Sync.ready && !Sync.muted) { try { Sync.client.storage.from('jl-uploads').remove([f.path]) } catch (e) {} }
@@ -3764,16 +3764,16 @@ function woDocHtml(o, edit) {
     row('表面处理', 'Surface finish', sp.finishing),
     row('交货时间', 'Delivery', sp.delivery)
   ].join('');
-  const note = edit ? `<div class="form-group" style="margin-top:16px"><label class="form-label">备注 —— 车间填写：过程中遇到的问题、要反馈给跟单员的</label>
+  const note = edit ? `<div class="form-group" style="margin-top:16px"><label class="form-label">备注 —— 生产部填写：过程中遇到的问题、要反馈给跟单员的</label>
       <textarea class="form-input" id="wo_note" rows="4" style="min-height:88px;resize:vertical" placeholder="例如：白卡只剩 280 克，问跟单员能不能换；这批能不能晚两天交">${esc(o.shopNote || '')}</textarea>
       <div style="font-size:12px;color:var(--gray-500);margin-top:6px">${o.shopNoteAt ? '上次更新 ' + esc(o.shopNoteAt) + '　' + esc(o.shopNoteBy || '') + '　改完点下面的「保存备注」' : '写完点下面的「保存备注」，跟单员在「全部订单 → 详情」里看得到'}</div></div>`
-    : `<div class="blk"><h4>备注 / Remarks（车间填写）</h4><p>${o.shopNote ? esc(o.shopNote) : '（空）'}</p></div>`;
+    : `<div class="blk"><h4>备注 / Remarks（生产部填写）</h4><p>${o.shopNote ? esc(o.shopNote) : '（空）'}</p></div>`;
   return `<div class="wo-doc">
     <div class="head"><div>${tpl.logo ? `<img class="logo" src="${safeHref(tpl.logo)}" alt="">` : ''}<div class="co">${esc(header)}</div>${contactLine ? `<div class="co-sub">${esc(contactLine)}</div>` : ''}</div>
       <div class="doc-type"><b>WORK ORDER</b><i>生产工单</i><div class="meta"><div>No. ${esc(o.id)}</div><div>Date: ${esc(day)}</div></div></div></div>
     <div class="parties">
       <div class="party"><h5>企业名称 / Customer</h5><div class="nm">${esc(o.customer || '—')}</div></div>
-      <div class="party"><h5>车间状态 / Shop status</h5><div class="nm">${SHOP_STATE[shopState(o)][0]}</div>
+      <div class="party"><h5>生产部状态 / Shop status</h5><div class="nm">${SHOP_STATE[shopState(o)][0]}</div>
         ${o.prodAckAt ? `<div>确认收到 ${esc(o.prodAckAt)}　${esc(o.prodAckBy || '')}</div>` : ''}
         ${o.prodDoneAt ? `<div>报完工 ${esc(o.prodDoneAt)}　${esc(o.prodDoneBy || '')}　实产 ${esc(String(o.prodQty || ''))} pcs</div>` : ''}
         ${o.prodNote ? `<div>特殊情况：${esc(o.prodNote)}</div>` : ''}</div></div>
@@ -3781,7 +3781,7 @@ function woDocHtml(o, edit) {
     ${woAssetsHtml(o, edit)}
     ${o.prodReject && !o.prodAckAt ? `<div class="blk"><h4>跟单员退回 / Rejected</h4><p>${esc(o.prodReject)}（${esc(o.prodRejectAt || '')} ${esc(o.prodRejectBy || '')}）</p></div>` : ''}
     ${note}
-    <div class="foot"><div class="note">请严格按以上要求生产。用料、工艺、数量有疑问，先写在备注里，跟单员确认后再开工。</div><div class="sig">车间签收</div></div>
+    <div class="foot"><div class="note">请严格按以上要求生产。用料、工艺、数量有疑问，先写在备注里，跟单员确认后再开工。</div><div class="sig">生产部签收</div></div>
   </div>`;
 }
 
@@ -3808,7 +3808,7 @@ function saveShopNote(id) {
   o.shopNote = txt;
   if (txt) { o.shopNoteAt = DM.now(); o.shopNoteBy = whoami(); }
   DM.set('orders', orders);
-  writeLog('车间备注', `${o.id}：${txt || '（清空）'}`.slice(0, 120));
+  writeLog('生产部备注', `${o.id}：${txt || '（清空）'}`.slice(0, 120));
   toast(txt ? '备注已保存，跟单员在「全部订单 → 详情」里看得到' : '备注已清空');
   openWorkOrder(id);
 }
@@ -3859,7 +3859,7 @@ function renderProduction(c) {
   const orders = DM.get('orders');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">生产工单</h1>
-      <p class="page-desc">车间这一眼只看得懂成品：公司名称 + 产品名称 / 材质 / 克重 / 尺寸 / 数量 / 印刷 / 表面处理 / 交货时间。核对无误点「确认收到工单」，做完填实际生产数量和特殊情况说明再点「确认生产完成」。金额和客户联系方式不下发车间；流程进度在「订单管理 → 状态看板」，那是跟单员的页面。</p></div></div>
+      <p class="page-desc">生产部这一眼只看得懂成品：公司名称 + 产品名称 / 材质 / 克重 / 尺寸 / 数量 / 印刷 / 表面处理 / 交货时间。核对无误点「确认收到工单」，做完填实际生产数量和特殊情况说明再点「确认生产完成」。金额和客户联系方式不下发生产部；流程进度在「订单管理 → 状态看板」，那是跟单员的页面。</p></div></div>
     ${prodShopHtml(orders)}`;
 }
 
@@ -3870,7 +3870,7 @@ function ackOrder(id) {
   const s = orderSpec(o);
   const miss = SHOP_KEYS.filter(([k]) => !String(s[k] || '').trim()).map(([, label]) => label);
   showModal('确认收到工单 ' + id, `
-    <p style="margin:0 0 12px;font-size:13px;color:var(--gray-600)">下面就是车间要做的东西。对得上就点确认；对不上把哪里不对写在下面，点「退回跟单员」，别按错数开工。</p>
+    <p style="margin:0 0 12px;font-size:13px;color:var(--gray-600)">下面就是生产部要做的东西。对得上就点确认；对不上把哪里不对写在下面，点「退回跟单员」，别按错数开工。</p>
     ${shopRowsHtml(s)}
     ${miss.length ? `<div style="margin-top:12px;font-size:12px;color:var(--red)">这几项后台没填：${esc(miss.join('、'))}。建议退回让跟单员补齐再开工。</div>` : ''}
     <div class="form-group" style="margin-top:14px"><label class="form-label">退回原因（只有点「退回跟单员」时才要填）</label>
@@ -3891,7 +3891,7 @@ function saveOrderAck(id) {
   delete o.prodReject; delete o.prodRejectAt; delete o.prodRejectBy;
   if (stepIndex(o.productionStatus) < stepIndex('producing')) o.productionStatus = 'producing';
   DM.set('orders', orders);
-  writeLog('车间接工单', `${o.id} ${o.customer}`);
+  writeLog('生产部接单', `${o.id} ${o.customer}`);
   closeModal();
   toast(`工单 ${o.id} 已确认收到，进入生产中`);
   renderPage(currentPageId);
@@ -3907,7 +3907,7 @@ function backOrderToSeller(id) {
   o.prodRejectAt = DM.now();
   o.prodRejectBy = whoami();
   DM.set('orders', orders);
-  writeLog('车间退回工单', `${o.id} ${reason}`);
+  writeLog('生产部退回工单', `${o.id} ${reason}`);
   closeModal();
   toast(`工单 ${o.id} 已退回跟单员`);
   renderPage(currentPageId);
@@ -3964,7 +3964,7 @@ function saveShopDone(id) {
   else { o.prodDoneAt = DM.now(); o.prodDoneBy = whoami(); }
   if (!wasDone && stepIndex(o.productionStatus) < stepIndex('shipping')) o.productionStatus = 'shipping';
   DM.set('orders', orders);
-  writeLog(wasDone ? '更正完工登记' : '车间报完工', `${o.id} 实产 ${qty}` + (note ? '｜' + note : ''));
+  writeLog(wasDone ? '更正完工登记' : '生产部报完工', `${o.id} 实产 ${qty}` + (note ? '｜' + note : ''));
   toast(wasDone ? `工单 ${o.id} 的完工登记已更正` : `工单 ${o.id} 已确认生产完成（实产 ${qty} pcs）`);
   renderPage(currentPageId);
 }
@@ -6663,7 +6663,7 @@ function openUserModal(id) {
     <div class="form-grid">
       <div class="form-group"><label class="form-label">姓名 *</label><input class="form-input" id="f_name" value="${esc(user ? user.name : '')}"></div>
       <div class="form-group"><label class="form-label">角色</label><select class="form-select" id="f_role">${roleList.map(r=>`<option ${user && user.role===r?'selected':''}>${esc(r)}</option>`).join('')}</select></div>
-      <div class="form-group"><label class="form-label">联系电话</label><input class="form-input" id="f_phone" value="${esc(user ? (user.phone || '') : '')}" placeholder="车间有疑问时打这个号"><div style="font-size:12px;color:var(--gray-500);margin-top:4px">印在生产工单纸的页眉上，不填就只显示姓名和邮箱</div></div>
+      <div class="form-group"><label class="form-label">联系电话</label><input class="form-input" id="f_phone" value="${esc(user ? (user.phone || '') : '')}" placeholder="生产部有疑问时打这个号"><div style="font-size:12px;color:var(--gray-500);margin-top:4px">印在生产工单纸的页眉上，不填就只显示姓名和邮箱</div></div>
       ${user
         ? `<div class="form-group"><label class="form-label">登录邮箱</label><div style="padding:8px 0;color:var(--gray-600)">${esc(user.email||'—')}</div></div>
            <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="f_active"><option value="true" ${user.active?'selected':''}>启用</option><option value="false" ${!user.active?'selected':''}>禁用</option></select></div>`
@@ -6799,7 +6799,7 @@ function renderRoles(c) {
   const roles = DM.get('roles'), users = DM.get('users');
   c.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">角色管理</h1><p class="page-desc">角色决定这个人登录后左侧能看到哪些菜单：勾整组＝这一组页面全能看，只勾一页＝只看得到这一页。
-      「生产」这一档只给了 订单管理 → 生产工单，车间同事看不到金额和客户联系方式。<strong>这是后台菜单层的限制，不是数据库隔离</strong>——要防人到库里翻数据，得在 Supabase 上按角色配权限。</p></div>
+      「生产」这一档只给了 订单管理 → 生产工单，生产部同事看不到金额和客户联系方式。<strong>这是后台菜单层的限制，不是数据库隔离</strong>——要防人到库里翻数据，得在 Supabase 上按角色配权限。</p></div>
       <div style="white-space:nowrap;flex-shrink:0"><button class="btn btn-primary" onclick="editRole('')">新增角色</button></div></div>
     <div class="card"><div class="table-wrap"><table><thead><tr><th>角色</th><th>权限范围</th><th>在用账号</th><th>操作</th></tr></thead>
     <tbody>${roles.map(r=>`<tr><td class="td-name">${esc(r.name)}</td><td>${esc(rolePermsText(r))}</td><td style="white-space:nowrap">${users.filter(u => (u.role||'').trim() === String(r.name||'').trim()).length} 个</td><td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="editRole('${r.id}')">编辑权限</button></td></tr>`).join('')}</tbody></table></div></div>`;
