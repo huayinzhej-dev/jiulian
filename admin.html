@@ -3535,7 +3535,7 @@ function viewOrder(id) {
       ${o.note ? cell('备注', `<span style="white-space:pre-wrap">${esc(o.note)}</span>`) : ''}
     </div>
     <div style="margin-top:14px"><div class="card-header" style="padding:0 0 8px"><span class="card-title">收款记录</span></div>
-    ${pays.length ? `<div class="table-wrap"><table><thead><tr><th>类型</th><th>金额(RM)</th><th>状态</th><th>到账日期</th><th>凭证</th><th></th></tr></thead><tbody>${pays.map(p => `<tr><td>${esc(p.typeLabel)}</td><td>${money2(p.amount)}</td><td><span class="badge ${p.status === 'confirmed' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${p.status === 'confirmed' ? '已到账' : p.status === 'rejected' ? '已退回' : '待确认'}</span></td><td>${esc(p.date || '—')}</td><td>${esc(p.receiptNo || '—')}</td><td><button class="btn btn-sm btn-secondary" onclick="closeModal();openPaymentModal('${o.id}','${p.type}')">登记</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>尚未生成收款项</p></div>'}
+    ${pays.length ? `<div class="table-wrap"><table><thead><tr><th>类型</th><th>金额(RM)</th><th>状态</th><th>到账日期</th><th>凭证</th><th></th></tr></thead><tbody>${pays.map(p => `<tr><td>${esc(p.typeLabel)}</td><td>${money2(p.amount)}</td><td><span class="badge ${p.status === 'confirmed' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${p.status === 'confirmed' ? '已到账' : p.status === 'rejected' ? '已退回' : '待确认'}</span></td><td>${esc(p.date || '—')}</td><td>${esc(p.receiptNo || '—')}</td><td><button class="btn btn-sm btn-secondary" onclick="closeModal();openPaymentModal('${o.id}','${p.type}','${p.id}')">${p.status === 'confirmed' ? '修改' : p.status === 'rejected' ? '重登' : '登记'}</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>尚未生成收款项</p></div>'}
     </div>
     ${o.shipDate ? `<div style="margin-top:14px;text-align:right"><button class="btn btn-sm btn-danger" onclick="unshipOrder('${o.id}')">撤销发货</button></div>` : ''}
   `, null, [
@@ -4030,15 +4030,26 @@ function renderPayments(c) {
 
 function openPaymentModal(orderId, type, payId) {
   const payments = DM.get('payments');
-  const p = payId ? payments.find(x => x.id === payId) : null;
+  let p = payId ? payments.find(x => x.id === payId) : null;
   const orders = DM.get('orders');
   if (!orderId && !p) {
     if (!orders.length) { toast('先创建订单，再登记收款'); return; }
     orderId = orders[0].id;
   }
+  // 转订单时自动生成的定金/尾款那两笔待收，本来就是留给收到钱时填的：没点名要改哪一笔时，
+  // 先把同订单、同类型、凭证和到账日期都还空着的那笔拿出来用，别再压一条新的进去。
+  // 老版本每次「登记」都新增一条，于是一笔款在表里出现两回，已到账的那条还顶着「待确认」。
+  // 只认「没填过」的：填过的说明那一笔已经记过账了，再收一次就该是新的第二条。
+  const isBlank = x => x && x.status === 'pending' && !(x.receiptNo || '').trim() && !(x.date || '').trim();
+  if (!p) {
+    const want = type === 'final' ? 'final' : 'deposit';
+    const blank = payments.find(x => x.orderId === orderId && x.type === want && isBlank(x));
+    if (blank) p = blank;
+  }
+  const filling = isBlank(p);
   const od = p ? (orders.find(x => x.id === p.orderId) || {}) : (orders.find(x => x.id === orderId) || {});
   const suggest = p ? p.amount : (type === 'final' ? +((Number(od.amount) || 0) - (Number(od.depositAmount) || 0)).toFixed(2) : (Number(od.depositAmount) || 0));
-  showModal(p ? '编辑收款 ' + (p.receiptNo || p.id) : '登记收款', `
+  showModal(p ? (filling ? '登记收款 ' : '编辑收款 ') + (p.receiptNo || p.id) : '登记收款', `
     <div class="form-grid">
       <div class="form-group"><label class="form-label">订单 *</label><select class="form-select" id="p_order" onchange="paymentPickOrder()">${orders.map(o => `<option value="${esc(o.id)}"${(p ? p.orderId : orderId) === o.id ? ' selected' : ''}>${esc(o.id)} — ${esc(o.customer)}</option>`).join('')}</select></div>
       <div class="form-group"><label class="form-label">款项类型</label><select class="form-select" id="p_type" onchange="paymentSuggest()">${selOpts(['定金', '尾款', '全额', '刀模费', '打样费', '运费'], p ? p.typeLabel : (type === 'final' ? '尾款' : '定金'))}</select></div>
@@ -4052,7 +4063,8 @@ function openPaymentModal(orderId, type, payId) {
       <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="p_status">${selOpts(['已到账', '待确认', '已退回'], p ? { confirmed: '已到账', pending: '待确认', rejected: '已退回' }[p.status] : '已到账')}</select></div>
       <div class="form-group full"><label class="form-label">备注</label><textarea class="form-textarea" id="p_note" rows="2">${esc((p && p.note) || '')}</textarea></div>
     </div>
-    <div style="margin-top:10px;font-size:12px;color:var(--gray-500)">标成「已到账」会同步更新订单的已收金额；定金到账后订单自动进入「已付定金」。</div>
+    <div style="margin-top:10px;font-size:12px;color:var(--gray-500)">标成「已到账」会同步更新订单的已收金额；定金到账后订单自动进入「已付定金」。${filling ? '这一笔是转订单时自动生成的待收项，收到钱直接填进来，不会再多出第二条。' : ''}</div>
+    ${p ? `<div style="margin-top:10px"><button class="btn btn-sm btn-danger" onclick="deletePayment('${p.id}')">删除这笔收款</button><span style="font-size:12px;color:var(--gray-500);margin-left:8px">记错了、或同一笔款多出一条才删；删掉后订单的已收金额跟着重算。</span></div>` : ''}
   `, () => {
     const oid = val('p_order');
     const order = orders.find(x => x.id === oid);
@@ -4073,10 +4085,27 @@ function openPaymentModal(orderId, type, payId) {
     else payments.push(Object.assign({ id: genDocId('PAY', 'payments'), creator: whoami(), created: DM.now() }, data));
     DM.set('payments', payments);
     syncOrderMoney(order);
-    writeLog('登记收款', `${order.id} ${typeLabel} RM ${money2(amount)}（${val('p_status')}）`);
+    writeLog(p && !filling ? '修改收款' : '登记收款', `${order.id} ${typeLabel} RM ${money2(amount)}（${val('p_status')}${p ? ' · ' + (p.receiptNo || p.id) : ''}）`);
     toast('已保存');
     renderPage(currentPageId);
   });
+}
+
+// 收款记错了、或者老版本重复登记出来的那一条，得能自己清掉——不然它一直占着「待确认」，
+// 已到账的那条也一起算进订单已收金额。删除只动这一笔，订单金额当场重算。
+function deletePayment(id) {
+  const payments = DM.get('payments');
+  const p = payments.find(x => x.id === id);
+  if (!p) { toast('找不到这笔收款'); return }
+  const stLabel = p.status === 'confirmed' ? '已到账' : p.status === 'rejected' ? '已退回' : '待确认';
+  if (!confirm(`确定删除这一笔收款？\n${p.orderId} ${p.typeLabel} RM ${money2(p.amount)}（${stLabel}）\n删除后订单的已收金额会重算，这条记录不留底。`)) return;
+  DM.set('payments', payments.filter(x => x.id !== id));
+  const od = DM.get('orders').find(x => x.id === p.orderId);
+  if (od) syncOrderMoney(od);
+  writeLog('删除收款', `${p.orderId} ${p.typeLabel} RM ${money2(p.amount)}（原 ${stLabel}，${p.creator || '—'} 登记）`);
+  closeModal();
+  toast('已删除');
+  renderPage(currentPageId);
 }
 
 function paymentSuggest() {
