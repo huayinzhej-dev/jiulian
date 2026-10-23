@@ -2295,6 +2295,7 @@ function viewQuote(id) {
   const od = DM.get('orders').find(o => o.quoteId === q.id);
   const ct = liveContractOf(q.id);
   const btns = [{label:'打印 / 存为 PDF',cls:'btn-primary',fn:()=>printQuote(q.id)}];
+  btns.push({label:'编辑这张单',cls:'btn-secondary',fn:()=>{closeModal();editQuote(q.id);}});
   if (ct) btns.push({label:'查看合同',cls:'btn-secondary',fn:()=>{closeModal();openContractView(ct.id);}});
   else if (q.status !== 'draft' && q.status !== 'rejected') btns.push({label:'生成合同',cls:'btn-secondary',fn:()=>{closeModal();newContractFromQuote(q.id);}});
   if (od) btns.push({label:'查看订单',cls:'btn-secondary',fn:()=>{closeModal();viewOrder(od.id);}});
@@ -2344,14 +2345,22 @@ function editQuote(id) {
   showModal('编辑报价 ' + q.id, `
     <div class="form-grid">
       <div class="form-group"><label class="form-label">客户</label><input class="form-input" id="fq_customer" value="${esc(q.customer)}"></div>
-      <div class="form-group"><label class="form-label">产品</label><input class="form-input" id="fq_product" value="${esc(q.product)}"></div>
+      <div class="form-group"><label class="form-label">产品 / 盒型</label>${comboInput('fq_product', quoteBoxNames(), q.product, '选盒型或直接填写')}</div>
+      <div class="form-group"><label class="form-label">材质</label>${comboInput('fq_material', QOPT.papers.map(p => p.name), q.material, '选材质或直接填写', `onchange="swapGsmOptions('fq_material','fq_gsm')"`)}</div>
+      <div class="form-group"><label class="form-label">克重 / 瓦楞型号</label>${gsmComboHtml('fq_gsm', q.material, q.gsm)}</div>
+      <div class="form-group"><label class="form-label">尺寸 (mm)</label><input class="form-input" id="fq_size" value="${esc(q.size)}" placeholder="长×宽×高"></div>
       <div class="form-group"><label class="form-label">数量</label><input class="form-input" type="number" id="fq_quantity" value="${esc(q.quantity)}" oninput="recalcEditQuote()"></div>
       <div class="form-group"><label class="form-label">单价 (RM)</label><input class="form-input" type="number" min="0" step="0.01" id="fq_unitPrice" value="${esc(q.unitPrice)}" oninput="recalcEditQuote()"></div>
       <div class="form-group"><label class="form-label">刀模费 (RM，一次性)</label><input class="form-input" type="number" min="0" step="0.01" id="fq_die" value="${esc(quoteFees(q).die)}" oninput="recalcEditQuote()"></div>
       <div class="form-group"><label class="form-label">版费 (RM，一次性)</label><input class="form-input" type="number" min="0" step="0.01" id="fq_plate" value="${esc(quoteFees(q).plate)}" oninput="recalcEditQuote()"></div>
       <div class="form-group"><label class="form-label">状态</label><select class="form-select" id="fq_status">${['draft','sent','approved','rejected'].map(s=>`<option value="${s}"${q.status===s?' selected':''}>${statusLabel(s)}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">报价日期</label><input class="form-input" type="date" id="fq_date" value="${esc(q.date || (q.created || '').slice(0, 10))}"></div>
       <div class="form-group"><label class="form-label">有效期至</label><input class="form-input" type="date" id="fq_validUntil" value="${esc(q.validUntil)}"></div>
+      <div class="form-group full"><label class="form-label">印刷色数</label>${comboInput('fq_printing', QOPT.printing, q.printing, '选印刷或直接填写')}</div>
+      <div class="form-group full"><label class="form-label">表面处理（可多选）</label>${finishPickerHtml('fq_finish', q.finish)}</div>
+      <div class="form-group full"><label class="form-label">备注（会印在报价单上）</label><textarea class="form-textarea" id="fq_note" rows="2" placeholder="选填，例如箱子粘口处打5枚钉固定">${esc(q.note)}</textarea></div>
       ${quoteTermsFormHtml('fq', q, 'recalcEditQuote()')}
+      <div class="form-group full" style="font-size:12px;color:var(--gray-500);line-height:1.7">这几项和「新建报价」用的是同一套清单，下拉里没有的可以直接手打，手打的不会被下拉框抹掉。<strong>这张报价如果已经转过订单，车间工单上看到的成品内容以「订单管理 → 全部订单 → 编辑」为准</strong>，改这里不会倒回去改那张工单。</div>
       <div class="form-group full" style="padding:10px 12px;background:var(--gray-50);border-radius:8px;font-size:13px" id="fq_sum"></div>
     </div>
   `, () => {
@@ -2359,6 +2368,13 @@ function editQuote(id) {
     if (own.bad) { toast('本单的 SST 税率 / 定金比例请填 0 到 100 之间的数字'); return false; }
     q.customer = val('fq_customer');
     q.product = val('fq_product');
+    q.material = val('fq_material');
+    q.gsm = val('fq_gsm');
+    q.size = val('fq_size');
+    q.printing = val('fq_printing');
+    q.finish = readFinish('fq_finish');
+    q.note = (document.getElementById('fq_note') || {}).value?.trim() || '';
+    q.date = val('fq_date') || q.date;
     q.quantity = parseInt(val('fq_quantity')) || q.quantity;
     const up = parseFloat(val('fq_unitPrice'));
     const t = quoteTotals(q.quantity, up > 0 ? up : q.unitPrice, { die: val('fq_die'), plate: val('fq_plate') }, own.sstRate);
@@ -3550,7 +3566,7 @@ function shopRowsHtml(s) {
     }).join('') + '</div>';
 }
 
-const SHOP_STATE = { todo: ['待车间确认', 'badge-yellow'], doing: ['生产中', 'badge-blue'], done: ['生产完成', 'badge-green'] };
+const SHOP_STATE = { todo: ['待生产部确认', 'badge-yellow'], doing: ['生产中', 'badge-blue'], done: ['生产完成', 'badge-green'] };
 function shopState(o) { return o.prodDoneAt ? 'done' : o.prodAckAt ? 'doing' : 'todo' }
 function shopBadge(o) { const st = SHOP_STATE[shopState(o)]; return `<span class="badge ${st[1]}">${st[0]}</span>` }
 const stepIndex = s => PROD_STEPS.indexOf(s || 'pending_deposit');
@@ -3560,13 +3576,14 @@ const stepIndex = s => PROD_STEPS.indexOf(s || 'pending_deposit');
 function shopKanbanCard(o) {
   const sp = orderSpec(o), st = shopState(o);
   const spec = [sp.name, sizeLabel(sp.size), sp.quantity ? sp.quantity + ' pcs' : ''].filter(Boolean).join(' · ');
+  const na = orderAssets(o).length;
   const back = st === 'todo' && o.prodReject ? '<div class="meta" style="color:var(--red)">上次退回，点开看原因</div>' : '';
-  return `<div class="kanban-card" onclick="openWorkOrder('${esc(o.id)}')" style="cursor:pointer"><div class="title">${esc(o.id)}</div><div class="meta">${esc(o.customer)}</div><div class="meta">${esc(spec || '后台没填成品内容')}</div>${sp.delivery ? `<div class="meta">交货 ${esc(sp.delivery)}</div>` : ''}${back}<div class="meta">${shopBadge(o)}</div></div>`;
+  return `<div class="kanban-card" onclick="openWorkOrder('${esc(o.id)}')" style="cursor:pointer"><div class="title">${esc(o.id)}</div><div class="meta">${esc(o.customer)}</div><div class="meta">${esc(spec || '后台没填成品内容')}</div>${sp.delivery ? `<div class="meta">交货 ${esc(sp.delivery)}</div>` : ''}${na ? `<div class="meta">客户素材 ${na} 个 · 点开预览 / 下载</div>` : ''}${back}<div class="meta">${shopBadge(o)}</div></div>`;
 }
 
 function prodShopHtml(orders) {
   if (!orders.length) return '<div class="card"><div class="card-body"><div class="empty"><p>还没有工单。报价在「报价管理 → 报价单」点「转订单」，那边把成品内容填全，这里才发得下去</p></div></div></div>';
-  const cols = [['todo', '待车间确认', '车间核对后点「确认收到工单」'], ['doing', '生产中', '做完点「登记生产完成」'], ['done', '已完工', '点开可看完工登记和备注']];
+  const cols = [['todo', SHOP_STATE.todo[0], '生产部核对后点「确认收到工单」'], ['doing', '生产中', '做完点「登记生产完成」'], ['done', '已完工', '点开可看完工登记和备注']];
   return `<div class="kanban">${cols.map(([st, title, tip]) => {
     let items = orders.filter(o => shopState(o) === st);
     if (st === 'done') items = items.slice().sort((a, b) => String(b.prodDoneAt).localeCompare(String(a.prodDoneAt)));
@@ -3598,6 +3615,12 @@ const WO_CSS = `
 .wo-doc .foot{margin-top:24px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px}
 .wo-doc .sig{border-top:1px solid #9aa3b1;width:200px;padding-top:5px;font-size:11px;color:#5b6472;text-align:center}
 .wo-doc .note{font-size:11px;color:#7a828f}
+.wo-doc .assets{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.wo-doc .arow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid #d9dee7;border-radius:6px;padding:6px 9px;font-size:12px}
+.wo-doc .arow .fn{font-weight:600;color:#1f4e79;word-break:break-all;flex:1;min-width:150px}
+.wo-doc .arow .tag{border:1px solid #c7cfdb;border-radius:4px;padding:0 5px;font-size:10px;color:#5b6472;letter-spacing:.5px}
+.wo-doc .arow .mt{color:#7a828f;font-size:11px}
+.wo-doc p.none{color:#7a828f;font-size:12px;margin:4px 0 0}
 `;
 
 // 工单纸页眉印的是本单负责人的联系方式：车间有疑问要找的是跟这张单的人，
@@ -3608,6 +3631,117 @@ function woOwnerContact(o) {
   if (!name) return '跟单负责人 未分配';
   const u = DM.get('users').find(x => (x.name || '').trim() === name);
   return ['跟单负责人 ' + name, u && String(u.phone || '').trim(), u && String(u.email || '').trim()].filter(Boolean).join('　·　');
+}
+
+// 客户素材（设计稿）挂在工单上：跟单员把客户从 WhatsApp / 邮箱发来的文件传上来，
+// 生产部在工单纸里直接预览、下载。AI / CDR / DXF 这些浏览器打不开的格式不给「预览」，
+// 只给下载——挂个坏掉的预览会让人以为文件传坏了。
+function orderAssets(o) { return (Array.isArray(o && o.assets) ? o.assets : []).filter(f => f && f.url) }
+function assetKind(f) {
+  const s = String(f.name || f.url || '').split('?')[0].toLowerCase();
+  return /\.(png|jpe?g|gif|webp|svg|bmp|tif|tiff)$/.test(s) ? 'img' : /\.pdf$/.test(s) ? 'pdf' : 'file';
+}
+function assetExt(f) {
+  const m = String(f.name || f.url || '').split('?')[0].match(/\.([a-z0-9]{1,5})$/i);
+  return m ? m[1].toUpperCase() : '文件';
+}
+function assetDownloadHref(f) {
+  const u = String(f.url);
+  return safeHref(u + (u.indexOf('?') >= 0 ? '&' : '?') + 'download=' + encodeURIComponent(f.name || 'asset'));
+}
+
+let assetViewFrame = null;
+function closeAssetView() { if (assetViewFrame) { assetViewFrame.remove(); assetViewFrame = null } }
+function viewAsset(orderId, idx) {
+  const o = DM.get('orders').find(x => x.id === orderId);
+  const f = o && orderAssets(o)[idx];
+  if (!f) { toast('这个素材已经不在了，关掉工单重开一次'); return; }
+  closeAssetView();
+  const kind = assetKind(f), url = safeHref(f.url), name = esc(String(f.name || '素材'));
+  const stage = kind === 'img'
+    ? `<div style="flex:1;min-height:0;overflow:auto;background:#475569;display:flex"><img src="${url}" alt="${name}" style="margin:auto;max-width:100%;max-height:100%;object-fit:contain"></div>`
+    : `<iframe src="${url}" title="${name}" style="flex:1;width:100%;border:0;background:#fff"></iframe>`;
+  const wrap = document.createElement('div');
+  wrap.id = 'assetViewWrap';
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:1300;display:flex;align-items:center;justify-content:center;padding:18px';
+  wrap.innerHTML = `<div style="width:min(1100px,100%);height:min(92vh,940px);background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35);display:flex;flex-direction:column">
+    <div style="display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid #e5e7eb;font-size:13px;flex-shrink:0">
+      <b style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</b>
+      <span style="color:var(--gray-500);font-size:12px">${esc([f.size, f.uploaded].filter(Boolean).join(' · '))}</span>
+      <a class="btn btn-sm btn-secondary" href="${assetDownloadHref(f)}" target="_blank" rel="noopener" download>下载</a>
+      <button class="btn btn-sm btn-secondary" onclick="closeAssetView()">关闭</button></div>
+    ${stage}</div>`;
+  document.body.appendChild(wrap);
+  assetViewFrame = wrap;
+}
+
+function woAssetsHtml(o, edit) {
+  const files = orderAssets(o);
+  if (!edit) return files.length
+    ? `<div class="blk"><h4>客户素材 / Artwork</h4><p>${files.map(f => esc(f.name || '文件')).join('、')}<span style="display:block;font-size:11px;color:#7a828f;margin-top:3px">附件在本系统的工单里预览和下载，打印件不带文件</span></p></div>`
+    : '';
+  const manage = canSee('orders-list');
+  return `<div class="blk"><h4>客户素材 / Artwork（${files.length}）</h4>${files.length
+    ? `<div class="assets">${files.map((f, i) => `<div class="arow"><span class="tag">${assetExt(f)}</span><span class="fn">${esc(f.name || '素材')}</span>
+        <span class="mt">${esc([f.size, f.uploaded, f.by].filter(Boolean).join(' · '))}</span>
+        ${assetKind(f) === 'file' ? '<span class="mt">源文件，下载后用 AI / CDR 打开</span>' : `<button class="btn btn-sm btn-secondary" onclick="viewAsset('${esc(o.id)}',${i})">预览</button>`}
+        <a class="btn btn-sm btn-secondary" href="${assetDownloadHref(f)}" target="_blank" rel="noopener" download>下载</a>
+        ${manage ? `<button class="btn btn-sm btn-secondary" onclick="removeOrderAsset('${esc(o.id)}',${i})">摘除</button>` : ''}</div>`).join('')}</div>`
+    : `<p class="none">${manage ? '还没挂素材。收到客户设计稿后点下面的「上传素材」，车间在这张工单上就能直接看。' : '这张单还没挂素材。要设计稿请找跟单员——让他在「生产工单 → 点开这张工单 → 上传素材」传上来。'}</p>`}
+    ${manage ? '<p class="none">改版请再传一份新的，别摘除车间已经在用的旧版。</p>' : ''}</div>`;
+}
+
+function uploadOrderAsset(id) {
+  const cur = orderAssets(DM.get('orders').find(x => x.id === id) || {});
+  showModal('上传客户素材 - ' + id, `
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">选择文件（可多选）*</label>
+        <input class="form-input" type="file" id="f_asset_files" multiple accept="image/*,.pdf,.ai,.psd,.eps,.cdr,.dxf,.dwg,.zip,.rar,.7z">
+        <div style="font-size:12px;color:var(--gray-500);margin-top:6px">设计稿、刀版图、参考图都能传，单个不超过 20MB。图片和 PDF 在工单上直接预览，AI / CDR 这类源文件给下载。</div></div>
+      ${cur.length ? `<div class="form-group full"><label class="form-label">这张单已经挂着的</label><div style="padding:8px 0;font-size:13px;line-height:1.9">${cur.map(f => `· ${esc(f.name || '文件')}　<span style="font-size:12px;color:var(--gray-500)">${esc([f.size, f.uploaded].filter(Boolean).join(' · '))}</span>`).join('<br>')}</div></div>` : ''}
+    </div>
+  `, async () => {
+    const files = [...(((document.getElementById('f_asset_files') || {}).files) || [])];
+    if (!files.length) { toast('请先选择文件'); return false }
+    closeModal();
+    const done = [];
+    for (const f of files) {
+      toast('正在上传 ' + f.name + ' …');
+      try {
+        const up = await cloudUpload(f, 'artworks');
+        done.push({ name: f.name, url: up.url, path: up.path, size: fmtSize(f.size), uploaded: DM.now(), by: whoami() });
+      } catch (e) { toast('「' + f.name + '」上传失败：' + e.message) }
+    }
+    if (!done.length) { openWorkOrder(id); return false }
+    const orders = DM.get('orders');
+    const t = orders.find(x => x.id === id);
+    if (!t) { toast('这张工单已经被删掉了'); return false }
+    t.assets = orderAssets(t).concat(done);
+    DM.set('orders', orders);
+    writeLog('上传工单素材', `${id}：${done.map(x => x.name).join('、')}`.slice(0, 120));
+    toast(done.length + ' 个素材已挂到工单上');
+    renderPage(currentPageId);
+    openWorkOrder(id);
+    // 上面已经自己关掉旧弹窗、重开成工单纸了；这里必须 return false，
+    // 不然 showModal 的收尾会把刚重开的那张纸再关掉一次。
+    return false;
+  });
+}
+
+function removeOrderAsset(id, idx) {
+  const orders = DM.get('orders');
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  const f = orderAssets(o)[idx];
+  if (!f) return;
+  if (!confirm('把「' + (f.name || '这个文件') + '」从这张工单上摘掉？车间就下载不到它了。')) return;
+  o.assets = orderAssets(o).filter((_, i) => i !== idx);
+  DM.set('orders', orders);
+  if (f.path && Sync.ready && !Sync.muted) { try { Sync.client.storage.from('jl-uploads').remove([f.path]) } catch (e) {} }
+  writeLog('摘除工单素材', `${id}：${f.name || ''}`.slice(0, 120));
+  toast('已摘除');
+  renderPage(currentPageId);
+  openWorkOrder(id);
 }
 
 function woDocHtml(o, edit) {
@@ -3644,6 +3778,7 @@ function woDocHtml(o, edit) {
         ${o.prodDoneAt ? `<div>报完工 ${esc(o.prodDoneAt)}　${esc(o.prodDoneBy || '')}　实产 ${esc(String(o.prodQty || ''))} pcs</div>` : ''}
         ${o.prodNote ? `<div>特殊情况：${esc(o.prodNote)}</div>` : ''}</div></div>
     <table class="spec"><tbody>${rows}</tbody></table>
+    ${woAssetsHtml(o, edit)}
     ${o.prodReject && !o.prodAckAt ? `<div class="blk"><h4>跟单员退回 / Rejected</h4><p>${esc(o.prodReject)}（${esc(o.prodRejectAt || '')} ${esc(o.prodRejectBy || '')}）</p></div>` : ''}
     ${note}
     <div class="foot"><div class="note">请严格按以上要求生产。用料、工艺、数量有疑问，先写在备注里，跟单员确认后再开工。</div><div class="sig">车间签收</div></div>
@@ -3656,6 +3791,7 @@ function openWorkOrder(id) {
   const st = shopState(o);
   const btns = [{ label: '保存备注', cls: 'btn-secondary', fn: () => saveShopNote(id) },
     { label: '打印 / 存为 PDF', cls: 'btn-secondary', fn: () => printWorkOrder(id) }];
+  if (canSee('orders-list')) btns.push({ label: '上传素材', cls: 'btn-secondary', fn: () => uploadOrderAsset(id) });
   if (st === 'todo') btns.push({ label: '核对并确认收到工单', cls: 'btn-primary', fn: () => ackOrder(id) });
   else btns.push({ label: st === 'doing' ? '登记生产完成' : '更正登记', cls: 'btn-primary', fn: () => openShopDoneModal(id) });
   btns.push({ label: '关闭', cls: 'btn-secondary', fn: closeModal });
@@ -4176,6 +4312,8 @@ function uploadProofFile(id) {
       toast('打样文件已上传');
       if (currentPageId === 'proofs-list') renderPage(currentPageId);
       viewProof(id);
+      // 同上传工单素材：自己已经重开过详情弹窗，return false 免得被 showModal 收尾关掉
+      return false;
     } catch (e) { toast('上传失败：' + e.message) }
   });
 }
@@ -6882,7 +7020,7 @@ function showModal(title, bodyHtml, onSave, buttons) {
   }
 }
 
-function closeModal() { document.getElementById('modalOverlay').classList.remove('active') }
+function closeModal() { closeAssetView(); document.getElementById('modalOverlay').classList.remove('active') }
 
 function toast(msg) {
   const t = document.createElement('div');
